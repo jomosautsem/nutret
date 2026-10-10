@@ -105,7 +105,7 @@ export interface ClinicalRecord {
   id: string;
   patientId: string;
   specialistId?: string;
-  familyHistory: {
+  familyHistory?: {
     diabetes: boolean;
     hypertension: boolean;
     cancer: boolean;
@@ -113,18 +113,18 @@ export interface ClinicalRecord {
     thyroid: boolean;
     notes?: string;
   };
-  pathologicalHistory: {
+  pathologicalHistory?: {
     diagnosedDiseases: string[];
     previousTreatments?: string;
     surgeries: string[];
   };
-  allergies: string[];
-  medications: Array<{
+  allergies?: string[];
+  medications?: Array<{
     name: string;
     dose: string;
     frequency: string;
   }>;
-  lifestyleHabits: {
+  lifestyleHabits?: {
     sleepHours: number;
     sleepQuality: string;
     smoking: boolean;
@@ -132,13 +132,13 @@ export interface ClinicalRecord {
     stressLevel: string;
     waterDailyLiters: number;
   };
-  physicalActivity: {
+  physicalActivity?: {
     activityLevel: string;
     exerciseType: string;
     frequencyDaysPerWeek: number;
     durationMinutes: number;
   };
-  dietaryHabits: {
+  dietaryHabits?: {
     mealsPerDay: number;
     preferredFoods: string[];
     dislikedFoods: string[];

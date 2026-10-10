@@ -76,6 +76,55 @@ import {
   CartesianGrid,
 } from 'recharts';
 
+/**
+ * Strips out any legacy auto-generated stubs or fake template text (e.g. mock 24h meals or default habits)
+ * to ensure that only real nutritionist inputs are stored and displayed.
+ */
+function cleanLegacyMockClinicalRecord(rec: ClinicalRecord | undefined): ClinicalRecord | undefined {
+  if (!rec) return undefined;
+  let changed = false;
+  const isMockRecall = !!(rec.recall24h && rec.recall24h.includes('Café con leche y pan tostado'));
+  const isAutoStubNotes =
+    rec.familyHistory?.notes === 'Sin antecedentes graves reportados.' ||
+    rec.familyHistory?.notes === 'Sin antecedentes patológicos familiares graves.';
+  const isAutoStubHabits =
+    rec.lifestyleHabits?.sleepHours === 7 &&
+    rec.lifestyleHabits?.waterDailyLiters === 2.0 &&
+    rec.lifestyleHabits?.alcohol === 'Ocasional' &&
+    rec.physicalActivity?.frequencyDaysPerWeek === 3;
+
+  const cleaned: ClinicalRecord = { ...rec };
+
+  if (isMockRecall) {
+    cleaned.recall24h = '';
+    changed = true;
+  }
+  if (isAutoStubHabits) {
+    cleaned.lifestyleHabits = undefined;
+    cleaned.physicalActivity = undefined;
+    cleaned.dietaryHabits = undefined;
+    changed = true;
+  }
+  if (isAutoStubNotes) {
+    if (cleaned.familyHistory && !cleaned.familyHistory.diabetes && !cleaned.familyHistory.hypertension && !cleaned.familyHistory.cancer) {
+      cleaned.familyHistory = undefined;
+      changed = true;
+    } else if (cleaned.familyHistory) {
+      cleaned.familyHistory = { ...cleaned.familyHistory, notes: '' };
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    try {
+      storageService.saveClinicalRecord(cleaned);
+    } catch {
+      // ignore
+    }
+  }
+  return cleaned;
+}
+
 interface PatientProfileViewProps {
   patientId: string;
   onBack: () => void;
@@ -159,7 +208,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     storageService.getAppointmentsByPatientId(patientId)
   );
   const [clinicalRecord, setClinicalRecord] = useState<ClinicalRecord | undefined>(() =>
-    storageService.getClinicalRecordByPatientId(patientId)
+    cleanLegacyMockClinicalRecord(storageService.getClinicalRecordByPatientId(patientId))
   );
   const [labRecords, setLabRecords] = useState<LaboratoryResult[]>(() =>
     storageService.getLabRecordsByPatientId(patientId)
@@ -179,7 +228,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
       setPlans(storageService.getPlansByPatientId(patientId));
       setAnthroRecords(storageService.getAnthropometricsByPatientId(patientId));
       setAppointments(storageService.getAppointmentsByPatientId(patientId));
-      setClinicalRecord(storageService.getClinicalRecordByPatientId(patientId));
+      setClinicalRecord(cleanLegacyMockClinicalRecord(storageService.getClinicalRecordByPatientId(patientId)));
       setLabRecords(storageService.getLabRecordsByPatientId(patientId));
       setRoutines(storageService.getExerciseRoutinesByPatientId(patientId));
       setSupplements(storageService.getSupplementsByPatientId(patientId));
@@ -210,7 +259,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         setPlans(storageService.getPlansByPatientId(patientId));
         setAnthroRecords(storageService.getAnthropometricsByPatientId(patientId));
         setAppointments(storageService.getAppointmentsByPatientId(patientId));
-        setClinicalRecord(storageService.getClinicalRecordByPatientId(patientId));
+        setClinicalRecord(cleanLegacyMockClinicalRecord(storageService.getClinicalRecordByPatientId(patientId)));
         setLabRecords(storageService.getLabRecordsByPatientId(patientId));
         setRoutines(storageService.getExerciseRoutinesByPatientId(patientId));
         setSupplements(storageService.getSupplementsByPatientId(patientId));
@@ -264,22 +313,27 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     familyNotes: '',
     allergies: '',
     pathologies: '',
-    sleepHours: 7,
-    sleepQuality: 'Buena',
-    waterDailyLiters: 2.0,
-    physicalActivityLevel: 'Moderada',
-    physicalActivityDays: 3,
+    sleepHours: '' as number | string,
+    sleepQuality: '',
+    waterDailyLiters: '' as number | string,
+    alcohol: '',
+    physicalActivityLevel: '',
+    physicalActivityDays: '' as number | string,
     recall24h: '',
     notes: '',
   });
 
   useEffect(() => {
     if (clinicalRecord || patient) {
+      const isMockRecall = !!(clinicalRecord?.recall24h && clinicalRecord.recall24h.includes('Café con leche y pan tostado'));
+      const isAutoStubNotes =
+        clinicalRecord?.familyHistory?.notes === 'Sin antecedentes graves reportados.' ||
+        clinicalRecord?.familyHistory?.notes === 'Sin antecedentes patológicos familiares graves.';
       setClinicalForm({
         diabetes: !!clinicalRecord?.familyHistory?.diabetes,
         hypertension: !!clinicalRecord?.familyHistory?.hypertension,
         cancer: !!clinicalRecord?.familyHistory?.cancer,
-        familyNotes: clinicalRecord?.familyHistory?.notes || 'Sin antecedentes graves reportados.',
+        familyNotes: isAutoStubNotes ? '' : (clinicalRecord?.familyHistory?.notes || ''),
         allergies: Array.isArray(clinicalRecord?.allergies)
           ? clinicalRecord!.allergies.join(', ')
           : typeof (patient as any)?.allergies === 'string'
@@ -290,14 +344,13 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
           : typeof (patient as any)?.pathologies === 'string'
           ? (patient as any).pathologies
           : '',
-        sleepHours: clinicalRecord?.lifestyleHabits?.sleepHours || 7,
-        sleepQuality: clinicalRecord?.lifestyleHabits?.sleepQuality || 'Buena',
-        waterDailyLiters: clinicalRecord?.lifestyleHabits?.waterDailyLiters || 2.0,
-        physicalActivityLevel: clinicalRecord?.physicalActivity?.activityLevel || 'Moderada',
-        physicalActivityDays: clinicalRecord?.physicalActivity?.frequencyDaysPerWeek || 3,
-        recall24h:
-          clinicalRecord?.recall24h ||
-          'Desayuno habitual: Café con leche y pan tostado con huevo o aguacate. Comida: Proteína magra con guarnición de verduras y arroz o tortilla. Cena: Porción ligera con infusión o té.',
+        sleepHours: clinicalRecord?.lifestyleHabits?.sleepHours ?? '',
+        sleepQuality: clinicalRecord?.lifestyleHabits?.sleepQuality || '',
+        waterDailyLiters: clinicalRecord?.lifestyleHabits?.waterDailyLiters ?? '',
+        alcohol: (clinicalRecord?.lifestyleHabits?.alcohol === 'Ocasional' && !clinicalRecord?.lifestyleHabits?.sleepHours) ? '' : (clinicalRecord?.lifestyleHabits?.alcohol || ''),
+        physicalActivityLevel: clinicalRecord?.physicalActivity?.activityLevel || '',
+        physicalActivityDays: clinicalRecord?.physicalActivity?.frequencyDaysPerWeek ?? '',
+        recall24h: isMockRecall ? '' : (clinicalRecord?.recall24h || ''),
         notes: clinicalRecord?.clinicalObservations || patient?.notes || '',
       });
     }
@@ -321,48 +374,64 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
       .map((s) => s.trim())
       .filter(Boolean);
 
+    const hasFamilyHistoryInput =
+      clinicalForm.diabetes ||
+      clinicalForm.hypertension ||
+      clinicalForm.cancer ||
+      clinicalForm.familyNotes.trim() !== '';
+
+    const hasLifestyleInput =
+      clinicalForm.sleepHours !== '' ||
+      clinicalForm.sleepQuality.trim() !== '' ||
+      clinicalForm.waterDailyLiters !== '' ||
+      clinicalForm.alcohol.trim() !== '';
+
+    const hasPhysicalActivityInput =
+      clinicalForm.physicalActivityLevel.trim() !== '' ||
+      clinicalForm.physicalActivityDays !== '';
+
     const updatedRecord: ClinicalRecord = {
       id: clinicalRecord?.id || `clin-${Date.now()}`,
       patientId: patient.id,
       specialistId: currentUser?.id || 'user-dra-valeria',
-      familyHistory: {
-        diabetes: clinicalForm.diabetes,
-        hypertension: clinicalForm.hypertension,
-        cancer: clinicalForm.cancer,
-        cardiovascular: false,
-        thyroid: false,
-        notes: clinicalForm.familyNotes,
-      },
+      familyHistory: hasFamilyHistoryInput
+        ? {
+            diabetes: clinicalForm.diabetes,
+            hypertension: clinicalForm.hypertension,
+            cancer: clinicalForm.cancer,
+            cardiovascular: false,
+            thyroid: false,
+            notes: clinicalForm.familyNotes.trim(),
+          }
+        : undefined,
       pathologicalHistory: {
         diagnosedDiseases: pathologiesArr,
         surgeries: clinicalRecord?.pathologicalHistory?.surgeries || [],
       },
       allergies: allergiesArr,
       medications: clinicalRecord?.medications || [],
-      lifestyleHabits: {
-        sleepHours: Number(clinicalForm.sleepHours) || 7,
-        sleepQuality: clinicalForm.sleepQuality,
-        smoking: !!clinicalRecord?.lifestyleHabits?.smoking,
-        alcohol: clinicalRecord?.lifestyleHabits?.alcohol || 'Ocasional',
-        stressLevel: clinicalRecord?.lifestyleHabits?.stressLevel || 'Moderado',
-        waterDailyLiters: Number(clinicalForm.waterDailyLiters) || 2.0,
-      },
-      physicalActivity: {
-        activityLevel: clinicalForm.physicalActivityLevel,
-        exerciseType: 'Acondicionamiento y fuerza',
-        frequencyDaysPerWeek: Number(clinicalForm.physicalActivityDays) || 3,
-        durationMinutes: 45,
-      },
-      dietaryHabits: clinicalRecord?.dietaryHabits || {
-        mealsPerDay: 3,
-        preferredFoods: [],
-        dislikedFoods: [],
-        eatingOutFrequency: 'Fines de semana',
-        bingeEating: false,
-      },
-      recall24h: clinicalForm.recall24h,
+      lifestyleHabits: hasLifestyleInput
+        ? {
+            sleepHours: Number(clinicalForm.sleepHours) || 0,
+            sleepQuality: clinicalForm.sleepQuality || 'Buena',
+            smoking: !!clinicalRecord?.lifestyleHabits?.smoking,
+            alcohol: clinicalForm.alcohol || 'No reportado',
+            stressLevel: clinicalRecord?.lifestyleHabits?.stressLevel || 'Normal',
+            waterDailyLiters: Number(clinicalForm.waterDailyLiters) || 0,
+          }
+        : undefined,
+      physicalActivity: hasPhysicalActivityInput
+        ? {
+            activityLevel: clinicalForm.physicalActivityLevel || 'Sedentaria',
+            exerciseType: clinicalRecord?.physicalActivity?.exerciseType || 'General',
+            frequencyDaysPerWeek: Number(clinicalForm.physicalActivityDays) || 0,
+            durationMinutes: clinicalRecord?.physicalActivity?.durationMinutes || 30,
+          }
+        : undefined,
+      dietaryHabits: clinicalRecord?.dietaryHabits,
+      recall24h: clinicalForm.recall24h.trim(),
       clinicalGoals: patient.goal,
-      clinicalObservations: clinicalForm.notes,
+      clinicalObservations: clinicalForm.notes.trim(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -1492,17 +1561,30 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                   <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
                     Estilo de Vida, Sueño e Hidratación
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                         Horas de Sueño
                       </label>
                       <input
                         type="number"
-                        min="3"
-                        max="14"
+                        min="1"
+                        max="24"
+                        placeholder="Ej. 7"
                         value={clinicalForm.sleepHours}
-                        onChange={(e) => setClinicalForm({ ...clinicalForm, sleepHours: Number(e.target.value) })}
+                        onChange={(e) => setClinicalForm({ ...clinicalForm, sleepHours: e.target.value === '' ? '' : Number(e.target.value) })}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Calidad de Sueño
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Buena, Regular, Insomnio..."
+                        value={clinicalForm.sleepQuality}
+                        onChange={(e) => setClinicalForm({ ...clinicalForm, sleepQuality: e.target.value })}
                         className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden"
                       />
                     </div>
@@ -1513,10 +1595,23 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                       <input
                         type="number"
                         step="0.1"
-                        min="0.5"
-                        max="8"
+                        min="0"
+                        max="15"
+                        placeholder="Ej. 2.0"
                         value={clinicalForm.waterDailyLiters}
-                        onChange={(e) => setClinicalForm({ ...clinicalForm, waterDailyLiters: Number(e.target.value) })}
+                        onChange={(e) => setClinicalForm({ ...clinicalForm, waterDailyLiters: e.target.value === '' ? '' : Number(e.target.value) })}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Consumo de Alcohol
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Negado, Ocasional, Social..."
+                        value={clinicalForm.alcohol}
+                        onChange={(e) => setClinicalForm({ ...clinicalForm, alcohol: e.target.value })}
                         className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden"
                       />
                     </div>
@@ -1529,12 +1624,27 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                         onChange={(e) => setClinicalForm({ ...clinicalForm, physicalActivityLevel: e.target.value })}
                         className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden"
                       >
+                        <option value="">Seleccionar nivel de actividad...</option>
                         <option value="Sedentaria">Sedentaria (Poco o ningún ejercicio)</option>
                         <option value="Ligera">Ligera (1-2 días / semana)</option>
                         <option value="Moderada">Moderada (3-4 días / semana)</option>
                         <option value="Intensa">Intensa (5-6 días / semana)</option>
                         <option value="Atleta">Atleta / Alto Rendimiento</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Días de Ejercicio / Semana
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="7"
+                        placeholder="Ej. 3"
+                        value={clinicalForm.physicalActivityDays}
+                        onChange={(e) => setClinicalForm({ ...clinicalForm, physicalActivityDays: e.target.value === '' ? '' : Number(e.target.value) })}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1579,11 +1689,22 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                     <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
                       Antecedentes Heredofamiliares
                     </h4>
-                    <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
-                      <p>• <strong>Diabetes Mellitus:</strong> {clinicalRecord?.familyHistory?.diabetes ? 'Sí reportado' : 'Negado'}</p>
-                      <p>• <strong>Hipertensión:</strong> {clinicalRecord?.familyHistory?.hypertension ? 'Sí reportado' : 'Negado'}</p>
-                      <p>• <strong>Notas:</strong> {clinicalRecord?.familyHistory?.notes || 'Sin antecedentes patológicos familiares graves.'}</p>
-                    </div>
+                    {clinicalRecord?.familyHistory && (clinicalRecord.familyHistory.diabetes || clinicalRecord.familyHistory.hypertension || clinicalRecord.familyHistory.cancer || (clinicalRecord.familyHistory.notes && clinicalRecord.familyHistory.notes.trim())) ? (
+                      <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+                        <p>• <strong>Diabetes Mellitus:</strong> {clinicalRecord.familyHistory.diabetes ? 'Sí reportado' : 'Negado'}</p>
+                        <p>• <strong>Hipertensión:</strong> {clinicalRecord.familyHistory.hypertension ? 'Sí reportado' : 'Negado'}</p>
+                        {clinicalRecord.familyHistory.cancer !== undefined && (
+                          <p>• <strong>Cáncer:</strong> {clinicalRecord.familyHistory.cancer ? 'Sí reportado' : 'Negado'}</p>
+                        )}
+                        {clinicalRecord.familyHistory.notes ? (
+                          <p>• <strong>Notas:</strong> {clinicalRecord.familyHistory.notes}</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">
+                        Sin antecedentes heredofamiliares registrados. Haz clic en "Editar Expediente" para evaluarlos en consulta.
+                      </p>
+                    )}
                   </div>
 
                   {/* Estilo de vida y hábitos */}
@@ -1591,12 +1712,31 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                     <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
                       Estilo de Vida & Hábitos Dietéticos
                     </h4>
-                    <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
-                      <p>• <strong>Horas de sueño:</strong> {clinicalRecord?.lifestyleHabits?.sleepHours || 7} horas promedio ({clinicalRecord?.lifestyleHabits?.sleepQuality || 'Buena'})</p>
-                      <p>• <strong>Consumo de agua:</strong> {clinicalRecord?.lifestyleHabits?.waterDailyLiters || 2} L / día</p>
-                      <p>• <strong>Consumo de alcohol:</strong> {clinicalRecord?.lifestyleHabits?.alcohol || 'Ocasional'}</p>
-                      <p>• <strong>Actividad física:</strong> {clinicalRecord?.physicalActivity?.activityLevel || 'Moderada'} ({clinicalRecord?.physicalActivity?.frequencyDaysPerWeek || 3} días/semana)</p>
-                    </div>
+                    {clinicalRecord?.lifestyleHabits || clinicalRecord?.physicalActivity ? (
+                      <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+                        {clinicalRecord?.lifestyleHabits?.sleepHours ? (
+                          <p>• <strong>Horas de sueño:</strong> {clinicalRecord.lifestyleHabits.sleepHours} horas promedio {clinicalRecord.lifestyleHabits.sleepQuality ? `(${clinicalRecord.lifestyleHabits.sleepQuality})` : ''}</p>
+                        ) : null}
+                        {clinicalRecord?.lifestyleHabits?.waterDailyLiters ? (
+                          <p>• <strong>Consumo de agua:</strong> {clinicalRecord.lifestyleHabits.waterDailyLiters} L / día</p>
+                        ) : null}
+                        {clinicalRecord?.lifestyleHabits?.alcohol && clinicalRecord.lifestyleHabits.alcohol !== 'No reportado' ? (
+                          <p>• <strong>Consumo de alcohol:</strong> {clinicalRecord.lifestyleHabits.alcohol}</p>
+                        ) : null}
+                        {clinicalRecord?.physicalActivity?.activityLevel ? (
+                          <p>• <strong>Actividad física:</strong> {clinicalRecord.physicalActivity.activityLevel} {clinicalRecord.physicalActivity.frequencyDaysPerWeek ? `(${clinicalRecord.physicalActivity.frequencyDaysPerWeek} días/semana)` : ''}</p>
+                        ) : null}
+                        {!clinicalRecord?.lifestyleHabits?.sleepHours && !clinicalRecord?.lifestyleHabits?.waterDailyLiters && !clinicalRecord?.lifestyleHabits?.alcohol && !clinicalRecord?.physicalActivity?.activityLevel && (
+                          <p className="text-xs text-slate-400 italic">
+                            Sin hábitos de estilo de vida capturados. Haz clic en "Editar Expediente" para registrarlos.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">
+                        Sin hábitos de vida o actividad física registrados. Haz clic en "Editar Expediente" para capturarlos en consulta.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1611,11 +1751,17 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                     </h4>
                   </div>
 
-                  <div className="text-xs text-slate-600 dark:text-slate-300 space-y-2">
-                    <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-                      {clinicalRecord?.recall24h || 'Desayuno habitual: Café con leche y pan tostado con huevo o aguacate. Comida: Proteína magra con guarnición de verduras y arroz o tortilla. Cena: Porción ligera con infusión o té.'}
+                  {clinicalRecord?.recall24h && clinicalRecord.recall24h.trim().length > 0 && !clinicalRecord.recall24h.includes('Café con leche y pan tostado') ? (
+                    <div className="text-xs text-slate-600 dark:text-slate-300 space-y-2">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
+                        {clinicalRecord.recall24h}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-3.5 bg-slate-100/60 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-xs text-slate-400 italic">
+                      Sin recordatorio de 24 horas capturado en consulta. Haz clic en "Editar Expediente" para registrar los alimentos y comidas habituales del paciente.
+                    </div>
+                  )}
                 </div>
               </>
             )}

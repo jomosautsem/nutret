@@ -358,6 +358,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
     // If new patient, also create baseline anthropometric & clinical records
     if (!isEditing) {
+      // Baseline anthropometric record: strictly real values provided in the form
       const initialAnthro: AnthropometricRecord = {
         id: `anthro-${Date.now()}`,
         patientId: savedPatient.id,
@@ -365,62 +366,30 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         weight: parsedCurrentWeight,
         height: parsedHeight,
         bmi: liveBmi,
-        bodyFatPercentage: formData.gender === 'F' ? 26.5 : 18.5,
-        fatMassKg: Number(((parsedCurrentWeight * (formData.gender === 'F' ? 26.5 : 18.5)) / 100).toFixed(1)),
-        muscleMassKg: Number((parsedCurrentWeight * (formData.gender === 'F' ? 0.40 : 0.48)).toFixed(1)),
-        visceralFatLevel: 4,
-        waistCircumference: Math.round(parsedHeight * 0.46),
-        hipCircumference: Math.round(parsedHeight * 0.58),
-        waistHipRatio: Number(((Math.round(parsedHeight * 0.46)) / (Math.round(parsedHeight * 0.58))).toFixed(2)),
-        measurementDevice: 'InBody Clínico / Báscula de Bioimpedancia',
+        measurementDevice: 'Báscula y Estadiómetro Clínico',
         notes: 'Evaluación somatométrica basal de ingreso.',
       };
       await storageService.saveAnthropometricRecord(initialAnthro);
 
-      const initialClinical: ClinicalRecord = {
-        id: `clin-${Date.now()}`,
-        patientId: savedPatient.id,
-        specialistId: 'user-dra-valeria',
-        familyHistory: {
-          diabetes: false,
-          hypertension: false,
-          cancer: false,
-          cardiovascular: false,
-          thyroid: false,
-          notes: 'Sin antecedentes graves reportados.',
-        },
-        pathologicalHistory: {
-          diagnosedDiseases: pathologiesArr,
-          surgeries: [],
-        },
-        allergies: allergiesArr,
-        medications: [],
-        lifestyleHabits: {
-          sleepHours: 7,
-          sleepQuality: 'Buena',
-          smoking: false,
-          alcohol: 'Ocasional',
-          stressLevel: 'Moderado',
-          waterDailyLiters: 2.0,
-        },
-        physicalActivity: {
-          activityLevel: 'Moderada',
-          exerciseType: 'Fuerza y acondicionamiento',
-          frequencyDaysPerWeek: 3,
-          durationMinutes: 45,
-        },
-        dietaryHabits: {
-          mealsPerDay: 3,
-          preferredFoods: [],
-          dislikedFoods: [],
-          eatingOutFrequency: 'Fines de semana',
-          bingeEating: false,
-        },
-        clinicalGoals: savedPatient.goal,
-        clinicalObservations: savedPatient.notes,
-        updatedAt: new Date().toISOString(),
-      };
-      storageService.saveClinicalRecord(initialClinical);
+      // Only create clinical record if the specialist entered allergies, pathologies or observations.
+      // NEVER invent lifestyle habits, sleep hours, water, alcohol, physical activity or meal logs.
+      if (allergiesArr.length > 0 || pathologiesArr.length > 0 || savedPatient.notes) {
+        const initialClinical: ClinicalRecord = {
+          id: `clin-${Date.now()}`,
+          patientId: savedPatient.id,
+          specialistId: savedPatient.specialistId || 'user-dra-valeria',
+          pathologicalHistory: {
+            diagnosedDiseases: pathologiesArr,
+            surgeries: [],
+          },
+          allergies: allergiesArr,
+          medications: [],
+          clinicalGoals: savedPatient.goal,
+          clinicalObservations: savedPatient.notes,
+          updatedAt: new Date().toISOString(),
+        };
+        storageService.saveClinicalRecord(initialClinical);
+      }
     } else {
       // If editing existing patient, update clinical allergies/pathologies if changed
       const existingClinical = storageService.getClinicalRecordByPatientId(savedPatient.id);

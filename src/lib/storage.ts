@@ -2811,7 +2811,36 @@ export const storageService = {
   },
 
   getClinicalRecordByPatientId(patientId: string): ClinicalRecord | undefined {
-    return this.getClinicalRecords().find((c) => c.patientId === patientId);
+    const rec = this.getClinicalRecords().find((c) => c.patientId === patientId);
+    if (!rec) return undefined;
+    const isMockRecall = !!(rec.recall24h && rec.recall24h.includes('Café con leche y pan tostado'));
+    const isAutoStubHabits =
+      rec.lifestyleHabits?.sleepHours === 7 &&
+      rec.lifestyleHabits?.waterDailyLiters === 2.0 &&
+      rec.lifestyleHabits?.alcohol === 'Ocasional' &&
+      rec.physicalActivity?.frequencyDaysPerWeek === 3;
+    const isAutoStubNotes =
+      rec.familyHistory?.notes === 'Sin antecedentes graves reportados.' ||
+      rec.familyHistory?.notes === 'Sin antecedentes patológicos familiares graves.';
+
+    if (isMockRecall || isAutoStubHabits || isAutoStubNotes) {
+      const sanitized: ClinicalRecord = {
+        ...rec,
+        recall24h: isMockRecall ? '' : rec.recall24h,
+        lifestyleHabits: isAutoStubHabits ? undefined : rec.lifestyleHabits,
+        physicalActivity: isAutoStubHabits ? undefined : rec.physicalActivity,
+        dietaryHabits: isAutoStubHabits ? undefined : rec.dietaryHabits,
+        familyHistory:
+          isAutoStubNotes &&
+          !rec.familyHistory?.diabetes &&
+          !rec.familyHistory?.hypertension &&
+          !rec.familyHistory?.cancer
+            ? undefined
+            : rec.familyHistory,
+      };
+      return sanitized;
+    }
+    return rec;
   },
   saveClinicalRecord(rec: ClinicalRecord) {
     const list = this.getClinicalRecords();
