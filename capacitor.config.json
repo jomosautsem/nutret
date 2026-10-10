@@ -1,0 +1,22 @@
+{
+  "appId": "com.nutriluz.app",
+  "appName": "NutriLuz",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": true,
+    "androidScheme": "https",
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "Filesystem": {
+      "permissions": ["storage"]
+    },
+    "Share": {}
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "NUTRILUZ - Plataforma Profesional de Nutrición",
+  "description": "Plataforma SaaS profesional de nutrición clínica con NutriCopilot AI, expedientes clínicos, antropometría, equivalentes SMAE, planificador de dietas, agenda y portal del paciente.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
