@@ -419,6 +419,13 @@ Genera una ESTIMACIÓN de:
 4. Grupo de equivalentes SMAE correspondientes.
 5. Feedback positivo y sugerencia de mejora para el paciente.
 Indica claramente que se trata de una estimación visual.`;
+    } else if (action === "clinical_smae_engine") {
+      prompt = `Eres el motor clínico algorítmico y evaluador antropométrico de una plataforma de nutrición basada en el Sistema Mexicano de Alimentos Equivalentes (SMAE). Tu responsabilidad es procesar los datos de entrada del paciente, calcular con precisión matemática estricta todos los indicadores antropométricos, computar las diferentes ecuaciones predictivas de Gasto Energético Basal (GEB) y Gasto Energético Total (GET), tabular las metas de macronutrientes y generar una tabla clínica exacta.
+
+Datos del paciente:
+${JSON.stringify(payload)}
+
+Aplica con rigor determinista las fórmulas antropométricas (IMC OMS, Peso Teórico), la tabla de requerimiento proteico (0.8 a 2.0 g/kg), las 5 ecuaciones (Harris-Benedict, Mifflin-St. Jeor, Schofield, Rápida Hospitalaria y Rápida Ambulatoria) y el cuadro dietosintético con las constantes SMAE. Devuelve ÚNICAMENTE el objeto JSON válido con la estructura solicitada sin bloques de texto explicativo introductorio ni conclusiones adicionales.`;
     } else {
       prompt = `Ayuda al nutriólogo con la siguiente tarea: ${JSON.stringify(payload)}`;
     }

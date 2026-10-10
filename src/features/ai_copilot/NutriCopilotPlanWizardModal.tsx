@@ -34,6 +34,7 @@ import {
   EyeOff,
   Plus,
   Edit3,
+  Calculator,
 } from 'lucide-react';
 import { Patient, NutritionPlan, NutritionPlanDay, NutritionPlanMeal, NutritionPlanItem, AnthropometricRecord, ClinicalRecord } from '../../types';
 import { storageService } from '../../lib/storage';
@@ -45,6 +46,7 @@ import { ClinicalPreset, INITIAL_CLINICAL_PRESETS } from './prescriptionPresetsD
 import { PrescriptionTemplateEditorModal } from './PrescriptionTemplateEditorModal';
 import { PrescriptionTemplatesManagerModal } from './PrescriptionTemplatesManagerModal';
 import { generateScaled7DaysPlan, SEVEN_DAYS_CLINICAL_TEMPLATES } from '../planner/planPresetsGenerator';
+import { ClinicalEngineSmaePanel } from './ClinicalEngineSmaePanel';
 
 export interface NutriCopilotWizardProps {
   isOpen: boolean;
@@ -110,8 +112,9 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
   const { showToast } = useToast();
   const patients = storageService.getPatients();
 
-  // Wizard Step: 1 = Biometrics & Goal, 2 = Clinical & Allergies, 3 = Habits & Meals, 4 = Review & AI Generate
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  // Wizard Step: 1 = Biometrics & Goal, 2 = Clinical & Allergies, 3 = Habits & Meals, 4 = Clinical SMAE Engine, 5 = Review & AI Generate
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [overrideTargetKcal, setOverrideTargetKcal] = useState<number | null>(null);
 
   // Selected Patient
   const [selectedPatientId, setSelectedPatientId] = useState<string>(
@@ -292,8 +295,11 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
     return Math.round(calculatedBmr * palFactor);
   }, [calculatedBmr, palFactor]);
 
-  // Target Daily Calories with adjustment
+  // Target Daily Calories with adjustment (or manual clinical engine override)
   const targetKcal = useMemo(() => {
+    if (overrideTargetKcal !== null && overrideTargetKcal > 0) {
+      return overrideTargetKcal;
+    }
     let finalKcal = calculatedTdee;
     if (adjustmentType === 'deficit_kcal') {
       finalKcal = calculatedTdee + adjustmentValue; // adjustmentValue is negative
@@ -305,7 +311,7 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
       finalKcal = Math.round(calculatedTdee * (1 + Math.abs(adjustmentValue) / 100));
     }
     return Math.max(finalKcal, 1100); // Clinical safe minimum
-  }, [calculatedTdee, adjustmentType, adjustmentValue]);
+  }, [calculatedTdee, adjustmentType, adjustmentValue, overrideTargetKcal]);
 
   // Target Macros in grams with full bidirectional manual editability
   const macroGrams = useMemo(() => {
@@ -736,6 +742,7 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
     setManualProteinG(null);
     setManualFatG(null);
     setManualCarbsG(null);
+    setOverrideTargetKcal(null);
     setDietStyle(preset.dietStyle);
     setMealsCount(preset.mealsCount);
     setBudgetPrepStyle(preset.prepStyle);
@@ -1464,7 +1471,8 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
             { step: 1, label: '1. Somatometría & Objetivos', icon: Scale },
             { step: 2, label: '2. Clínica & Alergias', icon: HeartPulse },
             { step: 3, label: '3. Macros & Comidas', icon: Utensils },
-            { step: 4, label: '4. Resumen & IA', icon: Sparkles },
+            { step: 4, label: '4. Motor Clínico SMAE', icon: Calculator },
+            { step: 5, label: '5. Resumen & Plan IA', icon: Sparkles },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = currentStep === item.step;
@@ -2378,6 +2386,34 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
                   <strong className="text-sky-600 dark:text-sky-400 font-bold">{macroGrams.waterLiters} L/día</strong>
                 </div>
               </div>
+              {/* Quick shortcut banner to Clinical SMAE Engine */}
+              <div className="p-3.5 bg-gradient-to-r from-teal-950/40 via-emerald-950/30 to-slate-900/40 rounded-xl border border-teal-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300 shrink-0">
+                    <Calculator className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-xs text-white flex items-center gap-2">
+                      Motor Clínico Algorítmico y Evaluador Antropométrico SMAE
+                      <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/20 text-emerald-300 font-bold">
+                        5 Fórmulas & Matriz SMAE
+                      </span>
+                    </h5>
+                    <p className="text-[11px] text-slate-300">
+                      Calcula con precisión estricta Harris-Benedict, Mifflin, Schofield, tabla proteica (0.8-2.0 g/kg) y exporta JSON estricto.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(4)}
+                  className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-xs shrink-0 self-end sm:self-auto"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Abrir Evaluador SMAE</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -2392,17 +2428,75 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
               <button
                 type="button"
                 onClick={() => setCurrentStep(4)}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer transition-all"
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl font-bold cursor-pointer transition-all shadow-sm"
               >
-                <span>Siguiente: Revisión y Generación IA</span>
+                <Calculator className="w-4 h-4" />
+                <span>Siguiente: 4. Motor Clínico SMAE</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 4: Revisión de Resumen Clínico y Generación con NutriCoPilot */}
+        {/* STEP 4: Motor Clínico Algorítmico y Evaluador Antropométrico SMAE */}
         {currentStep === 4 && (
+          <div className="space-y-5 animate-fade-in text-xs">
+            {(() => {
+              const activePat = storageService.getPatientById(selectedPatientId);
+              const fullName = activePat ? `${activePat.firstName} ${activePat.lastName}` : 'Paciente';
+              return (
+                <ClinicalEngineSmaePanel
+                  patientName={fullName}
+                  gender={gender}
+                  age={age}
+                  weightKg={weightKg}
+                  heightCm={heightCm}
+                  activityFactor={palFactor}
+                  targetKcal={targetKcal}
+                  carbsPct={macroGrams.carbsPct}
+                  proteinPct={macroGrams.proteinPct}
+                  fatPct={macroGrams.fatPct}
+                  onApplyTargetKcal={(kcal) => {
+                    setOverrideTargetKcal(kcal);
+                    setAdjustmentType('maintenance');
+                    setAdjustmentValue(0);
+                  }}
+                  onApplyProteinFactor={(factor, grams) => {
+                    setProteinGKg(factor);
+                    setProteinControlMode('gkg');
+                    setManualProteinG(grams);
+                  }}
+                  onApplyMacroDistribution={(dist) => {
+                    setCarbsPct(Math.round(dist.hc_pct * 100));
+                    setFatPct(Math.round(dist.lip_pct * 100));
+                  }}
+                />
+              );
+            })()}
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(3)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Anterior: 3. Macros & Comidas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(5)}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold cursor-pointer transition-all shadow-md"
+              >
+                <span>Avanzar a 5. Resumen & Plan IA</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5: Revisión de Resumen Clínico y Generación con NutriCoPilot */}
+        {currentStep === 5 && (
           <div className="space-y-5 animate-fade-in text-xs">
             {/* Clinical Summary Matrix */}
             <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
@@ -2859,11 +2953,11 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setCurrentStep(3)}
+                onClick={() => setCurrentStep(4)}
                 className="flex items-center gap-1.5 px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Modificar Parámetros</span>
+                <span>Volver a 4. Motor Clínico SMAE</span>
               </button>
 
               <div className="flex items-center gap-2.5 flex-wrap">

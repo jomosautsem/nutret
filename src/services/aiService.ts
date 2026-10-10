@@ -1,5 +1,5 @@
 export interface AiRequestPayload {
-  action: 'chat' | 'draft_plan' | 'parse_24h_recall' | 'consultation_prep' | 'analyze_labs' | 'analyze_meal_photo' | 'detect_risk';
+  action: 'chat' | 'draft_plan' | 'parse_24h_recall' | 'consultation_prep' | 'analyze_labs' | 'analyze_meal_photo' | 'detect_risk' | 'clinical_smae_engine';
   payload: any;
   systemContext?: any;
 }

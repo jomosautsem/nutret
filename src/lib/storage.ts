@@ -3038,46 +3038,82 @@ export const storageService = {
       }
 
       // 6. Check if Supabase has patients
+      // First, fetch any cloud tombstones from messages
+      try {
+        const cloudTombstones = await supabaseDb.getCloudTombstonePatientIds();
+        if (cloudTombstones && cloudTombstones.length > 0) {
+          const currentDeleted = this.getDeletedPatientIds();
+          const combined = Array.from(new Set([...currentDeleted, ...cloudTombstones]));
+          this.saveDeletedPatientIds(combined);
+        }
+      } catch (errTombstones) {
+        console.warn('[Storage] Error checking cloud tombstones:', errTombstones);
+      }
+
       const cloudPatients = await supabaseDb.getPatients();
       const deletedIds = new Set(this.getDeletedPatientIds());
 
-      if (!cloudPatients || cloudPatients.length === 0) {
-        // If local also has 0 active patients or was intentionally emptied, do NOT re-seed
-        const currentLocalPatients = this.getPatients();
-        if (currentLocalPatients.length > 0) {
-          console.log('[Storage] Performing cloud sync for existing local patients...');
-          await this.forceSyncAllToCloud();
-        }
-      } else {
-        console.log(`[Storage] Hydrating from Supabase (${cloudPatients.length} patients found in cloud)...`);
-        // Merge cloud patients while strictly excluding deleted tombstones
-        const localPatients = this.getPatients();
-        const mergedPatientsMap = new Map<string, Patient>();
-        localPatients.forEach((p) => {
-          if (!deletedIds.has(p.id)) mergedPatientsMap.set(p.id, p);
-        });
-        cloudPatients.forEach((cloudP) => {
-          if (!deletedIds.has(cloudP.id)) {
-            const existingLocal = mergedPatientsMap.get(cloudP.id);
-            // MERGE preserving local assignedRecipeIds if local has them and cloud is empty
-            const resolvedAssignedRecipes = (cloudP.assignedRecipeIds && cloudP.assignedRecipeIds.length > 0)
-              ? cloudP.assignedRecipeIds
-              : (existingLocal?.assignedRecipeIds || []);
-
-            const merged: Patient = {
-              ...existingLocal,
-              ...cloudP,
-              assignedRecipeIds: resolvedAssignedRecipes,
-              portalAccessEnabled: cloudP.portalAccessEnabled !== undefined
-                ? cloudP.portalAccessEnabled
-                : (existingLocal?.portalAccessEnabled ?? true),
-              portalUsername: cloudP.portalUsername || existingLocal?.portalUsername,
-              portalPassword: cloudP.portalPassword || existingLocal?.portalPassword,
-            };
-            mergedPatientsMap.set(cloudP.id, merged);
+      if (cloudPatients !== null) {
+        if (cloudPatients.length === 0) {
+          // If the user deleted all patients in Supabase, DO NOT re-upload them! Synchronize local to empty state!
+          console.log('[Storage] Cloud database has 0 patients. Syncing local state to reflect empty database.');
+          const currentLocal = this.getPatients();
+          if (currentLocal.length > 0) {
+            this.savePatients([]);
+            safeDispatchEvent('nutriluz:db_updated', { type: 'patients_cleared' });
+            safeDispatchEvent('nutriluz:patient_deleted', { detail: { count: currentLocal.length } });
           }
-        });
-        this.savePatients(Array.from(mergedPatientsMap.values()));
+        } else {
+          console.log(`[Storage] Hydrating from Supabase (${cloudPatients.length} patients found in cloud)...`);
+          const localPatients = this.getPatients();
+          const localPatientsMap = new Map<string, Patient>();
+          localPatients.forEach((p) => localPatientsMap.set(p.id, p));
+          const cloudIds = new Set(cloudPatients.map((p) => p.id));
+
+          // Detect any local patients that were deleted from the cloud database or on another device
+          const newlyDetectedDeletedIds: string[] = [];
+          localPatients.forEach((lp) => {
+            if (!cloudIds.has(lp.id) && !deletedIds.has(lp.id)) {
+              newlyDetectedDeletedIds.push(lp.id);
+            }
+          });
+
+          if (newlyDetectedDeletedIds.length > 0) {
+            console.log(`[Storage] Detected ${newlyDetectedDeletedIds.length} patients removed from database:`, newlyDetectedDeletedIds);
+            const updatedDeleted = Array.from(new Set([...this.getDeletedPatientIds(), ...newlyDetectedDeletedIds]));
+            this.saveDeletedPatientIds(updatedDeleted);
+            newlyDetectedDeletedIds.forEach((id) => deletedIds.add(id));
+          }
+
+          // Build final patient list strictly from active cloud patients (never re-adding deleted ones)
+          const mergedPatients: Patient[] = cloudPatients
+            .filter((cloudP) => !deletedIds.has(cloudP.id))
+            .map((cloudP) => {
+              const existingLocal = localPatientsMap.get(cloudP.id);
+              const resolvedAssignedRecipes = (cloudP.assignedRecipeIds && cloudP.assignedRecipeIds.length > 0)
+                ? cloudP.assignedRecipeIds
+                : (existingLocal?.assignedRecipeIds || []);
+
+              return {
+                ...(existingLocal || {}),
+                ...cloudP,
+                assignedRecipeIds: resolvedAssignedRecipes,
+                portalAccessEnabled: cloudP.portalAccessEnabled !== undefined
+                  ? cloudP.portalAccessEnabled
+                  : (existingLocal?.portalAccessEnabled ?? true),
+                portalUsername: cloudP.portalUsername || existingLocal?.portalUsername,
+                portalPassword: cloudP.portalPassword || existingLocal?.portalPassword,
+              };
+            });
+
+          const countChanged = mergedPatients.length !== localPatients.length || newlyDetectedDeletedIds.length > 0;
+          this.savePatients(mergedPatients);
+
+          if (countChanged) {
+            safeDispatchEvent('nutriluz:db_updated', { type: 'patients_synced' });
+            safeDispatchEvent('nutriluz:patient_deleted', { detail: { deletedIds: newlyDetectedDeletedIds } });
+          }
+        }
       }
 
       // 7. Hydrate Nutrition Plans from Supabase Cloud
@@ -3187,6 +3223,15 @@ export const storageService = {
           const currentDeleted = this.getDeletedPatientIds();
           const combined = Array.from(new Set([...currentDeleted, ...data.deletedPatientIds]));
           this.saveDeletedPatientIds(combined);
+
+          // Purge local patients matching deleted IDs from another device
+          const currentPatients = this.getPatients();
+          const filtered = currentPatients.filter((p) => !combined.includes(p.id));
+          if (filtered.length !== currentPatients.length) {
+            this.set(STORAGE_KEYS.PATIENTS, filtered);
+            safeDispatchEvent('nutriluz:db_updated', { type: 'patient_purged' });
+            safeDispatchEvent('nutriluz:patient_deleted', { detail: { count: currentPatients.length - filtered.length } });
+          }
         }
         return { success: true, syncedAt: data.syncedAt };
       }
@@ -3228,7 +3273,7 @@ export const storageService = {
   },
 };
 
-// Auto-run init and background sync
+// Auto-run init and background sync across all devices
 storageService.init();
 if (typeof window !== 'undefined') {
   // Immediate sync on load to hydrate plans and patients from Supabase without delay
@@ -3238,19 +3283,22 @@ if (typeof window !== 'undefined') {
 
   setTimeout(() => {
     storageService.syncWithServer().catch(() => {});
-  }, 1000);
+  }, 600);
 
   // Sync when user focuses or returns to the browser tab
   window.addEventListener('focus', () => {
+    storageService.syncWithServer().catch(() => {});
     storageService.syncWithSupabase().catch(() => {});
   });
   window.addEventListener('online', () => {
+    storageService.syncWithServer().catch(() => {});
     storageService.syncWithSupabase().catch(() => {});
   });
 
-  // Background interval sync every 15 seconds
+  // Multi-device background interval sync every 6 seconds
   setInterval(() => {
+    storageService.syncWithServer().catch(() => {});
     storageService.syncWithSupabase().catch(() => {});
-  }, 15000);
+  }, 6000);
 }
 

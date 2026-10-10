@@ -291,10 +291,64 @@ export const supabaseDb = {
   async deletePatient(patientId: string): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured) return false;
     try {
+      // 1. Delete associated child records in Supabase to maintain database cleanliness
+      await Promise.allSettled([
+        supabase.from('nutrition_plans').delete().eq('patient_id', patientId),
+        supabase.from('anthropometry_records').delete().eq('patient_id', patientId),
+        supabase.from('appointments').delete().eq('patient_id', patientId),
+        supabase.from('payments').delete().eq('patient_id', patientId),
+        supabase.from('lab_records').delete().eq('patient_id', patientId),
+      ]);
+
+      // 2. Delete patient from patients table
       const { error } = await supabase.from('patients').delete().eq('id', patientId);
+      if (error) {
+        console.error('[Supabase] Error deleting patient:', error.message);
+      }
+
+      // 3. Broadcast tombstone record in messages so other devices catch the deletion in real-time
+      try {
+        await supabase.from('messages').insert({
+          id: `tombstone-${patientId}-${Date.now()}`,
+          organization_id: 'org-nutriluz-mexico',
+          sender_id: 'SYSTEM_TOMBSTONE',
+          receiver_id: patientId,
+          content: `PATIENT_DELETED:${patientId}`,
+          is_read: true,
+          created_at: new Date().toISOString(),
+        });
+      } catch {
+        // Ignore tombstone broadcast errors
+      }
+
       return !error;
-    } catch {
+    } catch (err: any) {
+      console.error('[Supabase] Exception in deletePatient:', err?.message);
       return false;
+    }
+  },
+
+  async getCloudTombstonePatientIds(): Promise<string[]> {
+    if (!supabase || !isSupabaseConfigured) return [];
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('receiver_id, content')
+        .eq('sender_id', 'SYSTEM_TOMBSTONE')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error || !data) return [];
+      return data
+        .map((row: any) => {
+          if (row.content && String(row.content).startsWith('PATIENT_DELETED:')) {
+            return String(row.content).replace('PATIENT_DELETED:', '').trim();
+          }
+          return row.receiver_id;
+        })
+        .filter(Boolean);
+    } catch {
+      return [];
     }
   },
 
