@@ -53,20 +53,16 @@ export const NutriCopilotView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // 24H Recall Parser State
-  const [recallText, setRecallText] = useState(
-    'Desayuno: 2 huevos fritos con 2 tortillas y café con azúcar.\nComida: Tacos de carnitas (3 piezas) con refresco de cola.\nCena: Pan dulce con vaso de leche entera.'
-  );
+  const [recallText, setRecallText] = useState('');
   const [recallResult, setRecallResult] = useState<string | null>(null);
 
   // Quick Plan Generator State
   const [planPatientId, setPlanPatientId] = useState(patients[0]?.id || '');
-  const [planGoal, setPlanGoal] = useState('Pérdida de Grasa y Recomposición Corporal');
+  const [planGoal, setPlanGoal] = useState(patients[0]?.goal || '');
   const [planResult, setPlanResult] = useState<string | null>(null);
 
   // Lab interpreter state
-  const [labInput, setLabInput] = useState(
-    'Glucosa en ayuno: 112 mg/dL\nHbA1c: 5.9%\nTriglicéridos: 220 mg/dL\nColesterol Total: 210 mg/dL\nHDL: 38 mg/dL\nLDL: 128 mg/dL'
-  );
+  const [labInput, setLabInput] = useState('');
   const [labResult, setLabResult] = useState<string | null>(null);
 
   const handleSendChat = async (e: React.FormEvent) => {
@@ -326,7 +322,12 @@ export const NutriCopilotView: React.FC = () => {
                 </label>
                 <select
                   value={planPatientId}
-                  onChange={(e) => setPlanPatientId(e.target.value)}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setPlanPatientId(newId);
+                    const target = patients.find((p) => p.id === newId);
+                    setPlanGoal(target?.goal || '');
+                  }}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
                 >
                   {patients.map((p) => (
@@ -345,6 +346,7 @@ export const NutriCopilotView: React.FC = () => {
                   type="text"
                   value={planGoal}
                   onChange={(e) => setPlanGoal(e.target.value)}
+                  placeholder="Ej. Pérdida de grasa, ganancia muscular, control glucémico..."
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
                 />
               </div>
@@ -390,13 +392,14 @@ export const NutriCopilotView: React.FC = () => {
                 rows={5}
                 value={recallText}
                 onChange={(e) => setRecallText(e.target.value)}
+                placeholder="Ejemplo: Desayuno: 2 huevos con 2 tortillas y café sin azúcar. Comida: 150g de pechuga con ensalada y arroz... (Escribe o pega aquí el recordatorio de 24h del paciente)"
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 font-sans"
               />
             </div>
 
             <button
               onClick={handleRun24hParse}
-              disabled={isLoading}
+              disabled={isLoading || !recallText.trim()}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
@@ -422,13 +425,14 @@ export const NutriCopilotView: React.FC = () => {
                 rows={6}
                 value={labInput}
                 onChange={(e) => setLabInput(e.target.value)}
+                placeholder="Ejemplo:&#10;Glucosa en ayuno: 95 mg/dL&#10;HbA1c: 5.4%&#10;Triglicéridos: 135 mg/dL&#10;Colesterol Total: 190 mg/dL&#10;(Pega aquí los valores de laboratorio del paciente)"
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 font-mono"
               />
             </div>
 
             <button
               onClick={handleRunLabAnalysis}
-              disabled={isLoading}
+              disabled={isLoading || !labInput.trim()}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer"
             >
               <Activity className="w-4 h-4" />

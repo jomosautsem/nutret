@@ -126,37 +126,37 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
   const [age, setAge] = useState<number>(30);
   const [gender, setGender] = useState<'F' | 'M'>('F');
   const [heightCm, setHeightCm] = useState<number>(165);
-  const [weightKg, setWeightKg] = useState<number>(68);
-  const [bodyFatPct, setBodyFatPct] = useState<number | ''>(26);
-  const [muscleMassKg, setMuscleMassKg] = useState<number | ''>(47);
-  const [visceralFatLevel, setVisceralFatLevel] = useState<number | ''>(4);
+  const [weightKg, setWeightKg] = useState<number>(65);
+  const [bodyFatPct, setBodyFatPct] = useState<number | ''>('');
+  const [muscleMassKg, setMuscleMassKg] = useState<number | ''>('');
+  const [visceralFatLevel, setVisceralFatLevel] = useState<number | ''>('');
   const [metabolicFormula, setMetabolicFormula] = useState<MetabolicFormula>('MIFFLIN');
 
   // --- STEP 1 (B & C): Objetivo Nutricional & Actividad Física ---
-  const [goal, setGoal] = useState<string>('Pérdida de Grasa y Recomposición Corporal');
-  const [adjustmentType, setAdjustmentType] = useState<'deficit_kcal' | 'deficit_pct' | 'surplus_kcal' | 'surplus_pct' | 'maintenance'>('deficit_kcal');
-  const [adjustmentValue, setAdjustmentValue] = useState<number>(-350);
+  const [goal, setGoal] = useState<string>('');
+  const [adjustmentType, setAdjustmentType] = useState<'deficit_kcal' | 'deficit_pct' | 'surplus_kcal' | 'surplus_pct' | 'maintenance'>('maintenance');
+  const [adjustmentValue, setAdjustmentValue] = useState<number>(0);
   const [activityLevel, setActivityLevel] = useState<'SEDENTARY' | 'LIGHT' | 'MODERATE' | 'VERY_ACTIVE' | 'ATHLETE'>('MODERATE');
-  const [trainingType, setTrainingType] = useState<string>('Entrenamiento de fuerza (pesas) + cardio LISS');
-  const [trainingFrequencyDays, setTrainingFrequencyDays] = useState<number>(4);
-  const [trainingDurationMinutes, setTrainingDurationMinutes] = useState<number>(50);
+  const [trainingType, setTrainingType] = useState<string>('');
+  const [trainingFrequencyDays, setTrainingFrequencyDays] = useState<number>(3);
+  const [trainingDurationMinutes, setTrainingDurationMinutes] = useState<number>(45);
 
   // --- STEP 2: Condiciones Clínicas, Alergias y Fármacos ---
-  const [selectedConditions, setSelectedConditions] = useState<string[]>(['Resistencia a la Insulina']);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [customCondition, setCustomCondition] = useState<string>('');
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [customAllergy, setCustomAllergy] = useState<string>('');
-  const [medications, setMedications] = useState<string>('Metformina 850mg (1 vez al día con la cena)');
+  const [medications, setMedications] = useState<string>('');
 
   // --- STEP 3: Hábitos, Preferencias y Estructura del Día ---
   const [durationMode, setDurationMode] = useState<'7_DIAS' | '15_DIAS' | '30_DIAS' | '60_DIAS' | 'CUSTOM'>('30_DIAS');
   const [durationDays, setDurationDays] = useState<number>(30);
   const [customDaysInput, setCustomDaysInput] = useState<number>(30);
   const [startDate, setStartDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [dietStyle, setDietStyle] = useState<string>('Omnívora Flexible / Mediterránea');
-  const [dislikedFoods, setDislikedFoods] = useState<string>('Hígado, mariscos crudos, refrescos azucarados');
+  const [dietStyle, setDietStyle] = useState<string>('Omnívora Flexible');
+  const [dislikedFoods, setDislikedFoods] = useState<string>('');
   const [mealsCount, setMealsCount] = useState<number>(4);
-  const [budgetPrepStyle, setBudgetPrepStyle] = useState<string>('Práctica (<25 min) y Económica');
+  const [budgetPrepStyle, setBudgetPrepStyle] = useState<string>('Práctica y Equilibrada');
 
   // --- 7-Day Multi-Menu State (Lunes a Domingo) ---
   const [varietyCounter, setVarietyCounter] = useState<number>(0);
@@ -655,54 +655,94 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
     fatPct,
   ]);
 
-  // Auto-fill from patient file when patient changes
+  // Auto-fill from patient file when patient changes (Strict: NEVER invent clinical, bioimpedance, or medical data)
   const handleAutoFillFromPatient = (patientId: string) => {
     const pat = storageService.getPatientById(patientId);
     if (!pat) return;
 
     setSelectedPatientId(pat.id);
 
-    // 1. Biological Profile
+    // 1. Reset ALL clinical, bioimpedance and preference fields to clean state to avoid ghost/mock data
+    setSelectedConditions([]);
+    setCustomCondition('');
+    setSelectedAllergies([]);
+    setCustomAllergy('');
+    setMedications('');
+    setDislikedFoods('');
+    setTrainingType('');
+    setBodyFatPct('');
+    setMuscleMassKg('');
+    setVisceralFatLevel('');
+    setGoal(pat.goal || '');
+    setAdjustmentType('maintenance');
+    setAdjustmentValue(0);
+    setOverrideTargetKcal(null);
+    setActivePresetApplied(null);
+
+    // 2. Biological Profile from real patient profile
     if (pat.birthDate) {
       const birthYear = new Date(pat.birthDate).getFullYear();
       const currentYear = new Date().getFullYear();
-      setAge(Math.max(currentYear - birthYear, 18));
+      const calculatedAge = currentYear - birthYear;
+      if (calculatedAge > 0 && calculatedAge < 120) {
+        setAge(calculatedAge);
+      }
     }
     if (pat.gender) setGender(pat.gender as 'F' | 'M');
     if (pat.height) setHeightCm(pat.height);
     if (pat.currentWeight) setWeightKg(pat.currentWeight);
 
-    // 2. Latest Anthropometrics
+    // 3. Anthropometrics from REAL measurements (leave empty if not recorded)
     const anthros = storageService.getAnthropometricsByPatientId(pat.id);
     if (anthros && anthros.length > 0) {
       const latest = anthros[0];
-      if (latest.bodyFatPercentage) setBodyFatPct(latest.bodyFatPercentage);
-      if (latest.muscleMassKg) setMuscleMassKg(latest.muscleMassKg);
-      if (latest.visceralFatLevel) setVisceralFatLevel(latest.visceralFatLevel);
+      if (latest.bodyFatPercentage !== undefined && latest.bodyFatPercentage !== null && latest.bodyFatPercentage > 0) {
+        setBodyFatPct(latest.bodyFatPercentage);
+      }
+      if (latest.muscleMassKg !== undefined && latest.muscleMassKg !== null && latest.muscleMassKg > 0) {
+        setMuscleMassKg(latest.muscleMassKg);
+      }
+      if (latest.visceralFatLevel !== undefined && latest.visceralFatLevel !== null && latest.visceralFatLevel > 0) {
+        setVisceralFatLevel(latest.visceralFatLevel);
+      }
     }
 
-    // 3. Medical Record & Clinical History
+    // 4. Medical Record & Clinical History from REAL record (leave empty if none exists)
     const clin = storageService.getClinicalRecordByPatientId(pat.id);
+    let hasClinicalData = false;
     if (clin) {
-      if (clin.pathologicalHistory?.diagnosedDiseases && clin.pathologicalHistory.diagnosedDiseases.length > 0) {
-        setSelectedConditions(clin.pathologicalHistory.diagnosedDiseases);
+      if (clin.pathologicalHistory?.diagnosedDiseases && Array.isArray(clin.pathologicalHistory.diagnosedDiseases) && clin.pathologicalHistory.diagnosedDiseases.length > 0) {
+        setSelectedConditions([...clin.pathologicalHistory.diagnosedDiseases]);
+        hasClinicalData = true;
       }
-      if (clin.allergies && clin.allergies.length > 0) {
-        setSelectedAllergies(clin.allergies);
+      if (clin.allergies && Array.isArray(clin.allergies) && clin.allergies.length > 0) {
+        setSelectedAllergies([...clin.allergies]);
       }
-      if (clin.medications && clin.medications.length > 0) {
-        setMedications(clin.medications.map((m) => `${m.name} ${m.dose || ''}`.trim()).join(', '));
+      if (clin.medications && Array.isArray(clin.medications) && clin.medications.length > 0) {
+        const medString = clin.medications
+          .map((m) => `${m.name || ''} ${m.dose || ''}`.trim())
+          .filter(Boolean)
+          .join(', ');
+        if (medString) {
+          setMedications(medString);
+          hasClinicalData = true;
+        }
       }
-      if (clin.dietaryHabits?.dislikedFoods && clin.dietaryHabits.dislikedFoods.length > 0) {
+      if (clin.dietaryHabits?.dislikedFoods && Array.isArray(clin.dietaryHabits.dislikedFoods) && clin.dietaryHabits.dislikedFoods.length > 0) {
         setDislikedFoods(clin.dietaryHabits.dislikedFoods.join(', '));
       }
-      if (clin.dietaryHabits?.mealsPerDay) {
+      if (clin.dietaryHabits?.mealsPerDay && clin.dietaryHabits.mealsPerDay > 0) {
         setMealsCount(clin.dietaryHabits.mealsPerDay);
       }
-    }
-
-    if (pat.goal) {
-      setGoal(pat.goal);
+      if (clin.physicalActivity?.exerciseType) {
+        setTrainingType(clin.physicalActivity.exerciseType);
+      }
+      if (clin.physicalActivity?.frequencyDaysPerWeek) {
+        setTrainingFrequencyDays(clin.physicalActivity.frequencyDaysPerWeek);
+      }
+      if (clin.physicalActivity?.durationMinutes) {
+        setTrainingDurationMinutes(clin.physicalActivity.durationMinutes);
+      }
     }
 
     // Preload previous general recommendations if available
@@ -715,17 +755,23 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
     setPatientAutoFilled(true);
     showToast(
       'Expediente Sincronizado',
-      `Datos clínicos y somatométricos de ${pat.firstName} ${pat.lastName} auto-llenados con éxito.`,
+      hasClinicalData
+        ? `Datos clínicos y somatométricos de ${pat.firstName} ${pat.lastName} sincronizados fielmente.`
+        : `Datos somatométricos de ${pat.firstName} ${pat.lastName} sincronizados (sin diagnósticos ni fármacos previos en el historial).`,
       'success'
     );
   };
 
-  // Trigger auto-fill on mount or patient change
+  // Trigger auto-fill on mount, modal open, or patient change
   useEffect(() => {
-    if (selectedPatientId) {
-      handleAutoFillFromPatient(selectedPatientId);
+    if (isOpen) {
+      const patientIdToLoad = initialPatientId || selectedPatientId || patients[0]?.id || '';
+      if (patientIdToLoad) {
+        setSelectedPatientId(patientIdToLoad);
+        handleAutoFillFromPatient(patientIdToLoad);
+      }
     }
-  }, [selectedPatientId]);
+  }, [isOpen, initialPatientId]);
 
   // Apply a Preset
   const handleApplyPreset = (preset: ClinicalPreset) => {
@@ -1138,7 +1184,11 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
                 <label className="block text-[10px] text-slate-400 font-semibold">Paciente:</label>
                 <select
                   value={selectedPatientId}
-                  onChange={(e) => setSelectedPatientId(e.target.value)}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setSelectedPatientId(newId);
+                    handleAutoFillFromPatient(newId);
+                  }}
                   className="bg-transparent text-white font-bold text-xs focus:outline-hidden cursor-pointer"
                 >
                   {patients.map((p) => (
@@ -1156,7 +1206,9 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
             <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-emerald-300">
               <span className="flex items-center gap-1.5 text-[11px]">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Expediente vinculado: Somatometría, bioimpedancia y diagnósticos cargados automáticamente.
+                {selectedConditions.length > 0 || medications
+                  ? 'Expediente vinculado: Somatometría y antecedentes clínicos sincronizados fielmente.'
+                  : 'Expediente vinculado: Somatometría sincronizada (sin diagnósticos patológicos ni fármacos en el historial).'}
               </span>
               <button
                 type="button"

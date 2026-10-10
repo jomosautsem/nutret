@@ -2596,7 +2596,7 @@ export const storageService = {
     return found || null;
   },
 
-  savePatient(patient: Patient) {
+  savePatient(patient: Patient): Promise<boolean> {
     const list = this.getPatients();
     const idx = list.findIndex((p) => p.id === patient.id);
     const sanitizedPatient: Patient = {
@@ -2609,15 +2609,18 @@ export const storageService = {
       list.unshift(sanitizedPatient);
     }
     this.savePatients(list);
+    safeDispatchEvent('nutriluz:db_updated', { type: 'patient', id: sanitizedPatient.id, patientId: sanitizedPatient.id });
+
     // Direct sync with Supabase PostgreSQL cloud database with logging
-    supabaseDb.savePatient(sanitizedPatient).then((success) => {
+    return supabaseDb.savePatient(sanitizedPatient).then((success) => {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('nutriluz:cloud_synced', { detail: { type: 'patient', id: sanitizedPatient.id, patientId: sanitizedPatient.id, success } }));
       }
+      return success;
     }).catch((err) => {
       console.error('[Storage] Error syncing patient to Supabase:', err);
+      return false;
     });
-    safeDispatchEvent('nutriluz:db_updated', { type: 'patient', id: sanitizedPatient.id, patientId: sanitizedPatient.id });
   },
 
   deletePatient(patientId: string): boolean {
@@ -2759,7 +2762,7 @@ export const storageService = {
   getAnthropometricsByPatientId(patientId: string): AnthropometricRecord[] {
     return this.getAnthropometry().filter((a) => a.patientId === patientId);
   },
-  saveAnthropometricRecord(record: AnthropometricRecord) {
+  saveAnthropometricRecord(record: AnthropometricRecord): Promise<boolean> {
     const list = this.getAnthropometry();
     const idx = list.findIndex((a) => a.id === record.id);
     if (idx >= 0) {
@@ -2768,10 +2771,14 @@ export const storageService = {
       list.unshift(record);
     }
     this.saveAnthropometry(list);
-    supabaseDb.saveAnthropometric(record).then((success) => {
-      safeDispatchEvent('nutriluz:cloud_synced', { type: 'anthropometry', id: record.id, success });
-    }).catch((err) => console.error('[Storage] Error syncing anthropometry to Supabase:', err));
     safeDispatchEvent('nutriluz:db_updated', { type: 'anthropometry', id: record.id });
+    return supabaseDb.saveAnthropometric(record).then((success) => {
+      safeDispatchEvent('nutriluz:cloud_synced', { type: 'anthropometry', id: record.id, success });
+      return success;
+    }).catch((err) => {
+      console.error('[Storage] Error syncing anthropometry to Supabase:', err);
+      return false;
+    });
   },
 
   getAppointmentsByPatientId(patientId: string): Appointment[] {

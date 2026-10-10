@@ -302,7 +302,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     setShowConfirmModal(true);
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     setShowConfirmModal(false);
 
     const cleanFirstName = formData.firstName.trim();
@@ -353,8 +353,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    // Save or update Patient in storage
-    storageService.savePatient(savedPatient);
+    // Save or update Patient in storage & wait for parent patient record
+    await storageService.savePatient(savedPatient);
 
     // If new patient, also create baseline anthropometric & clinical records
     if (!isEditing) {
@@ -375,7 +375,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         measurementDevice: 'InBody Clínico / Báscula de Bioimpedancia',
         notes: 'Evaluación somatométrica basal de ingreso.',
       };
-      storageService.saveAnthropometricRecord(initialAnthro);
+      await storageService.saveAnthropometricRecord(initialAnthro);
 
       const initialClinical: ClinicalRecord = {
         id: `clin-${Date.now()}`,
