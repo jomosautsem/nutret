@@ -390,7 +390,9 @@ export const NutriCopilotView: React.FC = () => {
               </div>
               <button
                 onClick={() => {
-                  setWizardPatientId(planPatientId);
+                  const targetId = planPatientId || storageService.getActiveClinicalPatientId() || selectedPatientId || patients[0]?.id || '';
+                  setSelectedPatientId(targetId);
+                  setWizardPatientId(targetId);
                   setIsWizardOpen(true);
                 }}
                 className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md flex items-center gap-2 shrink-0 cursor-pointer"

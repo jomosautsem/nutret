@@ -430,8 +430,28 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
           });
         }
       }
+
+      // Restore Quick Prescription Preset if previously selected
+      const existingPresetId =
+        (patientToEdit as any).selectedPresetId ||
+        (patientToEdit as any).presetId ||
+        (clinRec as any)?.selectedPresetId ||
+        (clinRec as any)?.presetId;
+
+      if (existingPresetId) {
+        setSelectedPresetId(existingPresetId);
+      } else {
+        const existingPlans = storageService.getPlansByPatientId(patientToEdit.id);
+        const activePlan = existingPlans && existingPlans.length > 0 ? existingPlans[0] : null;
+        if ((activePlan as any)?.selectedPresetId || (activePlan as any)?.presetId) {
+          setSelectedPresetId((activePlan as any)?.selectedPresetId || (activePlan as any)?.presetId);
+        } else {
+          setSelectedPresetId(null);
+        }
+      }
     } else {
       // Defaults for new patient
+      setSelectedPresetId(null);
       setFormData({
         firstName: '',
         lastName: '',
@@ -814,6 +834,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       portalAccessEnabled: formData.portalAccessEnabled,
       portalUsername: formData.portalUsername.trim() || formData.email.trim() || `${cleanFirstName.toLowerCase()}.${cleanLastName.toLowerCase()}`.replace(/\s+/g, ''),
       portalPassword: formData.portalPassword.trim() || 'Nutri2026!',
+      selectedPresetId: selectedPresetId || undefined,
+      presetId: selectedPresetId || undefined,
       createdAt: patientToEdit?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -882,6 +904,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       },
       clinicalGoals: savedPatient.goal,
       clinicalObservations: savedPatient.notes,
+      selectedPresetId: selectedPresetId || undefined,
+      presetId: selectedPresetId || undefined,
       isCustomized: true,
       updatedAt: new Date().toISOString(),
     };
@@ -941,6 +965,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       startDate: new Date().toISOString().slice(0, 10),
       approvedBySpecialist: true,
       generalInstructions: `Distribución de macronutrientes: ${carbsPct}% Carbohidratos (${carbsGrams}g), ${proteinPct}% Proteínas (${proteinGrams}g, ${proteinGPerKg} g/kg), ${fatPct}% Grasas (${fatGrams}g).`,
+      selectedPresetId: selectedPresetId || undefined,
+      presetId: selectedPresetId || undefined,
       days: [
         {
           id: `day-1`,
@@ -1903,28 +1929,51 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 </div>
 
                 {/* Quick Presets Pills */}
-                <div className="flex flex-wrap gap-1.5">
-                  {presets.slice(0, 6).map((preset) => {
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {(presets.filter((p) => p.isVisibleInQuickBar !== false).length > 0
+                    ? presets.filter((p) => p.isVisibleInQuickBar !== false)
+                    : presets
+                  ).map((preset) => {
                     const isSelected = selectedPresetId === preset.id;
                     return (
                       <button
                         key={preset.id}
                         type="button"
                         onClick={() => handleSelectPreset(preset)}
-                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
                           isSelected
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-400'
                             : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
                         }`}
                       >
+                        {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
                         <span>{preset.name}</span>
-                        <span className="text-[10px] opacity-80 ml-1">
+                        <span className={`text-[10px] ml-0.5 ${isSelected ? 'text-emerald-100 font-semibold' : 'opacity-80 text-slate-400'}`}>
                           ({preset.carbsPct}C / {Math.max(0, 100 - preset.carbsPct - preset.fatPct)}P / {preset.fatPct}G)
                         </span>
                       </button>
                     );
                   })}
                 </div>
+
+                {/* Selected Preset Sync Banner */}
+                {selectedPresetId && (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-200 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        Plantilla seleccionada: <strong className="font-extrabold text-emerald-950 dark:text-emerald-100">{presets.find((p) => p.id === selectedPresetId)?.name || 'Personalizada'}</strong>. Sincronizada automáticamente con NutriCopilot AI.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPresetId(null)}
+                      className="text-[10px] text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 underline font-bold cursor-pointer shrink-0 ml-2"
+                    >
+                      Deseleccionar
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Fórmulas de Gasto Energético & Meta Calórica */}

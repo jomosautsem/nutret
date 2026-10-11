@@ -99,6 +99,8 @@ export interface Patient {
   portalPassword?: string;
   portalLastLogin?: string;
   assignedRecipeIds?: string[]; // IDs de recetas asignadas específicamente al paciente
+  selectedPresetId?: string; // ID de la plantilla de prescripción rápida vinculada
+  presetId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -153,6 +155,8 @@ export interface ClinicalRecord {
   clinicalGoals?: string;
   clinicalObservations?: string;
   customFields?: Record<string, any>;
+  selectedPresetId?: string;
+  presetId?: string;
   isCustomized?: boolean;
   updatedAt: string;
 }
@@ -340,6 +344,8 @@ export interface NutritionPlan {
   hydrationInstructions?: string;
   allowedSubstitutionsPolicy?: string;
   approvedBySpecialist: boolean;
+  selectedPresetId?: string;
+  presetId?: string;
   digitalSignatureApprovedAt?: string;
   createdAt: string;
   updatedAt: string;

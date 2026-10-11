@@ -9,6 +9,7 @@ import {
   Utensils,
   Clock,
   CheckCircle2,
+  Check,
   ChevronRight,
   ChevronLeft,
   Flame,
@@ -828,10 +829,68 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
       }
     }
 
+    // 7. Synchronize Quick Prescription Preset (Plantilla de Selección Rápida 1-Clic)
+    const candidatePresetId =
+      (pat as any).selectedPresetId ||
+      (pat as any).presetId ||
+      (clin as any)?.selectedPresetId ||
+      (clin as any)?.presetId ||
+      (activePlan as any)?.selectedPresetId ||
+      (activePlan as any)?.presetId;
+
+    const allPresets = storageService.getPrescriptionPresets();
+    let matchedPreset: ClinicalPreset | undefined = undefined;
+
+    if (candidatePresetId) {
+      matchedPreset = allPresets.find((p) => p.id === candidatePresetId);
+    }
+
+    // Fallback: match by dietStyle or preset name in clinical record
+    if (!matchedPreset && clin?.dietaryHabits?.preferredDiet) {
+      matchedPreset = allPresets.find(
+        (p) =>
+          p.dietStyle.toLowerCase() === clin.dietaryHabits?.preferredDiet?.toLowerCase() ||
+          p.name.toLowerCase().includes(clin.dietaryHabits?.preferredDiet?.toLowerCase() || '')
+      );
+    }
+
+    if (matchedPreset) {
+      setActivePresetApplied(matchedPreset.id);
+
+      // If category filter is active and doesn't match, show all so doctor sees the selected preset
+      if (selectedQuickCategory !== 'all' && matchedPreset.badge && selectedQuickCategory !== matchedPreset.badge) {
+        setSelectedQuickCategory('all');
+      }
+
+      // If patient didn't already have overridden macros from a saved plan, sync preset parameters
+      if (!hasPlanData) {
+        if (matchedPreset.goal) setGoal(matchedPreset.goal);
+        if (matchedPreset.caloricAdjustmentType) {
+          setAdjustmentType(matchedPreset.caloricAdjustmentType);
+          setAdjustmentValue(matchedPreset.adjustmentValue);
+        }
+        if (matchedPreset.proteinGKg) setProteinGKg(matchedPreset.proteinGKg);
+        if (matchedPreset.proteinMode) setProteinControlMode(matchedPreset.proteinMode);
+        if (matchedPreset.fatPct) setFatPct(matchedPreset.fatPct);
+        if (matchedPreset.carbsPct) setCarbsPct(matchedPreset.carbsPct);
+        if (matchedPreset.dietStyle) setDietStyle(matchedPreset.dietStyle);
+        if (matchedPreset.mealsCount) setMealsCount(matchedPreset.mealsCount);
+        if (matchedPreset.prepStyle) setBudgetPrepStyle(matchedPreset.prepStyle);
+      }
+
+      // Merge preset clinical recommendations if not already customized
+      if (matchedPreset.recommendations && !generalRecommendations) {
+        setGeneralRecommendations(matchedPreset.recommendations);
+        setIncludeGeneralRecommendations(true);
+      }
+    } else {
+      setActivePresetApplied(null);
+    }
+
     setPatientAutoFilled(true);
     showToast(
       'Expediente Sincronizado',
-      `Datos de ${pat.firstName} ${pat.lastName} sincronizados: somatometría, ${latestLab ? 'laboratorios, ' : ''}${hasPlanData ? 'meta calórica y macros (100%), ' : ''}patologías y fármacos.`,
+      `Datos de ${pat.firstName} ${pat.lastName} sincronizados: somatometría, ${matchedPreset ? `plantilla "${matchedPreset.name}", ` : ''}${latestLab ? 'laboratorios, ' : ''}${hasPlanData ? 'meta calórica y macros (100%), ' : ''}patologías y fármacos.`,
       'success'
     );
   };
@@ -884,6 +943,18 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
     if (preset.recommendations) {
       setGeneralRecommendations(preset.recommendations);
       setIncludeGeneralRecommendations(true);
+    }
+
+    // Persist preset selection on current patient
+    if (selectedPatientId) {
+      const currentPat = storageService.getPatientById(selectedPatientId);
+      if (currentPat) {
+        storageService.savePatient({
+          ...currentPat,
+          selectedPresetId: preset.id,
+          presetId: preset.id,
+        });
+      }
     }
 
     showToast(
@@ -1213,6 +1284,8 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
       status: 'ACTIVE',
       days: wizardDays.length > 0 ? wizardDays : generateScaled7DaysPlan(targetKcal, macroGrams.proteinG, macroGrams.carbsG, macroGrams.fatG, mealsCount),
       generalInstructions: finalInstructions,
+      selectedPresetId: activePresetApplied || undefined,
+      presetId: activePresetApplied || undefined,
       approvedBySpecialist: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1220,6 +1293,18 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
 
     // Always persist to storage
     storageService.saveNutritionPlan(newPlan);
+
+    // Persist applied preset to patient record
+    if (selectedPatientId && activePresetApplied) {
+      const currentPat = storageService.getPatientById(selectedPatientId);
+      if (currentPat) {
+        storageService.savePatient({
+          ...currentPat,
+          selectedPresetId: activePresetApplied,
+          presetId: activePresetApplied,
+        });
+      }
+    }
 
     if (onApplyPlanToPlanner) {
       onApplyPlanToPlanner({
@@ -1305,8 +1390,10 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
           {patientAutoFilled && (
             <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-emerald-300">
               <span className="flex items-center gap-1.5 text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                {selectedConditions.length > 0 || medications
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                {activePresetApplied
+                  ? `Expediente vinculado: Somatometría, plantilla "${presets.find((p) => p.id === activePresetApplied)?.name || 'Seleccionada'}" y parámetros sincronizados fielmente.`
+                  : selectedConditions.length > 0 || medications
                   ? 'Expediente vinculado: Somatometría y antecedentes clínicos sincronizados fielmente.'
                   : 'Expediente vinculado: Somatometría sincronizada (sin diagnósticos patológicos ni fármacos en el historial).'}
               </span>
@@ -1354,7 +1441,7 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
         <div className="p-3.5 bg-slate-50/70 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/70 space-y-2.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <Zap className="w-3.5 h-3.5 text-amber-500" />
                 <span className="text-xs font-extrabold text-slate-900 dark:text-white">
                   Plantillas de Prescripción Rápida (1-Clic):
@@ -1362,6 +1449,12 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
                   {presets.filter((p) => p.isVisibleInQuickBar !== false).length} Activas
                 </span>
+                {activePresetApplied && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-2xs flex items-center gap-1">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                    Activa: {presets.find((p) => p.id === activePresetApplied)?.name || 'Personalizada'}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-500">
                 Aplica macros, fórmulas y objetivos clínicos instantáneamente.
@@ -1444,13 +1537,16 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
           {/* Cards Grid */}
           {(() => {
             const visibleList = presets
-              .filter((p) => p.isVisibleInQuickBar !== false)
+              .filter((p) => p.isVisibleInQuickBar !== false || p.id === activePresetApplied)
               .filter((p) => {
+                if (p.id === activePresetApplied) return true;
                 if (selectedQuickCategory === 'favorites') return Boolean(p.isFavorite);
                 if (selectedQuickCategory !== 'all') return p.badge === selectedQuickCategory;
                 return true;
               })
               .sort((a, b) => {
+                if (a.id === activePresetApplied) return -1;
+                if (b.id === activePresetApplied) return 1;
                 if (a.isFavorite && !b.isFavorite) return -1;
                 if (!a.isFavorite && b.isFavorite) return 1;
                 return a.name.localeCompare(b.name);
@@ -1494,13 +1590,19 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
                       onClick={() => handleApplyPreset(preset)}
                       className={`p-2.5 rounded-2xl border text-left transition-all relative group cursor-pointer ${
                         isApplied
-                          ? 'border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-100 shadow-sm ring-1 ring-emerald-500'
+                          ? 'border-emerald-500 bg-emerald-50/95 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-100 shadow-md ring-2 ring-emerald-500'
                           : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-emerald-400 hover:shadow-2xs'
                       }`}
                     >
                       {/* Top Row: Badge, Caloric adjustment, Star, Context Menu */}
                       <div className="flex items-start justify-between gap-1.5 mb-1.5">
                         <div className="flex items-center gap-1 flex-wrap">
+                          {isApplied && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-600 text-white font-extrabold text-[9px] flex items-center gap-0.5 shadow-2xs">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                              Seleccionada
+                            </span>
+                          )}
                           <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 font-bold text-[10px] text-slate-700 dark:text-slate-200">
                             {preset.badge}
                           </span>
