@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Activity,
@@ -82,12 +82,17 @@ import {
  */
 function cleanLegacyMockClinicalRecord(rec: ClinicalRecord | undefined): ClinicalRecord | undefined {
   if (!rec) return undefined;
+  // If the record was customized or edited by the user, never wipe out their inputs!
+  if (rec.isCustomized) return rec;
+
   let changed = false;
   const isMockRecall = !!(rec.recall24h && rec.recall24h.includes('Café con leche y pan tostado'));
   const isAutoStubNotes =
     rec.familyHistory?.notes === 'Sin antecedentes graves reportados.' ||
     rec.familyHistory?.notes === 'Sin antecedentes patológicos familiares graves.';
+  // Only strip dummy placeholder habits if this is the unedited mock template
   const isAutoStubHabits =
+    isMockRecall &&
     rec.lifestyleHabits?.sleepHours === 7 &&
     rec.lifestyleHabits?.waterDailyLiters === 2.0 &&
     rec.lifestyleHabits?.alcohol === 'Ocasional' &&
@@ -117,7 +122,7 @@ function cleanLegacyMockClinicalRecord(rec: ClinicalRecord | undefined): Clinica
 
   if (changed) {
     try {
-      storageService.saveClinicalRecord(cleaned);
+      storageService.saveClinicalRecordSilent(cleaned);
     } catch {
       // ignore
     }
@@ -259,7 +264,9 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         setPlans(storageService.getPlansByPatientId(patientId));
         setAnthroRecords(storageService.getAnthropometricsByPatientId(patientId));
         setAppointments(storageService.getAppointmentsByPatientId(patientId));
-        setClinicalRecord(cleanLegacyMockClinicalRecord(storageService.getClinicalRecordByPatientId(patientId)));
+        if (!isEditingClinicalRef.current) {
+          setClinicalRecord(cleanLegacyMockClinicalRecord(storageService.getClinicalRecordByPatientId(patientId)));
+        }
         setLabRecords(storageService.getLabRecordsByPatientId(patientId));
         setRoutines(storageService.getExerciseRoutinesByPatientId(patientId));
         setSupplements(storageService.getSupplementsByPatientId(patientId));
@@ -300,7 +307,12 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
 
   // Clinical record edit state
   const [isEditingClinical, setIsEditingClinical] = useState(false);
+  const isEditingClinicalRef = useRef(false);
   const [showConfirmClinical, setShowConfirmClinical] = useState(false);
+
+  useEffect(() => {
+    isEditingClinicalRef.current = isEditingClinical;
+  }, [isEditingClinical]);
 
   // Modal para asignación personalizada de recetas (Opción B)
   const [isAssignRecipesModalOpen, setIsAssignRecipesModalOpen] = useState(false);
@@ -323,45 +335,65 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     notes: '',
   });
 
+  const populateClinicalForm = (rec: ClinicalRecord | undefined, pat: Patient | undefined) => {
+    const isMockRecall = !rec?.isCustomized && !!(rec?.recall24h && rec.recall24h.includes('Café con leche y pan tostado'));
+    const isAutoStubNotes = !rec?.isCustomized && (
+      rec?.familyHistory?.notes === 'Sin antecedentes graves reportados.' ||
+      rec?.familyHistory?.notes === 'Sin antecedentes patológicos familiares graves.'
+    );
+    setClinicalForm({
+      diabetes: !!rec?.familyHistory?.diabetes,
+      hypertension: !!rec?.familyHistory?.hypertension,
+      cancer: !!rec?.familyHistory?.cancer,
+      familyNotes: isAutoStubNotes ? '' : (rec?.familyHistory?.notes || ''),
+      allergies: Array.isArray(rec?.allergies)
+        ? rec!.allergies.join(', ')
+        : typeof (pat as any)?.allergies === 'string'
+        ? (pat as any).allergies
+        : '',
+      pathologies: Array.isArray(rec?.pathologicalHistory?.diagnosedDiseases)
+        ? rec!.pathologicalHistory.diagnosedDiseases.join(', ')
+        : typeof (pat as any)?.pathologies === 'string'
+        ? (pat as any).pathologies
+        : '',
+      sleepHours: rec?.lifestyleHabits?.sleepHours ?? '',
+      sleepQuality: rec?.lifestyleHabits?.sleepQuality || '',
+      waterDailyLiters: rec?.lifestyleHabits?.waterDailyLiters ?? '',
+      alcohol: (rec?.lifestyleHabits?.alcohol === 'Ocasional' && !rec?.lifestyleHabits?.sleepHours) ? '' : (rec?.lifestyleHabits?.alcohol || ''),
+      physicalActivityLevel: rec?.physicalActivity?.activityLevel || '',
+      physicalActivityDays: rec?.physicalActivity?.frequencyDaysPerWeek ?? '',
+      recall24h: isMockRecall ? '' : (rec?.recall24h || ''),
+      notes: rec?.clinicalObservations || pat?.notes || '',
+    });
+  };
+
   useEffect(() => {
+    // CRITICAL: Do NOT overwrite clinical form if the user is currently editing!
+    if (isEditingClinicalRef.current || isEditingClinical) return;
     if (clinicalRecord || patient) {
-      const isMockRecall = !!(clinicalRecord?.recall24h && clinicalRecord.recall24h.includes('Café con leche y pan tostado'));
-      const isAutoStubNotes =
-        clinicalRecord?.familyHistory?.notes === 'Sin antecedentes graves reportados.' ||
-        clinicalRecord?.familyHistory?.notes === 'Sin antecedentes patológicos familiares graves.';
-      setClinicalForm({
-        diabetes: !!clinicalRecord?.familyHistory?.diabetes,
-        hypertension: !!clinicalRecord?.familyHistory?.hypertension,
-        cancer: !!clinicalRecord?.familyHistory?.cancer,
-        familyNotes: isAutoStubNotes ? '' : (clinicalRecord?.familyHistory?.notes || ''),
-        allergies: Array.isArray(clinicalRecord?.allergies)
-          ? clinicalRecord!.allergies.join(', ')
-          : typeof (patient as any)?.allergies === 'string'
-          ? (patient as any).allergies
-          : '',
-        pathologies: Array.isArray(clinicalRecord?.pathologicalHistory?.diagnosedDiseases)
-          ? clinicalRecord!.pathologicalHistory.diagnosedDiseases.join(', ')
-          : typeof (patient as any)?.pathologies === 'string'
-          ? (patient as any).pathologies
-          : '',
-        sleepHours: clinicalRecord?.lifestyleHabits?.sleepHours ?? '',
-        sleepQuality: clinicalRecord?.lifestyleHabits?.sleepQuality || '',
-        waterDailyLiters: clinicalRecord?.lifestyleHabits?.waterDailyLiters ?? '',
-        alcohol: (clinicalRecord?.lifestyleHabits?.alcohol === 'Ocasional' && !clinicalRecord?.lifestyleHabits?.sleepHours) ? '' : (clinicalRecord?.lifestyleHabits?.alcohol || ''),
-        physicalActivityLevel: clinicalRecord?.physicalActivity?.activityLevel || '',
-        physicalActivityDays: clinicalRecord?.physicalActivity?.frequencyDaysPerWeek ?? '',
-        recall24h: isMockRecall ? '' : (clinicalRecord?.recall24h || ''),
-        notes: clinicalRecord?.clinicalObservations || patient?.notes || '',
-      });
+      populateClinicalForm(clinicalRecord, patient);
     }
-  }, [clinicalRecord, patient]);
+  }, [clinicalRecord, patient, isEditingClinical]);
+
+  const handleStartEditClinical = () => {
+    const currentClin = clinicalRecord || storageService.getClinicalRecordByPatientId(patientId);
+    populateClinicalForm(currentClin, patient);
+    isEditingClinicalRef.current = true;
+    setIsEditingClinical(true);
+  };
+
+  const handleCancelEditClinical = () => {
+    isEditingClinicalRef.current = false;
+    setIsEditingClinical(false);
+    populateClinicalForm(clinicalRecord, patient);
+  };
 
   const handleOpenConfirmClinical = (e?: React.FormEvent) => {
     if (e && e.preventDefault) e.preventDefault();
     setShowConfirmClinical(true);
   };
 
-  const handleConfirmSaveClinicalRecord = () => {
+  const handleConfirmSaveClinicalRecord = async () => {
     setShowConfirmClinical(false);
     if (!patient) return;
 
@@ -432,22 +464,35 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
       recall24h: clinicalForm.recall24h.trim(),
       clinicalGoals: patient.goal,
       clinicalObservations: clinicalForm.notes.trim(),
+      isCustomized: true,
       updatedAt: new Date().toISOString(),
     };
 
-    storageService.saveClinicalRecord(updatedRecord);
+    isEditingClinicalRef.current = false;
+    setIsEditingClinical(false);
+
     setClinicalRecord(updatedRecord);
+    try {
+      await storageService.saveClinicalRecord(updatedRecord);
+    } catch (err) {
+      console.warn('[Clinical] Error saving record to cloud:', err);
+    }
 
     // Update patient record
     const updatedPat: Patient = {
       ...patient,
-      notes: clinicalForm.notes || patient.notes,
+      allergies: allergiesArr.join(', '),
+      pathologies: pathologiesArr.join(', '),
+      notes: clinicalForm.notes !== undefined ? clinicalForm.notes : (patient.notes || ''),
       updatedAt: new Date().toISOString(),
     };
-    storageService.savePatient(updatedPat);
     setPatient(updatedPat);
+    try {
+      await storageService.savePatient(updatedPat);
+    } catch (err) {
+      console.warn('[Clinical] Error saving patient to cloud:', err);
+    }
 
-    setIsEditingClinical(false);
     showToast('Expediente actualizado', 'Los cambios en la historia clínica y anamnesis han sido guardados con éxito en la base de datos.', 'success');
   };
 
@@ -1447,7 +1492,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                   <>
                     <button
                       id="cancel-edit-clinical-btn"
-                      onClick={() => setIsEditingClinical(false)}
+                      onClick={handleCancelEditClinical}
                       className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                     >
                       Cancelar
@@ -1464,7 +1509,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                 ) : (
                   <button
                     id="edit-clinical-record-btn"
-                    onClick={() => setIsEditingClinical(true)}
+                    onClick={handleStartEditClinical}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                   >
                     <span>Editar Expediente</span>

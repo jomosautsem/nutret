@@ -2813,8 +2813,13 @@ export const storageService = {
   getClinicalRecordByPatientId(patientId: string): ClinicalRecord | undefined {
     const rec = this.getClinicalRecords().find((c) => c.patientId === patientId);
     if (!rec) return undefined;
+    // If the record was explicitly saved/customized by a nutritionist, never wipe out their inputs!
+    if (rec.isCustomized) return rec;
+
     const isMockRecall = !!(rec.recall24h && rec.recall24h.includes('Café con leche y pan tostado'));
+    // Only strip dummy placeholder habits if this is the unedited mock template
     const isAutoStubHabits =
+      isMockRecall &&
       rec.lifestyleHabits?.sleepHours === 7 &&
       rec.lifestyleHabits?.waterDailyLiters === 2.0 &&
       rec.lifestyleHabits?.alcohol === 'Ocasional' &&
@@ -2842,7 +2847,19 @@ export const storageService = {
     }
     return rec;
   },
-  saveClinicalRecord(rec: ClinicalRecord) {
+
+  saveClinicalRecordSilent(rec: ClinicalRecord) {
+    const list = this.getClinicalRecords();
+    const idx = list.findIndex((c) => c.id === rec.id);
+    if (idx >= 0) {
+      list[idx] = rec;
+    } else {
+      list.unshift(rec);
+    }
+    this.saveClinicalRecords(list);
+  },
+
+  saveClinicalRecord(rec: ClinicalRecord): Promise<boolean> {
     const list = this.getClinicalRecords();
     const idx = list.findIndex((c) => c.id === rec.id);
     if (idx >= 0) {
@@ -2856,7 +2873,15 @@ export const storageService = {
     if (pat) {
       supabaseDb.savePatient(pat).catch(() => {});
     }
-    safeDispatchEvent('nutriluz:db_updated', { type: 'clinical_record', id: rec.id });
+    return supabaseDb.saveClinicalRecord(rec).then((success) => {
+      safeDispatchEvent('nutriluz:cloud_synced', { type: 'clinical_record', id: rec.id, success });
+      safeDispatchEvent('nutriluz:db_updated', { type: 'clinical_record', id: rec.id });
+      return success;
+    }).catch((err) => {
+      console.warn('[Storage] Error syncing clinical record to Supabase:', err);
+      safeDispatchEvent('nutriluz:db_updated', { type: 'clinical_record', id: rec.id });
+      return false;
+    });
   },
 
   getLabRecordsByPatientId(patientId: string): LaboratoryResult[] {

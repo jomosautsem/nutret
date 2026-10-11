@@ -1,0 +1,3281 @@
+{
+  "lastSync": "2026-10-11T14:52:18.813Z",
+  "collections": {
+    "ORGANIZATION": {
+      "id": "org-nutriluz-mexico",
+      "name": "Nutri Luz Elena",
+      "slug": "nutri-luz-elena",
+      "primaryColor": "#059669",
+      "secondaryColor": "#047857",
+      "currency": "MXN",
+      "country": "México",
+      "phone": "7773846122",
+      "whatsapp": "+52 55 4162 8900",
+      "email": "contacto@nutriluz.mx",
+      "address": "Temixco, Morelos",
+      "taxId": "NLZ240101XYZ",
+      "website": "https://nutriluz.mx",
+      "logoUrl": "https://qbhsmptpepxuuknwygdo.supabase.co/storage/v1/object/public/clinic-assets/logos/clinic_logo_1791503381084_ChatGPT_Image_7_oct_2026__01_44_24_p.m._opt.png",
+      "watermarkOpacity": 0.12
+    },
+    "BRANCHES": [
+      {
+        "id": "branch-cdmx-sur",
+        "organizationId": "org-nutriluz-mexico",
+        "name": "Sucursal CDMX Sur (Insurgentes)",
+        "code": "CDMX-SUR",
+        "phone": "+52 55 4162 8900",
+        "whatsapp": "+52 55 4162 8900",
+        "address": "Av. Insurgentes Sur 1602, CDMX",
+        "isActive": true
+      },
+      {
+        "id": "branch-gdl-prov",
+        "organizationId": "org-nutriluz-mexico",
+        "name": "Sucursal Guadalajara (Providencia)",
+        "code": "GDL-PROV",
+        "phone": "+52 33 3615 2200",
+        "whatsapp": "+52 33 3615 2200",
+        "address": "Av. Providencia 2450, Guadalajara, JAL",
+        "isActive": true
+      }
+    ],
+    "SPECIALISTS": [
+      {
+        "id": "user-dra-valeria",
+        "organizationId": "org-nutriluz-mexico",
+        "branchId": "branch-cdmx-sur",
+        "role": "NUTRIOLOGO",
+        "email": "luzelenaalcocer14@gmail.com",
+        "firstName": "Luz Elena",
+        "lastName": "Alcocer",
+        "professionalTitle": "Nutrióloga Clínica",
+        "licenseNumber": "15573967",
+        "specialties": [
+          "Nutrición Clínica"
+        ],
+        "avatarUrl": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop&q=80",
+        "phone": "+52 55 9876 5432",
+        "whatsapp": "+52 55 9876 5432",
+        "bio": "Especialista en nutrición personalizada basada en evidencia científica, recomposición corporal y control de resistencia a la insulina con más de 8 años de experiencia clínica.",
+        "publicProfileEnabled": true,
+        "publicSlug": "luz-elena-alcocer",
+        "isActive": true
+      },
+      {
+        "id": "user-dr-carlos",
+        "organizationId": "org-nutriluz-mexico",
+        "branchId": "branch-gdl-prov",
+        "role": "NUTRIOLOGO",
+        "email": "dr.carlos@nutriluz.mx",
+        "firstName": "Carlos",
+        "lastName": "Mendoza Ruiz",
+        "professionalTitle": "Mtro. en Nutrición Deportiva y Alto Rendimiento",
+        "licenseNumber": "12493019 / SSA 9410",
+        "specialties": [
+          "Nutrición Deportiva",
+          "Hipertrofia",
+          "Atletas de Resistencia"
+        ],
+        "avatarUrl": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&auto=format&fit=crop&q=80",
+        "phone": "+52 33 3615 2201",
+        "whatsapp": "+52 33 3615 2201",
+        "bio": "Maestría en ciencias del deporte, enfocado en optimización de rendimiento atlético, pérdida de grasa acelerada manteniendo masa muscular magra.",
+        "publicProfileEnabled": true,
+        "publicSlug": "carlos-mendoza",
+        "isActive": true
+      }
+    ],
+    "CURRENT_USER": {
+      "id": "user-dra-valeria",
+      "organizationId": "org-nutriluz-mexico",
+      "branchId": "branch-cdmx-sur",
+      "role": "ADMIN",
+      "email": "luzelenaalcocer14@gmail.com",
+      "firstName": "Luz",
+      "lastName": "Elena Alcocer",
+      "professionalTitle": "Nutrióloga Clínica",
+      "licenseNumber": "15573967",
+      "specialties": [
+        "Nutrición Clínica"
+      ],
+      "avatarUrl": "https://images.unsplash.com/photo-1594824813686-639a0397500e?w=300&auto=format&fit=crop&q=80",
+      "phone": "+52 55 9876 5432",
+      "whatsapp": "+52 55 9876 5432",
+      "bio": "Especialista en nutrición personalizada basada en evidencia científica, recomposición corporal y control de resistencia a la insulina con más de 8 años de experiencia clínica.",
+      "publicProfileEnabled": true,
+      "publicSlug": "luz-elena-alcocer",
+      "isActive": true
+    },
+    "PATIENTS": [
+      {
+        "id": "pat-1791657060261",
+        "organizationId": "org-nutriluz-mexico",
+        "branchId": "branch-cdmx-sur",
+        "specialistId": "user-dra-valeria",
+        "firstName": "tercer",
+        "lastName": "prueba",
+        "email": "tercer.0261@correo.com",
+        "phone": "+52 55 1234 5678",
+        "whatsapp": "+52 55 1234 5678",
+        "gender": "F",
+        "birthDate": "1995-05-12",
+        "occupation": "Profesionista",
+        "address": "CDMX, México",
+        "height": 165,
+        "initialWeight": 72,
+        "currentWeight": 72,
+        "targetWeight": 62,
+        "goal": "Aumento de Masa Muscular (Hipertrofia)",
+        "status": "Activo",
+        "riskLevel": "NORMAL",
+        "adherenceRate": 90,
+        "notes": "Expediente clínico registrado.",
+        "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+        "portalAccessEnabled": true,
+        "portalUsername": "tercer.prueba",
+        "portalPassword": "Nutri2026!",
+        "createdAt": "2026-10-10T18:31:00.261+00:00",
+        "updatedAt": "2026-10-11T13:04:40.485+00:00",
+        "assignedRecipeIds": [
+          "rec-3"
+        ],
+        "portalLastLogin": null,
+        "allergies": "leche",
+        "pathologies": "ninguna"
+      },
+      {
+        "id": "pat-1791652993560",
+        "organizationId": "org-nutriluz-mexico",
+        "branchId": "branch-cdmx-sur",
+        "specialistId": "user-dra-valeria",
+        "firstName": "luz elena",
+        "lastName": "alcocer muñoz",
+        "email": "luzelenaalcocer14@gmail.com",
+        "phone": "7773846122",
+        "whatsapp": "7773846122",
+        "birthDate": "2001-01-14",
+        "gender": "F",
+        "occupation": "nutriologa",
+        "address": "temixco, mor.",
+        "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+        "goal": "Pérdida de Grasa y Recomposición",
+        "status": "Activo",
+        "riskLevel": "NORMAL",
+        "adherenceRate": 90,
+        "initialWeight": 52,
+        "currentWeight": 52,
+        "targetWeight": 60,
+        "height": 162,
+        "notes": "1 tza de cafe con leche y un pan\n3 enchiladas rellenas de jamon y queso acompañadas con agua natural\n1 plato pequeño de sopa azteca, con queso, un vaso de agua de tamarindo\n2 tostadas de surimi",
+        "assignedRecipeIds": [
+          "rec-1"
+        ],
+        "portalAccessEnabled": true,
+        "portalUsername": "luzelenaalcocer14@gmail.com",
+        "portalPassword": "Nutri2026!",
+        "portalLastLogin": "2026-10-10T23:34:33.319Z",
+        "createdAt": "2026-10-10T17:23:13.56+00:00",
+        "updatedAt": "2026-10-10T23:33:52.205+00:00",
+        "allergies": "",
+        "pathologies": ""
+      },
+      {
+        "id": "pat-1791647847175",
+        "organizationId": "org-nutriluz-mexico",
+        "branchId": "branch-cdmx-sur",
+        "specialistId": "user-dra-valeria",
+        "firstName": "jose",
+        "lastName": "perez",
+        "email": "jose@gmail.com",
+        "phone": "55555555",
+        "whatsapp": "555555555",
+        "birthDate": "1995-05-12",
+        "gender": "M",
+        "occupation": "instructor de boxeo",
+        "address": "CDMX, México",
+        "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+        "goal": "Pérdida de Grasa y Recomposición",
+        "status": "Activo",
+        "riskLevel": "NORMAL",
+        "adherenceRate": 90,
+        "initialWeight": 72,
+        "currentWeight": 72,
+        "targetWeight": 62,
+        "height": 170,
+        "notes": "Expediente clínico registrado.",
+        "assignedRecipeIds": [],
+        "portalAccessEnabled": true,
+        "portalUsername": "jose@gmail.com",
+        "portalPassword": "Nutri2026!",
+        "portalLastLogin": null,
+        "createdAt": "2026-10-10T15:57:27.175+00:00",
+        "updatedAt": "2026-10-11T14:07:58.175+00:00",
+        "allergies": "",
+        "pathologies": ""
+      }
+    ],
+    "DELETED_PATIENT_IDS": [
+      "pat-1787408465165",
+      "pat-gabriel-l",
+      "pat-pablo-c",
+      "pat-javier-o",
+      "pat-claudia-h",
+      "pat-diego-s",
+      "pat-roberto-m",
+      "pat-1791217781887",
+      "pat-1791403898691",
+      "pat-1787104364602",
+      "pat-1791261331895",
+      "test-dummy-delete-123",
+      "pat-1791416154847",
+      "pat-1791220451418",
+      "pat-valeria-s",
+      "pat-ana-sofia",
+      "pat-fernanda-p",
+      "pat-mariana-t",
+      "pat-1791591909849",
+      "pat-1791654296153",
+      "pat-1791654348947",
+      "pat-1791656217568",
+      "pat-1791656310169"
+    ],
+    "CLINICAL_RECORDS": [
+      {
+        "id": "cr-pat-1791647847175",
+        "patientId": "pat-1791647847175",
+        "isCustomized": true,
+        "clinicalGoals": "Test goal",
+        "updatedAt": "2026-10-11T13:15:05.639Z"
+      },
+      {
+        "id": "clin-1791657061399",
+        "patientId": "pat-1791657060261",
+        "specialistId": "user-dra-valeria",
+        "familyHistory": {
+          "diabetes": false,
+          "hypertension": false,
+          "cancer": false,
+          "cardiovascular": false,
+          "thyroid": false,
+          "notes": "abuela"
+        },
+        "pathologicalHistory": {
+          "diagnosedDiseases": [
+            "ninguna"
+          ],
+          "surgeries": []
+        },
+        "allergies": [
+          "leche"
+        ],
+        "medications": [],
+        "lifestyleHabits": {
+          "sleepHours": 7,
+          "sleepQuality": "buena",
+          "smoking": false,
+          "alcohol": "ocacional",
+          "stressLevel": "Normal",
+          "waterDailyLiters": 3.1
+        },
+        "physicalActivity": {
+          "activityLevel": "Ligera",
+          "exerciseType": "General",
+          "frequencyDaysPerWeek": 2,
+          "durationMinutes": 30
+        },
+        "recall24h": "tragar saludable",
+        "clinicalGoals": "Aumento de Masa Muscular (Hipertrofia)",
+        "clinicalObservations": "Expediente clínico registrado.",
+        "isCustomized": true,
+        "updatedAt": "2026-10-11T13:04:39.147Z"
+      },
+      {
+        "id": "clin-1791654348948",
+        "patientId": "pat-1791654348947",
+        "specialistId": "user-dra-valeria",
+        "familyHistory": {
+          "diabetes": false,
+          "hypertension": false,
+          "cancer": false,
+          "cardiovascular": false,
+          "thyroid": false,
+          "notes": "Sin antecedentes graves reportados."
+        },
+        "pathologicalHistory": {
+          "diagnosedDiseases": [],
+          "surgeries": []
+        },
+        "allergies": [],
+        "medications": [],
+        "lifestyleHabits": {
+          "sleepHours": 7,
+          "sleepQuality": "Buena",
+          "smoking": false,
+          "alcohol": "Ocasional",
+          "stressLevel": "Moderado",
+          "waterDailyLiters": 2
+        },
+        "physicalActivity": {
+          "activityLevel": "Moderada",
+          "exerciseType": "Fuerza y acondicionamiento",
+          "frequencyDaysPerWeek": 3,
+          "durationMinutes": 45
+        },
+        "dietaryHabits": {
+          "mealsPerDay": 3,
+          "preferredFoods": [],
+          "dislikedFoods": [],
+          "eatingOutFrequency": "Fines de semana",
+          "bingeEating": false
+        },
+        "clinicalGoals": "Pérdida de Grasa y Recomposición",
+        "clinicalObservations": "Expediente clínico registrado.",
+        "updatedAt": "2026-10-10T17:45:48.948Z"
+      },
+      {
+        "id": "clin-1791654296154",
+        "patientId": "pat-1791654296153",
+        "specialistId": "user-dra-valeria",
+        "familyHistory": {
+          "diabetes": false,
+          "hypertension": false,
+          "cancer": false,
+          "cardiovascular": false,
+          "thyroid": false,
+          "notes": "Sin antecedentes graves reportados."
+        },
+        "pathologicalHistory": {
+          "diagnosedDiseases": [],
+          "surgeries": []
+        },
+        "allergies": [],
+        "medications": [],
+        "lifestyleHabits": {
+          "sleepHours": 7,
+          "sleepQuality": "Buena",
+          "smoking": false,
+          "alcohol": "Ocasional",
+          "stressLevel": "Moderado",
+          "waterDailyLiters": 2
+        },
+        "physicalActivity": {
+          "activityLevel": "Moderada",
+          "exerciseType": "Fuerza y acondicionamiento",
+          "frequencyDaysPerWeek": 3,
+          "durationMinutes": 45
+        },
+        "dietaryHabits": {
+          "mealsPerDay": 3,
+          "preferredFoods": [],
+          "dislikedFoods": [],
+          "eatingOutFrequency": "Fines de semana",
+          "bingeEating": false
+        },
+        "clinicalGoals": "Pérdida de Grasa y Recomposición Corporal",
+        "clinicalObservations": "Expediente clínico registrado.",
+        "updatedAt": "2026-10-10T17:44:56.154Z"
+      },
+      {
+        "id": "clin-1791653414097",
+        "patientId": "pat-1791652993560",
+        "specialistId": "user-dra-valeria",
+        "familyHistory": {
+          "diabetes": false,
+          "hypertension": false,
+          "cancer": false,
+          "cardiovascular": false,
+          "thyroid": false,
+          "notes": "Sin antecedentes graves reportados."
+        },
+        "pathologicalHistory": {
+          "diagnosedDiseases": [],
+          "surgeries": []
+        },
+        "allergies": [],
+        "medications": [],
+        "lifestyleHabits": {
+          "sleepHours": 7,
+          "sleepQuality": "Buena",
+          "smoking": false,
+          "alcohol": "Ocasional",
+          "stressLevel": "Moderado",
+          "waterDailyLiters": 2
+        },
+        "physicalActivity": {
+          "activityLevel": "Moderada",
+          "exerciseType": "Acondicionamiento y fuerza",
+          "frequencyDaysPerWeek": 3,
+          "durationMinutes": 45
+        },
+        "dietaryHabits": {
+          "mealsPerDay": 3,
+          "preferredFoods": [],
+          "dislikedFoods": [],
+          "eatingOutFrequency": "Fines de semana",
+          "bingeEating": false
+        },
+        "recall24h": "Desayuno habitual: Café con leche y pan tostado con huevo o aguacate. Comida: Proteína magra con guarnición de verduras y arroz o tortilla. Cena: Porción ligera con infusión o té.",
+        "clinicalGoals": "Pérdida de Grasa y Recomposición",
+        "clinicalObservations": "1 tza de cafe con leche y un pan\n3 enchiladas rellenas de jamon y queso acompañadas con agua natural\n1 plato pequeño de sopa azteca, con queso, un vaso de agua de tamarindo\n2 tostadas de surimi",
+        "updatedAt": "2026-10-10T17:41:05.902Z"
+      }
+    ],
+    "ANTHROPOMETRY": [
+      {
+        "id": "anthro-1791657061089",
+        "patientId": "pat-1791657060261",
+        "date": "2026-10-10",
+        "weight": 72,
+        "height": 165,
+        "bmi": 26.4,
+        "bodyFatPercentage": 22,
+        "muscleMassKg": 45,
+        "fatMassKg": 15,
+        "visceralFatLevel": 4,
+        "waistCircumference": 75,
+        "hipCircumference": 95,
+        "waistHipRatio": 0.79,
+        "measurementDevice": "InBody / Bioimpedancia",
+        "notes": "Evaluación somatométrica basal de ingreso."
+      },
+      {
+        "id": "anthro-1791653804078",
+        "patientId": "pat-1791652993560",
+        "date": "2026-10-10",
+        "weight": 52,
+        "height": 162,
+        "bmi": 19.8,
+        "bodyFatPercentage": 24.5,
+        "muscleMassKg": 26.2,
+        "fatMassKg": 12.7,
+        "visceralFatLevel": 4,
+        "waistCircumference": 76,
+        "hipCircumference": 98,
+        "waistHipRatio": 0.78,
+        "measurementDevice": "InBody / Bioimpedancia",
+        "notes": "Medición de control evolutivo"
+      },
+      {
+        "id": "anthro-1791727678174",
+        "patientId": "pat-1791647847175",
+        "date": "2026-10-11",
+        "weight": 72,
+        "height": 170,
+        "bmi": 24.9,
+        "bodyFatPercentage": 24.5,
+        "muscleMassKg": 26.2,
+        "fatMassKg": 17.6,
+        "visceralFatLevel": 4,
+        "waistCircumference": 76,
+        "hipCircumference": 98,
+        "waistHipRatio": 0.78,
+        "measurementDevice": "InBody / Bioimpedancia",
+        "notes": "Medición de control evolutivo"
+      }
+    ],
+    "LABS": [],
+    "EQUIVALENT_GROUPS": [
+      {
+        "id": "eq-verduras",
+        "name": "Verduras",
+        "code": "VERDURAS",
+        "colorHex": "#10B981",
+        "avgEnergyKcal": 25,
+        "avgProteinG": 2,
+        "avgCarbsG": 4,
+        "avgFatG": 0,
+        "description": "Espinacas, jitomate, nopales, brócoli, lechuga."
+      },
+      {
+        "id": "eq-frutas",
+        "name": "Frutas",
+        "code": "FRUTAS",
+        "colorHex": "#F59E0B",
+        "avgEnergyKcal": 60,
+        "avgProteinG": 0,
+        "avgCarbsG": 15,
+        "avgFatG": 0,
+        "description": "Manzana, plátano, fresas, papaya, moras."
+      },
+      {
+        "id": "eq-cereales-sg",
+        "name": "Cereales sin grasa",
+        "code": "CEREALES_SG",
+        "colorHex": "#EAB308",
+        "avgEnergyKcal": 70,
+        "avgProteinG": 2,
+        "avgCarbsG": 15,
+        "avgFatG": 0,
+        "description": "Avena, tortilla de maíz, arroz integral, pasta, tostadas horneadas."
+      },
+      {
+        "id": "eq-cereales-cg",
+        "name": "Cereales con grasa",
+        "code": "CEREALES_CG",
+        "colorHex": "#D97706",
+        "avgEnergyKcal": 115,
+        "avgProteinG": 2,
+        "avgCarbsG": 15,
+        "avgFatG": 5,
+        "description": "Galletas de avena con chispas, pan dulce, tamal."
+      },
+      {
+        "id": "eq-leguminosas",
+        "name": "Leguminosas",
+        "code": "LEGUMINOSAS",
+        "colorHex": "#84CC16",
+        "avgEnergyKcal": 120,
+        "avgProteinG": 8,
+        "avgCarbsG": 20,
+        "avgFatG": 1,
+        "description": "Frijoles cocidos, lentejas, garbanzos, habas."
+      },
+      {
+        "id": "eq-aoa-mba",
+        "name": "AOA Muy Bajo Aporte",
+        "code": "AOA_MBA",
+        "colorHex": "#EF4444",
+        "avgEnergyKcal": 40,
+        "avgProteinG": 7,
+        "avgCarbsG": 0,
+        "avgFatG": 1,
+        "description": "Claras de huevo, pechuga de pavo, atún en agua."
+      },
+      {
+        "id": "eq-aoa-ba",
+        "name": "AOA Bajo Aporte",
+        "code": "AOA_BA",
+        "colorHex": "#F87171",
+        "avgEnergyKcal": 55,
+        "avgProteinG": 7,
+        "avgCarbsG": 0,
+        "avgFatG": 3,
+        "description": "Pechuga de pollo sin piel, filete de tilapia, queso panela."
+      },
+      {
+        "id": "eq-aoa-ma",
+        "name": "AOA Moderado Aporte",
+        "code": "AOA_MA",
+        "colorHex": "#DC2626",
+        "avgEnergyKcal": 75,
+        "avgProteinG": 7,
+        "avgCarbsG": 0,
+        "avgFatG": 5,
+        "description": "Huevo entero, carne de res bistec magro, queso Oaxaca."
+      },
+      {
+        "id": "eq-aoa-aa",
+        "name": "AOA Alto Aporte",
+        "code": "AOA_AA",
+        "colorHex": "#B91C1C",
+        "avgEnergyKcal": 100,
+        "avgProteinG": 7,
+        "avgCarbsG": 0,
+        "avgFatG": 8,
+        "description": "Queso manchego, carne de cerdo, salchicha de pavo."
+      },
+      {
+        "id": "eq-leche-desc",
+        "name": "Leche descremada",
+        "code": "LECHE_DESC",
+        "colorHex": "#3B82F6",
+        "avgEnergyKcal": 95,
+        "avgProteinG": 9,
+        "avgCarbsG": 12,
+        "avgFatG": 2,
+        "description": "Leche descremada, yogur griego sin azúcar."
+      },
+      {
+        "id": "eq-leche-ent",
+        "name": "Leche entera",
+        "code": "LECHE_ENT",
+        "colorHex": "#1D4ED8",
+        "avgEnergyKcal": 150,
+        "avgProteinG": 9,
+        "avgCarbsG": 12,
+        "avgFatG": 8,
+        "description": "Leche entera pasteurizada, yogur natural entero."
+      },
+      {
+        "id": "eq-grasas-sp",
+        "name": "Grasas sin proteína",
+        "code": "GRASAS_SP",
+        "colorHex": "#8B5CF6",
+        "avgEnergyKcal": 45,
+        "avgProteinG": 0,
+        "avgCarbsG": 0,
+        "avgFatG": 5,
+        "description": "Aceite de oliva extra virgen, aguacate Hass, aceite de aguacate."
+      },
+      {
+        "id": "eq-grasas-cp",
+        "name": "Grasas con proteína",
+        "code": "GRASAS_CP",
+        "colorHex": "#6D28D9",
+        "avgEnergyKcal": 70,
+        "avgProteinG": 3,
+        "avgCarbsG": 3,
+        "avgFatG": 5,
+        "description": "Almendras, nuez pecana, semillas de chía, cacahuates tostados."
+      },
+      {
+        "id": "eq-azucares-sg",
+        "name": "Azúcares sin grasa",
+        "code": "AZUCARES_SG",
+        "colorHex": "#EC4899",
+        "avgEnergyKcal": 40,
+        "avgProteinG": 0,
+        "avgCarbsG": 10,
+        "avgFatG": 0,
+        "description": "Miel de abeja pura, mermelada reducida en azúcar."
+      }
+    ],
+    "FOODS": [
+      {
+        "id": "food-1786665501041",
+        "organizationId": "org-demo-1",
+        "name": "hamburguesa doble ",
+        "equivalentGroupCode": "GRASAS_CP",
+        "servingSize": "1 diaria",
+        "servingWeightG": 100,
+        "energyKcal": 25,
+        "proteinG": 2,
+        "fatG": 0,
+        "carbsG": 4,
+        "fiberG": 2,
+        "glycemicIndex": "Bajo",
+        "isCustom": true
+      },
+      {
+        "id": "f-1",
+        "name": "Pechuga de pollo cocida s/piel",
+        "servingSize": "30g",
+        "servingWeightG": 30,
+        "energyKcal": 55,
+        "proteinG": 7,
+        "carbsG": 0,
+        "fatG": 3,
+        "equivalentGroupCode": "AOA_BA"
+      },
+      {
+        "id": "f-2",
+        "name": "Pechuga de pollo a la plancha (porción 120g)",
+        "servingSize": "120g",
+        "servingWeightG": 120,
+        "energyKcal": 220,
+        "proteinG": 28,
+        "carbsG": 0,
+        "fatG": 12,
+        "equivalentGroupCode": "AOA_BA"
+      },
+      {
+        "id": "f-3",
+        "name": "Huevo de gallina entero",
+        "servingSize": "1 pieza (50g)",
+        "servingWeightG": 50,
+        "energyKcal": 75,
+        "proteinG": 7,
+        "carbsG": 0.5,
+        "fatG": 5,
+        "equivalentGroupCode": "AOA_MA"
+      },
+      {
+        "id": "f-4",
+        "name": "Clara de huevo pasteurizada",
+        "servingSize": "2 piezas (60ml)",
+        "servingWeightG": 60,
+        "energyKcal": 40,
+        "proteinG": 7,
+        "carbsG": 0,
+        "fatG": 0.2,
+        "equivalentGroupCode": "AOA_MBA"
+      },
+      {
+        "id": "f-5",
+        "name": "Atún en agua (Dolores/Herdez)",
+        "servingSize": "1/3 de lata (40g)",
+        "servingWeightG": 40,
+        "energyKcal": 40,
+        "proteinG": 7.5,
+        "carbsG": 0,
+        "fatG": 0.5,
+        "equivalentGroupCode": "AOA_MBA"
+      },
+      {
+        "id": "f-6",
+        "name": "Filete de tilapia o pescado blanco",
+        "servingSize": "40g",
+        "servingWeightG": 40,
+        "energyKcal": 55,
+        "proteinG": 7,
+        "carbsG": 0,
+        "fatG": 2.5,
+        "equivalentGroupCode": "AOA_BA"
+      },
+      {
+        "id": "f-7",
+        "name": "Queso panela fresco (Lala/Fud)",
+        "servingSize": "40g",
+        "servingWeightG": 40,
+        "energyKcal": 55,
+        "proteinG": 6.5,
+        "carbsG": 1,
+        "fatG": 3,
+        "equivalentGroupCode": "AOA_BA"
+      },
+      {
+        "id": "f-8",
+        "name": "Tortilla de maíz nixtamalizado",
+        "servingSize": "1 pieza (30g)",
+        "servingWeightG": 30,
+        "energyKcal": 70,
+        "proteinG": 2,
+        "carbsG": 15,
+        "fatG": 0.5,
+        "fiberG": 1.5,
+        "equivalentGroupCode": "CEREALES_SG"
+      },
+      {
+        "id": "f-9",
+        "name": "Tostadas de maíz horneadas (Sanissimo)",
+        "servingSize": "2 piezas (24g)",
+        "servingWeightG": 24,
+        "energyKcal": 70,
+        "proteinG": 2,
+        "carbsG": 15,
+        "fatG": 0.5,
+        "fiberG": 2,
+        "equivalentGroupCode": "CEREALES_SG"
+      },
+      {
+        "id": "f-10",
+        "name": "Avena en hojuelas cruda (Quaker)",
+        "servingSize": "1/3 taza (30g)",
+        "servingWeightG": 30,
+        "energyKcal": 70,
+        "proteinG": 3,
+        "carbsG": 14,
+        "fatG": 1.5,
+        "fiberG": 3,
+        "equivalentGroupCode": "CEREALES_SG"
+      },
+      {
+        "id": "f-11",
+        "name": "Arroz integral cocido",
+        "servingSize": "1/2 taza (100g)",
+        "servingWeightG": 100,
+        "energyKcal": 70,
+        "proteinG": 2,
+        "carbsG": 15,
+        "fatG": 0.5,
+        "fiberG": 1.8,
+        "equivalentGroupCode": "CEREALES_SG"
+      },
+      {
+        "id": "f-12",
+        "name": "Frijoles negros de la olla cocidos",
+        "servingSize": "1/2 taza (90g)",
+        "servingWeightG": 90,
+        "energyKcal": 120,
+        "proteinG": 8,
+        "carbsG": 20,
+        "fatG": 1,
+        "fiberG": 7,
+        "equivalentGroupCode": "LEGUMINOSAS"
+      },
+      {
+        "id": "f-13",
+        "name": "Lentejas cocidas",
+        "servingSize": "1/2 taza (100g)",
+        "servingWeightG": 100,
+        "energyKcal": 120,
+        "proteinG": 8,
+        "carbsG": 20,
+        "fatG": 0.8,
+        "fiberG": 6,
+        "equivalentGroupCode": "LEGUMINOSAS"
+      },
+      {
+        "id": "f-14",
+        "name": "Aguacate Hass",
+        "servingSize": "1/3 pieza (35g)",
+        "servingWeightG": 35,
+        "energyKcal": 45,
+        "proteinG": 0.5,
+        "carbsG": 1.5,
+        "fatG": 5,
+        "fiberG": 2,
+        "equivalentGroupCode": "GRASAS_SP"
+      },
+      {
+        "id": "f-15",
+        "name": "Aceite de oliva extra virgen",
+        "servingSize": "1 cucharadita (5ml)",
+        "servingWeightG": 5,
+        "energyKcal": 45,
+        "proteinG": 0,
+        "carbsG": 0,
+        "fatG": 5,
+        "equivalentGroupCode": "GRASAS_SP"
+      },
+      {
+        "id": "f-16",
+        "name": "Almendras enteras naturales",
+        "servingSize": "10 piezas (12g)",
+        "servingWeightG": 12,
+        "energyKcal": 70,
+        "proteinG": 3,
+        "carbsG": 2.5,
+        "fatG": 6,
+        "fiberG": 1.5,
+        "equivalentGroupCode": "GRASAS_CP"
+      },
+      {
+        "id": "f-17",
+        "name": "Nuez pecana en mitades",
+        "servingSize": "3 piezas enteras (12g)",
+        "servingWeightG": 12,
+        "energyKcal": 70,
+        "proteinG": 1.5,
+        "carbsG": 2,
+        "fatG": 7,
+        "equivalentGroupCode": "GRASAS_CP"
+      },
+      {
+        "id": "f-18",
+        "name": "Espinaca fresca cruda",
+        "servingSize": "2 tazas (120g)",
+        "servingWeightG": 120,
+        "energyKcal": 25,
+        "proteinG": 2.5,
+        "carbsG": 3.5,
+        "fatG": 0.3,
+        "fiberG": 2.5,
+        "equivalentGroupCode": "VERDURAS"
+      },
+      {
+        "id": "f-19",
+        "name": "Jitomate guaje bola",
+        "servingSize": "1 pieza mediana (120g)",
+        "servingWeightG": 120,
+        "energyKcal": 25,
+        "proteinG": 1.2,
+        "carbsG": 4.8,
+        "fatG": 0.2,
+        "fiberG": 1.5,
+        "equivalentGroupCode": "VERDURAS"
+      },
+      {
+        "id": "f-20",
+        "name": "Nopales cocidos picados",
+        "servingSize": "1 taza (150g)",
+        "servingWeightG": 150,
+        "energyKcal": 25,
+        "proteinG": 1.8,
+        "carbsG": 4,
+        "fatG": 0.2,
+        "fiberG": 3.2,
+        "equivalentGroupCode": "VERDURAS"
+      },
+      {
+        "id": "f-21",
+        "name": "Brócoli al vapor",
+        "servingSize": "1 taza (100g)",
+        "servingWeightG": 100,
+        "energyKcal": 25,
+        "proteinG": 2.5,
+        "carbsG": 4.5,
+        "fatG": 0.3,
+        "fiberG": 2.8,
+        "equivalentGroupCode": "VERDURAS"
+      },
+      {
+        "id": "f-22",
+        "name": "Manzana roja/verde",
+        "servingSize": "1 pieza chica (100g)",
+        "servingWeightG": 100,
+        "energyKcal": 60,
+        "proteinG": 0.3,
+        "carbsG": 15,
+        "fatG": 0.2,
+        "fiberG": 2.5,
+        "equivalentGroupCode": "FRUTAS"
+      },
+      {
+        "id": "f-23",
+        "name": "Plátano tabasco",
+        "servingSize": "1/2 pieza (60g)",
+        "servingWeightG": 60,
+        "energyKcal": 60,
+        "proteinG": 0.8,
+        "carbsG": 15,
+        "fatG": 0.2,
+        "fiberG": 1.6,
+        "equivalentGroupCode": "FRUTAS"
+      },
+      {
+        "id": "f-24",
+        "name": "Fresas rebanadas frescas",
+        "servingSize": "1 taza (150g)",
+        "servingWeightG": 150,
+        "energyKcal": 60,
+        "proteinG": 1,
+        "carbsG": 14,
+        "fatG": 0.4,
+        "fiberG": 3,
+        "equivalentGroupCode": "FRUTAS"
+      },
+      {
+        "id": "f-25",
+        "name": "Papaya picada",
+        "servingSize": "1 taza (140g)",
+        "servingWeightG": 140,
+        "energyKcal": 60,
+        "proteinG": 0.8,
+        "carbsG": 15,
+        "fatG": 0.2,
+        "fiberG": 2.2,
+        "equivalentGroupCode": "FRUTAS"
+      },
+      {
+        "id": "f-26",
+        "name": "Yogur griego Fage 0% o Chobani natural",
+        "servingSize": "3/4 taza (150g)",
+        "servingWeightG": 150,
+        "energyKcal": 95,
+        "proteinG": 15,
+        "carbsG": 6,
+        "fatG": 0,
+        "equivalentGroupCode": "LECHE_DESC"
+      },
+      {
+        "id": "f-27",
+        "name": "Leche de vaca descremada (Santa Clara)",
+        "servingSize": "1 taza (240ml)",
+        "servingWeightG": 240,
+        "energyKcal": 95,
+        "proteinG": 9,
+        "carbsG": 12,
+        "fatG": 1,
+        "equivalentGroupCode": "LECHE_DESC"
+      },
+      {
+        "id": "f-28",
+        "name": "Bebida de almendras sin azúcar (Silk/Nature's Heart)",
+        "servingSize": "1 taza (240ml)",
+        "servingWeightG": 240,
+        "energyKcal": 35,
+        "proteinG": 1,
+        "carbsG": 1,
+        "fatG": 2.5,
+        "equivalentGroupCode": "GRASAS_SP"
+      },
+      {
+        "id": "f-29",
+        "name": "Miel de abeja pura",
+        "servingSize": "2 cucharaditas (10g)",
+        "servingWeightG": 10,
+        "energyKcal": 40,
+        "proteinG": 0,
+        "carbsG": 10,
+        "fatG": 0,
+        "equivalentGroupCode": "AZUCARES_SG"
+      },
+      {
+        "id": "f-30",
+        "name": "Semillas de chía",
+        "servingSize": "1 cucharada sopera (12g)",
+        "servingWeightG": 12,
+        "energyKcal": 70,
+        "proteinG": 2.5,
+        "carbsG": 4.5,
+        "fatG": 4,
+        "fiberG": 4,
+        "equivalentGroupCode": "GRASAS_CP"
+      }
+    ],
+    "RECIPES": [
+      {
+        "id": "rec-1",
+        "name": "Omelette Verde con Espinacas y Queso Panela",
+        "description": "Delicioso desayuno alto en proteína y fibra con vegetales frescos y aguacate sobre tortilla de maíz.",
+        "photoUrl": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=500&auto=format&fit=crop&q=80",
+        "category": "Desayuno",
+        "prepTimeMinutes": 10,
+        "cookTimeMinutes": 10,
+        "difficulty": "Fácil",
+        "servings": 1,
+        "caloriesKcal": 385,
+        "proteinG": 26,
+        "carbsG": 32,
+        "fatG": 16,
+        "fiberG": 6,
+        "tags": [
+          "Alta proteína",
+          "Mexicana",
+          "Fácil",
+          "Vegetariana"
+        ],
+        "ingredients": [
+          {
+            "id": "i-1",
+            "foodName": "Huevo entero",
+            "amount": 2,
+            "unit": "piezas",
+            "equivalentGroupName": "AOA Moderado Aporte"
+          },
+          {
+            "id": "i-2",
+            "foodName": "Espinaca fresca",
+            "amount": 1,
+            "unit": "taza",
+            "equivalentGroupName": "Verduras"
+          },
+          {
+            "id": "i-3",
+            "foodName": "Queso panela",
+            "amount": 40,
+            "unit": "g",
+            "equivalentGroupName": "AOA Bajo Aporte"
+          },
+          {
+            "id": "i-4",
+            "foodName": "Tortilla de maíz",
+            "amount": 2,
+            "unit": "piezas",
+            "equivalentGroupName": "Cereales sin grasa"
+          },
+          {
+            "id": "i-5",
+            "foodName": "Aguacate Hass",
+            "amount": 35,
+            "unit": "g",
+            "equivalentGroupName": "Grasas sin proteína"
+          }
+        ],
+        "steps": [
+          {
+            "stepNumber": 1,
+            "instruction": "Bate los 2 huevos en un tazón con una pizca de sal marina, pimienta y orégano."
+          },
+          {
+            "stepNumber": 2,
+            "instruction": "En un sartén antiadherente con unas gotas de aceite de oliva, sofríe las espinacas por 1 minuto hasta que reduzcan."
+          },
+          {
+            "stepNumber": 3,
+            "instruction": "Vierte los huevos batidos sobre las espinacas a fuego medio-bajo."
+          },
+          {
+            "stepNumber": 4,
+            "instruction": "Agrega el queso panela en cubos en una mitad, dobla el omelette y cocina 2 minutos tapado."
+          },
+          {
+            "stepNumber": 5,
+            "instruction": "Sirve acompañado de 2 tortillas calientes y rebanadas de aguacate fresco."
+          }
+        ]
+      },
+      {
+        "id": "rec-2",
+        "name": "Pechuga a la Plancha con Arroz al Vapor y Nopales Asados",
+        "description": "Plato balanceado perfecto para comida principal con proteína magra, carbohidrato complejo y fibra.",
+        "photoUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80",
+        "category": "Comida",
+        "prepTimeMinutes": 15,
+        "cookTimeMinutes": 20,
+        "difficulty": "Fácil",
+        "servings": 1,
+        "caloriesKcal": 490,
+        "proteinG": 38,
+        "carbsG": 50,
+        "fatG": 14,
+        "fiberG": 8,
+        "tags": [
+          "Alta proteína",
+          "Mexicana",
+          "Económica",
+          "Sin gluten"
+        ],
+        "ingredients": [
+          {
+            "id": "i-6",
+            "foodName": "Pechuga de pollo limpia",
+            "amount": 130,
+            "unit": "g",
+            "equivalentGroupName": "AOA Bajo Aporte"
+          },
+          {
+            "id": "i-7",
+            "foodName": "Arroz integral cocido",
+            "amount": 1,
+            "unit": "taza",
+            "equivalentGroupName": "Cereales sin grasa"
+          },
+          {
+            "id": "i-8",
+            "foodName": "Nopales medianos",
+            "amount": 2,
+            "unit": "piezas",
+            "equivalentGroupName": "Verduras"
+          },
+          {
+            "id": "i-9",
+            "foodName": "Frijoles de la olla",
+            "amount": 0.5,
+            "unit": "taza",
+            "equivalentGroupName": "Leguminosas"
+          },
+          {
+            "id": "i-10",
+            "foodName": "Aceite de oliva",
+            "amount": 1,
+            "unit": "cucharadita",
+            "equivalentGroupName": "Grasas sin proteína"
+          }
+        ],
+        "steps": [
+          {
+            "stepNumber": 1,
+            "instruction": "Sazona la pechuga de pollo con ajo en polvo, paprika, sal y pimienta negra."
+          },
+          {
+            "stepNumber": 2,
+            "instruction": "Asa los nopales y la pechuga en una plancha caliente con la cucharadita de aceite de oliva por 6-8 minutos por lado."
+          },
+          {
+            "stepNumber": 3,
+            "instruction": "Calienta el arroz integral y los frijoles de la olla."
+          },
+          {
+            "stepNumber": 4,
+            "instruction": "Monta en un plato amplio con una porción de salsa verde o pico de gallo al gusto."
+          }
+        ]
+      },
+      {
+        "id": "rec-3",
+        "name": "Tazón de Yogur Griego con Frutos Rojos y Almendras",
+        "description": "Colación refrescante rica en probióticos, proteína de alto valor biológico y antioxidantes.",
+        "photoUrl": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&auto=format&fit=crop&q=80",
+        "category": "Colación",
+        "prepTimeMinutes": 5,
+        "cookTimeMinutes": 0,
+        "difficulty": "Fácil",
+        "servings": 1,
+        "caloriesKcal": 235,
+        "proteinG": 18,
+        "carbsG": 22,
+        "fatG": 7,
+        "fiberG": 4,
+        "tags": [
+          "Rápida",
+          "Sin cocción",
+          "Vegetariana",
+          "Baja en azúcar"
+        ],
+        "ingredients": [
+          {
+            "id": "i-11",
+            "foodName": "Yogur griego 0% sin azúcar",
+            "amount": 170,
+            "unit": "g",
+            "equivalentGroupName": "Leche descremada"
+          },
+          {
+            "id": "i-12",
+            "foodName": "Fresas y moras frescas",
+            "amount": 1,
+            "unit": "taza",
+            "equivalentGroupName": "Frutas"
+          },
+          {
+            "id": "i-13",
+            "foodName": "Almendras fileteadas tostadas",
+            "amount": 10,
+            "unit": "piezas",
+            "equivalentGroupName": "Grasas con proteína"
+          },
+          {
+            "id": "i-14",
+            "foodName": "Canela en polvo",
+            "amount": 0.5,
+            "unit": "cucharadita",
+            "equivalentGroupName": "Libre"
+          }
+        ],
+        "steps": [
+          {
+            "stepNumber": 1,
+            "instruction": "Coloca el yogur griego frío en un tazón hondo."
+          },
+          {
+            "stepNumber": 2,
+            "instruction": "Lava y rebana las fresas; colócalas sobre el yogur junto con las moras."
+          },
+          {
+            "stepNumber": 3,
+            "instruction": "Espolvorea las almendras tostadas y la canela en polvo. Disfruta de inmediato."
+          }
+        ]
+      },
+      {
+        "id": "rec-4",
+        "name": "Tostadas de Atún a la Mexicana con Aguacate",
+        "description": "Cena ligera, saciante, rápida de preparar y excelente para días con poco tiempo.",
+        "photoUrl": "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop&q=80",
+        "category": "Cena",
+        "prepTimeMinutes": 10,
+        "cookTimeMinutes": 0,
+        "difficulty": "Fácil",
+        "servings": 1,
+        "caloriesKcal": 320,
+        "proteinG": 27,
+        "carbsG": 30,
+        "fatG": 9,
+        "fiberG": 5,
+        "tags": [
+          "Rápida",
+          "Económica",
+          "Alta proteína",
+          "Mexicana"
+        ],
+        "ingredients": [
+          {
+            "id": "i-15",
+            "foodName": "Atún en agua escurrido",
+            "amount": 1,
+            "unit": "lata (120g)",
+            "equivalentGroupName": "AOA Muy Bajo Aporte"
+          },
+          {
+            "id": "i-16",
+            "foodName": "Jitomate, cebolla y cilantro picados",
+            "amount": 1,
+            "unit": "taza",
+            "equivalentGroupName": "Verduras"
+          },
+          {
+            "id": "i-17",
+            "foodName": "Tostadas horneadas Sanissimo",
+            "amount": 3,
+            "unit": "piezas",
+            "equivalentGroupName": "Cereales sin grasa"
+          },
+          {
+            "id": "i-18",
+            "foodName": "Aguacate Hass",
+            "amount": 35,
+            "unit": "g",
+            "equivalentGroupName": "Grasas sin proteína"
+          }
+        ],
+        "steps": [
+          {
+            "stepNumber": 1,
+            "instruction": "Drena el agua de la lata de atún."
+          },
+          {
+            "stepNumber": 2,
+            "instruction": "En un tazón mezcla el atún con el jitomate, cebolla, cilantro y jugo de limón fresco con sal."
+          },
+          {
+            "stepNumber": 3,
+            "instruction": "Monta la mezcla sobre las 3 tostadas horneadas y decora con rebanadas de aguacate."
+          }
+        ]
+      },
+      {
+        "id": "rec-test-02",
+        "name": "Salmón con Verduras",
+        "description": "",
+        "category": "Comida",
+        "servings": 1,
+        "prepTimeMinutes": 15,
+        "cookTimeMinutes": 15,
+        "difficulty": "Fácil",
+        "caloriesKcal": 350,
+        "proteinG": 30,
+        "carbsG": 10,
+        "fatG": 15,
+        "fiberG": 4,
+        "ingredients": [],
+        "steps": [],
+        "photoUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400",
+        "tags": [
+          "Saludable",
+          "NutriLuz"
+        ]
+      }
+    ],
+    "PLANS": [
+      {
+        "id": "plan-copilot-1791592752886",
+        "organizationId": "org-nutriluz-mexico",
+        "specialistId": "user-dra-valeria",
+        "patientId": "pat-1791591909849",
+        "title": "Plan Pérdida de Grasa y Sensibilidad a la Insulina - Resistencia a la Insulina",
+        "goal": "Pérdida de Grasa y Sensibilidad a la Insulina",
+        "status": "ACTIVE",
+        "startDate": "2026-10-10",
+        "endDate": "2026-11-09",
+        "targetCaloriesKcal": 1874,
+        "targetProteinG": 234,
+        "targetCarbsG": 117,
+        "targetFatG": 52,
+        "targetWaterLiters": 2.5,
+        "generalInstructions": "Seguir horarios regulares y respetar las porciones de equivalentes SMAE.",
+        "hydrationInstructions": "Consumir al menos 2.5L de agua natural durante el día.",
+        "approvedBySpecialist": true,
+        "days": [
+          {
+            "id": "day-1-1791592693848-29j8",
+            "meals": [
+              {
+                "id": "meal-1-1-1791592693848-z4dg",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-1-1-1-1791592693848-efta",
+                    "fatG": 13.7,
+                    "name": "Huevo entero fresco",
+                    "carbsG": 1.1,
+                    "itemType": "FOOD",
+                    "proteinG": 18,
+                    "energyKcal": 200,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "2 piezas (100g)"
+                  },
+                  {
+                    "id": "item-1-1-2-1791592693848-flcu",
+                    "fatG": 0.3,
+                    "name": "Jitomate, cebolla y chile serrano picados",
+                    "carbsG": 6.4,
+                    "itemType": "FOOD",
+                    "proteinG": 1.4,
+                    "energyKcal": 36,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/2 pieza (60g) de jitomate + 2 cdas (20g) de cebolla + 1/2 pieza de chile serrano"
+                  },
+                  {
+                    "id": "item-1-1-3-1791592693848-umby",
+                    "fatG": 1.1,
+                    "name": "Frijoles negros de la olla enteros",
+                    "carbsG": 24.3,
+                    "itemType": "FOOD",
+                    "proteinG": 9.1,
+                    "energyKcal": 136,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/2 taza (85g)"
+                  },
+                  {
+                    "id": "item-1-1-4-1791592693848-r0gy",
+                    "fatG": 1.4,
+                    "name": "Tortillas de maíz calientitas",
+                    "carbsG": 40,
+                    "itemType": "FOOD",
+                    "proteinG": 4.3,
+                    "energyKcal": 186,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "2 piezas (50g)"
+                  },
+                  {
+                    "id": "item-1-1-5-1791592693848-zuxm",
+                    "fatG": 0.3,
+                    "name": "Fruta fresca de temporada (Papaya o Melón)",
+                    "carbsG": 20,
+                    "itemType": "FOOD",
+                    "proteinG": 1.1,
+                    "energyKcal": 79,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 taza (140g)"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:00"
+              },
+              {
+                "id": "meal-1-2-1791592693848-yzbj",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1-2-1-1791592693848-7eyg",
+                    "fatG": 8.6,
+                    "name": "Semillas de chía hidratadas en leche vegetal sin azúcar",
+                    "carbsG": 10,
+                    "itemType": "RECIPE",
+                    "proteinG": 5,
+                    "energyKcal": 136,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1.5 cdas chía (18g) + 1/2 taza leche almendra"
+                  },
+                  {
+                    "id": "item-1-2-2-1791592693848-1t1w",
+                    "fatG": 0.6,
+                    "name": "Frambuesas frescas",
+                    "carbsG": 10,
+                    "itemType": "FOOD",
+                    "proteinG": 1,
+                    "energyKcal": 46,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/2 taza (60g)"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-1-3-1791592693848-qp4h",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-1-3-1-1791592693848-xwby",
+                    "fatG": 10,
+                    "name": "Medallón de atún fresco con ajonjolí negro",
+                    "carbsG": 1.4,
+                    "itemType": "FOOD",
+                    "proteinG": 54.3,
+                    "energyKcal": 314,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "150g sellado término medio"
+                  },
+                  {
+                    "id": "item-1-3-2-1791592693848-0dvp",
+                    "fatG": 0.6,
+                    "name": "Arroz al vapor tipo jazmín o basmati",
+                    "carbsG": 45.7,
+                    "itemType": "FOOD",
+                    "proteinG": 4.3,
+                    "energyKcal": 207,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "3/4 taza"
+                  },
+                  {
+                    "id": "item-1-3-3-1791592693848-x1f1",
+                    "fatG": 5,
+                    "name": "Ensalada oriental de col morada, pepino y edamames con aderezo de soya y jengibre",
+                    "carbsG": 12.9,
+                    "itemType": "RECIPE",
+                    "proteinG": 7.1,
+                    "energyKcal": 121,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1.5 tazas"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-0-1791592893686-wusf",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-0-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-1-4-1791592693848-p1rl",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-1-4-1-1791592693848-cj9u",
+                    "fatG": 2.1,
+                    "name": "Tortilla de trigo integral o nopal",
+                    "carbsG": 25.7,
+                    "itemType": "FOOD",
+                    "proteinG": 5.7,
+                    "energyKcal": 143,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 pieza grande (45g)"
+                  },
+                  {
+                    "id": "item-1-4-2-1791592693848-4z4n",
+                    "fatG": 1.1,
+                    "name": "Atún en agua con apio y pepino picaditos",
+                    "carbsG": 1.4,
+                    "itemType": "FOOD",
+                    "proteinG": 40,
+                    "energyKcal": 171,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 lata drenada (120g)"
+                  },
+                  {
+                    "id": "item-1-4-3-1791592693848-bjq9",
+                    "fatG": 0.7,
+                    "name": "Aderezo de yogur griego con mostaza dijon y limón",
+                    "carbsG": 2.9,
+                    "itemType": "RECIPE",
+                    "proteinG": 4.3,
+                    "energyKcal": 43,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "2 cdas"
+                  },
+                  {
+                    "id": "item-1-4-4-1791592693848-yzna",
+                    "fatG": 5.7,
+                    "name": "Aguacate Hass en rebanadas",
+                    "carbsG": 2.1,
+                    "itemType": "FOOD",
+                    "proteinG": 0.7,
+                    "energyKcal": 57,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/4 pieza (25g)"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Energía & Arranque Semanal",
+            "dayName": "Lunes",
+            "dayOfWeek": 1
+          },
+          {
+            "id": "day-2-1791592693848-oen6",
+            "meals": [
+              {
+                "id": "meal-2-1-1791592693848-itfu",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-2-1-1-1791592693848-st8q",
+                    "fatG": 4.2,
+                    "name": "Machaca sonorense de res magra con jitomate, cebolla y chile",
+                    "carbsG": 4.2,
+                    "itemType": "FOOD",
+                    "proteinG": 36.4,
+                    "energyKcal": 210,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "50g machaca hidratada + vegetales"
+                  },
+                  {
+                    "id": "item-2-1-2-1791592693848-wejm",
+                    "fatG": 6.7,
+                    "name": "Huevos revueltos agregados a la machaca",
+                    "carbsG": 0.6,
+                    "itemType": "FOOD",
+                    "proteinG": 8.8,
+                    "energyKcal": 101,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 pieza entera"
+                  },
+                  {
+                    "id": "item-2-1-3-1791592693848-2kf0",
+                    "fatG": 1.4,
+                    "name": "Tortillas de maíz azul calientitas",
+                    "carbsG": 36.4,
+                    "itemType": "FOOD",
+                    "proteinG": 4.2,
+                    "energyKcal": 175,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "2 piezas"
+                  },
+                  {
+                    "id": "item-2-1-4-1791592693848-9yww",
+                    "fatG": 0.3,
+                    "name": "Frijoles de la olla",
+                    "carbsG": 14,
+                    "itemType": "FOOD",
+                    "proteinG": 4.9,
+                    "energyKcal": 77,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/4 taza"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:30"
+              },
+              {
+                "id": "meal-2-2-1791592693848-yq8s",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-2-2-1-1791592693848-5ahp",
+                    "fatG": 11.9,
+                    "name": "Pechuga o pierna sin piel en mole verde de pepita y tomate",
+                    "carbsG": 11.2,
+                    "itemType": "RECIPE",
+                    "proteinG": 46.2,
+                    "energyKcal": 336,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "130g pollo + 3 cdas mole verde ligero"
+                  },
+                  {
+                    "id": "item-2-2-2-1791592693848-oa81",
+                    "fatG": 0.7,
+                    "name": "Arroz blanco con elote y cilantro",
+                    "carbsG": 33.6,
+                    "itemType": "FOOD",
+                    "proteinG": 3.1,
+                    "energyKcal": 154,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/2 taza"
+                  },
+                  {
+                    "id": "item-2-2-3-1791592693848-5www",
+                    "fatG": 0.4,
+                    "name": "Calabacitas salteadas al vapor",
+                    "carbsG": 9.8,
+                    "itemType": "FOOD",
+                    "proteinG": 2.1,
+                    "energyKcal": 49,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 taza"
+                  },
+                  {
+                    "id": "item-2-2-4-1791592693848-br3f",
+                    "fatG": 1.4,
+                    "name": "Tortilla de maíz nixtamalizado",
+                    "carbsG": 39.2,
+                    "itemType": "FOOD",
+                    "proteinG": 4.2,
+                    "energyKcal": 182,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "2 piezas"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-2-3-1791592693848-l1ba",
+                "name": "Colación Vespertina",
+                "items": [
+                  {
+                    "id": "item-2-3-1-1791592693848-zxpn",
+                    "fatG": 1.7,
+                    "name": "Palomitas naturales reventadas sin mantequilla",
+                    "carbsG": 25.2,
+                    "itemType": "FOOD",
+                    "proteinG": 4.2,
+                    "energyKcal": 133,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "3 tazas infladas (25g maíz)"
+                  },
+                  {
+                    "id": "item-2-3-2-1791592693848-ivww",
+                    "fatG": 2.1,
+                    "name": "Semillas de ajonjolí o chile en polvo",
+                    "carbsG": 0.7,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 25,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 cdta"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "17:30"
+              },
+              {
+                "id": "meal-1-1791592893686-ya0u",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-1-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-2-4-1791592693848-a2ph",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-2-4-1-1791592693848-z3im",
+                    "fatG": 4.2,
+                    "name": "Pechuga de pollo deshebrada tibia",
+                    "carbsG": 0.2,
+                    "itemType": "FOOD",
+                    "proteinG": 43.4,
+                    "energyKcal": 210,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "100g cocida"
+                  },
+                  {
+                    "id": "item-2-4-2-1791592693848-5iin",
+                    "fatG": 0.4,
+                    "name": "Mix de lechugas, espinacas y jitomates cherry",
+                    "carbsG": 8.4,
+                    "itemType": "FOOD",
+                    "proteinG": 2.8,
+                    "energyKcal": 49,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "2 tazas abundantes"
+                  },
+                  {
+                    "id": "item-2-4-3-1791592693848-h7d4",
+                    "fatG": 13.3,
+                    "name": "Aguacate Hass y aceite de oliva virgen extra",
+                    "carbsG": 2.8,
+                    "itemType": "FOOD",
+                    "proteinG": 1.4,
+                    "energyKcal": 133,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1/3 aguacate + 1 cdta AOVE"
+                  },
+                  {
+                    "id": "item-2-4-4-1791592693848-ut3p",
+                    "fatG": 0.4,
+                    "name": "Tostada de maíz horneada",
+                    "carbsG": 8.4,
+                    "itemType": "FOOD",
+                    "proteinG": 1.1,
+                    "energyKcal": 42,
+                    "portionQuantity": 1.4,
+                    "portionDescription": "1 pieza"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Proteína Magra & Complejos",
+            "dayName": "Martes",
+            "dayOfWeek": 2
+          },
+          {
+            "id": "day-3-1791592693848-6p5j",
+            "meals": [
+              {
+                "id": "meal-3-1-1791592693848-us2b",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-3-1-1-1791592693848-1826",
+                    "fatG": 2.5,
+                    "name": "Pan integral de masa madre tostado",
+                    "carbsG": 46.4,
+                    "itemType": "FOOD",
+                    "proteinG": 9.9,
+                    "energyKcal": 248,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "2 rebanadas (60g)"
+                  },
+                  {
+                    "id": "item-3-1-2-1791592693848-1brh",
+                    "fatG": 16.6,
+                    "name": "Huevos poché al vapor",
+                    "carbsG": 1.7,
+                    "itemType": "FOOD",
+                    "proteinG": 21.5,
+                    "energyKcal": 240,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "2 piezas (100g)"
+                  },
+                  {
+                    "id": "item-3-1-3-1791592693848-hf40",
+                    "fatG": 9.1,
+                    "name": "Aguacate Hass con semillas de ajonjolí y hojuelas de chile",
+                    "carbsG": 3.3,
+                    "itemType": "FOOD",
+                    "proteinG": 1.7,
+                    "energyKcal": 99,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "1/3 pieza (35g)"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:00"
+              },
+              {
+                "id": "meal-3-2-1791592693848-oroy",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-3-2-1-1791592693848-gypp",
+                    "fatG": 0.3,
+                    "name": "Manzana verde con canela en polvo",
+                    "carbsG": 31.5,
+                    "itemType": "FOOD",
+                    "proteinG": 0.5,
+                    "energyKcal": 119,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "1 pieza mediana (150g)"
+                  },
+                  {
+                    "id": "item-3-2-2-1791592693848-otkw",
+                    "fatG": 11.6,
+                    "name": "Almendras naturales sin sal",
+                    "carbsG": 5,
+                    "itemType": "FOOD",
+                    "proteinG": 5,
+                    "energyKcal": 141,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "12 piezas (15g)"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-3-3-1791592693848-uy2t",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-3-3-1-1791592693848-k2n4",
+                    "fatG": 3.3,
+                    "name": "Ceviche de pescado blanco marinado en limón con cilantro",
+                    "carbsG": 5,
+                    "itemType": "RECIPE",
+                    "proteinG": 56.3,
+                    "energyKcal": 281,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "160g pescado fresco preparado"
+                  },
+                  {
+                    "id": "item-3-3-2-1791592693848-j4sp",
+                    "fatG": 0.5,
+                    "name": "Cubos de mango y pepino dentro del ceviche",
+                    "carbsG": 24.8,
+                    "itemType": "FOOD",
+                    "proteinG": 1.7,
+                    "energyKcal": 99,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "1/2 taza mango + 1/2 taza pepino"
+                  },
+                  {
+                    "id": "item-3-3-3-1791592693848-a51f",
+                    "fatG": 1.7,
+                    "name": "Tostadas horneadas de maíz",
+                    "carbsG": 29.8,
+                    "itemType": "FOOD",
+                    "proteinG": 4.1,
+                    "energyKcal": 149,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "3 piezas"
+                  },
+                  {
+                    "id": "item-3-3-4-1791592693848-ukci",
+                    "fatG": 8.3,
+                    "name": "Aguacate en cubos",
+                    "carbsG": 2.5,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 83,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "1/3 pieza (35g)"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-2-1791592893686-7swb",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-2-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-3-4-1791592693848-c562",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-3-4-1-1791592693848-c37t",
+                    "fatG": 0.3,
+                    "name": "Hojas de lechuga romana o francesa a modo de taco",
+                    "carbsG": 5,
+                    "itemType": "FOOD",
+                    "proteinG": 1.7,
+                    "energyKcal": 25,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "4 hojas grandes"
+                  },
+                  {
+                    "id": "item-3-4-2-1791592693848-h8vs",
+                    "fatG": 16.6,
+                    "name": "Salmón fresco en lascas o pechuga de pavo salteada",
+                    "carbsG": 0.2,
+                    "itemType": "FOOD",
+                    "proteinG": 39.7,
+                    "energyKcal": 315,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "110g cocido"
+                  },
+                  {
+                    "id": "item-3-4-3-1791592693848-nstp",
+                    "fatG": 7.4,
+                    "name": "Guacamole casero y salsa de mango o pico de gallo",
+                    "carbsG": 3.3,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 74,
+                    "portionQuantity": 1.7,
+                    "portionDescription": "2 cdas guacamole"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Fibra & Ácidos Grasos Esenciales",
+            "dayName": "Miércoles",
+            "dayOfWeek": 3
+          },
+          {
+            "id": "day-4-1791592693848-dtle",
+            "meals": [
+              {
+                "id": "meal-4-1-1791592693848-hnv6",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-4-1-1-1791592693848-s3du",
+                    "fatG": 4.8,
+                    "name": "Avena en hojuelas cocida con canela",
+                    "carbsG": 43.2,
+                    "itemType": "FOOD",
+                    "proteinG": 8,
+                    "energyKcal": 248,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/2 taza seca (40g)"
+                  },
+                  {
+                    "id": "item-4-1-2-1791592693848-dgt6",
+                    "fatG": 4.8,
+                    "name": "Leche de almendras sin azúcar + proteína o clara",
+                    "carbsG": 3.2,
+                    "itemType": "FOOD",
+                    "proteinG": 28.8,
+                    "energyKcal": 176,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1 taza + 1 medida proteína o 2 claras"
+                  },
+                  {
+                    "id": "item-4-1-3-1791592693848-8nf4",
+                    "fatG": 9.6,
+                    "name": "Moras azules frescas y nueces en mitades",
+                    "carbsG": 19.2,
+                    "itemType": "FOOD",
+                    "proteinG": 3.2,
+                    "energyKcal": 152,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/2 taza moras + 10g nueces"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:00"
+              },
+              {
+                "id": "meal-4-2-1791592693848-mvwq",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-4-2-1-1791592693848-yo3y",
+                    "fatG": 4,
+                    "name": "Quinoa cocida con cúrcuma",
+                    "carbsG": 48.1,
+                    "itemType": "FOOD",
+                    "proteinG": 9.6,
+                    "energyKcal": 256,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "3/4 taza"
+                  },
+                  {
+                    "id": "item-4-2-2-1791592693848-qgfc",
+                    "fatG": 4,
+                    "name": "Garbanzos especiados horneados con paprika",
+                    "carbsG": 35.2,
+                    "itemType": "FOOD",
+                    "proteinG": 11.2,
+                    "energyKcal": 216,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/2 taza"
+                  },
+                  {
+                    "id": "item-4-2-3-1791592693848-m7ie",
+                    "fatG": 0.8,
+                    "name": "Calabaza, pimientos y cebolla morada rostizados",
+                    "carbsG": 22.4,
+                    "itemType": "FOOD",
+                    "proteinG": 4,
+                    "energyKcal": 112,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1.5 tazas"
+                  },
+                  {
+                    "id": "item-4-2-4-1791592693848-kcy0",
+                    "fatG": 12,
+                    "name": "Aderezo ligero de tahini y limón",
+                    "carbsG": 4.8,
+                    "itemType": "FOOD",
+                    "proteinG": 4,
+                    "energyKcal": 136,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1 cda (15g)"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-4-3-1791592693848-5j55",
+                "name": "Colación Vespertina",
+                "items": [
+                  {
+                    "id": "item-4-3-1-1791592693848-gmxu",
+                    "fatG": 0.3,
+                    "name": "Zanahorias baby y pepino rebanado",
+                    "carbsG": 17.6,
+                    "itemType": "FOOD",
+                    "proteinG": 2.4,
+                    "energyKcal": 80,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1.5 tazas"
+                  },
+                  {
+                    "id": "item-4-3-2-1791592693848-w09y",
+                    "fatG": 7.2,
+                    "name": "Guacamole ligero con cilantro",
+                    "carbsG": 2.4,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 72,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 cdas (30g)"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "17:30"
+              },
+              {
+                "id": "meal-3-1791592893686-ble0",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-3-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-4-4-1791592693848-jqkf",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-4-4-1-1791592693848-swxa",
+                    "fatG": 0.3,
+                    "name": "Nopales asados al comal a modo de tortilla",
+                    "carbsG": 11.2,
+                    "itemType": "FOOD",
+                    "proteinG": 3.2,
+                    "energyKcal": 56,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 piezas grandes"
+                  },
+                  {
+                    "id": "item-4-4-2-1791592693848-g4zz",
+                    "fatG": 8,
+                    "name": "Requesón o queso panela fresco",
+                    "carbsG": 4.8,
+                    "itemType": "FOOD",
+                    "proteinG": 22.4,
+                    "energyKcal": 192,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "80g"
+                  },
+                  {
+                    "id": "item-4-4-3-1791592693848-gfaz",
+                    "fatG": 0.8,
+                    "name": "Tortilla de maíz nixtamalizado",
+                    "carbsG": 22.4,
+                    "itemType": "FOOD",
+                    "proteinG": 2.4,
+                    "energyKcal": 104,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1 pieza"
+                  },
+                  {
+                    "id": "item-4-4-4-1791592693848-3qou",
+                    "fatG": 6.4,
+                    "name": "Aguacate y salsa verde fresca",
+                    "carbsG": 3.2,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 72,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/4 aguacate + salsa"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Vitalidad & Minerales",
+            "dayName": "Jueves",
+            "dayOfWeek": 4
+          },
+          {
+            "id": "day-5-1791592693849-edga",
+            "meals": [
+              {
+                "id": "meal-5-1-1791592693849-gf4c",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-5-1-1-1791592693849-0pw9",
+                    "fatG": 4.6,
+                    "name": "Quinoa cocida con canela y bebida de almendras",
+                    "carbsG": 49.2,
+                    "itemType": "FOOD",
+                    "proteinG": 9.2,
+                    "energyKcal": 276,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 taza cocida"
+                  },
+                  {
+                    "id": "item-5-1-2-1791592693849-xfly",
+                    "fatG": 0.3,
+                    "name": "Manzana verde salteada en agua con canela",
+                    "carbsG": 29.2,
+                    "itemType": "FOOD",
+                    "proteinG": 0.5,
+                    "energyKcal": 111,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 pieza mediana"
+                  },
+                  {
+                    "id": "item-5-1-3-1791592693849-c9u4",
+                    "fatG": 1.2,
+                    "name": "Proteína en polvo o yogur griego",
+                    "carbsG": 3.1,
+                    "itemType": "FOOD",
+                    "proteinG": 24.6,
+                    "energyKcal": 123,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "20g proteína o 100g yogur"
+                  },
+                  {
+                    "id": "item-5-1-4-1791592693849-rlif",
+                    "fatG": 12,
+                    "name": "Nueces de castilla troceadas",
+                    "carbsG": 2.5,
+                    "itemType": "FOOD",
+                    "proteinG": 2.8,
+                    "energyKcal": 120,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "12g (4 mitades)"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:00"
+              },
+              {
+                "id": "meal-5-2-1791592693849-9x6f",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-5-2-1-1791592693849-ccw2",
+                    "fatG": 0.3,
+                    "name": "Plátano en rodajas",
+                    "carbsG": 21.5,
+                    "itemType": "FOOD",
+                    "proteinG": 1.1,
+                    "energyKcal": 84,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1/2 pieza (60g)"
+                  },
+                  {
+                    "id": "item-5-2-2-1791592693849-khwh",
+                    "fatG": 7.7,
+                    "name": "Mantequilla de cacahuate 100% natural",
+                    "carbsG": 3.1,
+                    "itemType": "FOOD",
+                    "proteinG": 3.8,
+                    "energyKcal": 92,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 cdta colmada (10g)"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-5-3-1791592693849-ps6f",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-5-3-1-1791592693849-1gmv",
+                    "fatG": 23,
+                    "name": "Filete de salmón fresco sellado al sartén",
+                    "carbsG": 0.2,
+                    "itemType": "FOOD",
+                    "proteinG": 46.1,
+                    "energyKcal": 399,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "140g"
+                  },
+                  {
+                    "id": "item-5-3-2-1791592693849-o9bs",
+                    "fatG": 0.3,
+                    "name": "Camote horneado con canela y sal de grano",
+                    "carbsG": 32.3,
+                    "itemType": "FOOD",
+                    "proteinG": 3.1,
+                    "energyKcal": 138,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1/2 taza en cubos (100g)"
+                  },
+                  {
+                    "id": "item-5-3-3-1791592693849-nqg1",
+                    "fatG": 0.6,
+                    "name": "Espárragos y brócoli al vapor con limón",
+                    "carbsG": 12.3,
+                    "itemType": "FOOD",
+                    "proteinG": 6.1,
+                    "energyKcal": 69,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 taza abundante"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-4-1791592893686-e4nh",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-4-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-5-4-1791592693849-0gb8",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-5-4-1-1791592693849-gp6b",
+                    "fatG": 1.5,
+                    "name": "Tortillas de maíz nixtamalizado",
+                    "carbsG": 43,
+                    "itemType": "FOOD",
+                    "proteinG": 4.6,
+                    "energyKcal": 200,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "2 piezas"
+                  },
+                  {
+                    "id": "item-5-4-2-1791592693849-iwn7",
+                    "fatG": 9.2,
+                    "name": "Queso panela o Oaxaca bajo en grasa",
+                    "carbsG": 2.3,
+                    "itemType": "FOOD",
+                    "proteinG": 18.4,
+                    "energyKcal": 169,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "50g"
+                  },
+                  {
+                    "id": "item-5-4-3-1791592693849-kc29",
+                    "fatG": 0.8,
+                    "name": "Pechuga de pavo baja en sodio",
+                    "carbsG": 1.5,
+                    "itemType": "FOOD",
+                    "proteinG": 12.3,
+                    "energyKcal": 61,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "2 rebanadas (40g)"
+                  },
+                  {
+                    "id": "item-5-4-4-1791592693849-fr7n",
+                    "fatG": 0.3,
+                    "name": "Pico de gallo fresco con limón",
+                    "carbsG": 6.1,
+                    "itemType": "FOOD",
+                    "proteinG": 1.2,
+                    "energyKcal": 31,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "Abundante al gusto"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Antioxidantes & Hidratación",
+            "dayName": "Viernes",
+            "dayOfWeek": 5
+          },
+          {
+            "id": "day-6-1791592693850-viey",
+            "meals": [
+              {
+                "id": "meal-6-1-1791592693849-e0m3",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-6-1-1-1791592693849-a3aw",
+                    "fatG": 16.4,
+                    "name": "Huevos pochados en salsa de pimiento y tomate con comino",
+                    "carbsG": 11.9,
+                    "itemType": "RECIPE",
+                    "proteinG": 20.9,
+                    "energyKcal": 283,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "2 huevos enteros + 1 taza salsa shakshuka"
+                  },
+                  {
+                    "id": "item-6-1-2-1791592693849-x8ad",
+                    "fatG": 1.8,
+                    "name": "Pan pita integral tostado",
+                    "carbsG": 38.8,
+                    "itemType": "FOOD",
+                    "proteinG": 7.5,
+                    "energyKcal": 201,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 pieza (50g)"
+                  },
+                  {
+                    "id": "item-6-1-3-1791592693849-co8j",
+                    "fatG": 7.5,
+                    "name": "Queso feta o panela desmoronado",
+                    "carbsG": 1.5,
+                    "itemType": "FOOD",
+                    "proteinG": 6,
+                    "energyKcal": 97,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "25g"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:30"
+              },
+              {
+                "id": "meal-6-2-1791592693850-extv",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-6-2-1-1791592693850-io4z",
+                    "fatG": 3,
+                    "name": "Filete de pescado blanco fresco al limón y epazote",
+                    "carbsG": 0.2,
+                    "itemType": "FOOD",
+                    "proteinG": 47.7,
+                    "energyKcal": 216,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "150g al vapor o empapelado"
+                  },
+                  {
+                    "id": "item-6-2-2-1791592693850-cexz",
+                    "fatG": 3.7,
+                    "name": "Quinoa tricolor al vapor",
+                    "carbsG": 44.7,
+                    "itemType": "FOOD",
+                    "proteinG": 8.9,
+                    "energyKcal": 246,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "3/4 taza cocida"
+                  },
+                  {
+                    "id": "item-6-2-3-1791592693850-4pem",
+                    "fatG": 0.4,
+                    "name": "Calabacitas y zanahorias asadas con romero",
+                    "carbsG": 16.4,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 82,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1.5 tazas"
+                  },
+                  {
+                    "id": "item-6-2-4-1791592693850-uo1w",
+                    "fatG": 7.5,
+                    "name": "Aguacate Hass en cubos",
+                    "carbsG": 2.2,
+                    "itemType": "FOOD",
+                    "proteinG": 0.7,
+                    "energyKcal": 75,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1/3 pieza (35g)"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-6-3-1791592693850-5ivk",
+                "name": "Colación Vespertina",
+                "items": [
+                  {
+                    "id": "item-6-3-1-1791592693850-ppn1",
+                    "fatG": 0.3,
+                    "name": "Naranja fresca pelada en gajos",
+                    "carbsG": 22.4,
+                    "itemType": "FOOD",
+                    "proteinG": 1.8,
+                    "energyKcal": 92,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 pieza mediana"
+                  },
+                  {
+                    "id": "item-6-3-2-1791592693850-e3w7",
+                    "fatG": 7.5,
+                    "name": "Queso panela en cubitos",
+                    "carbsG": 1.5,
+                    "itemType": "FOOD",
+                    "proteinG": 13.4,
+                    "energyKcal": 127,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "40g"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "17:30"
+              },
+              {
+                "id": "meal-5-1791592893686-qju6",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-5-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-6-4-1791592693850-mozr",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-6-4-1-1791592693850-wnzc",
+                    "fatG": 1.5,
+                    "name": "Sopa o crema de calabacita italiana licuada con caldo desgrasado",
+                    "carbsG": 14.9,
+                    "itemType": "RECIPE",
+                    "proteinG": 4.5,
+                    "energyKcal": 89,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1.5 tazas"
+                  },
+                  {
+                    "id": "item-6-4-2-1791592693850-alw2",
+                    "fatG": 3.7,
+                    "name": "Pechuga de pollo cocida deshebrada añadida",
+                    "carbsG": 0.2,
+                    "itemType": "FOOD",
+                    "proteinG": 37.3,
+                    "energyKcal": 194,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "80g"
+                  },
+                  {
+                    "id": "item-6-4-3-1791592693850-fqr7",
+                    "fatG": 8.9,
+                    "name": "Cubitos de queso panela y semillas de calabaza tostadas",
+                    "carbsG": 2.2,
+                    "itemType": "FOOD",
+                    "proteinG": 10.4,
+                    "energyKcal": 127,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "30g panela + 1 cdta semillas"
+                  },
+                  {
+                    "id": "item-6-4-4-1791592693850-3tfw",
+                    "fatG": 0.4,
+                    "name": "Tostada horneada",
+                    "carbsG": 8.9,
+                    "itemType": "FOOD",
+                    "proteinG": 1.2,
+                    "energyKcal": 45,
+                    "portionQuantity": 1.5,
+                    "portionDescription": "1 pieza"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Variedad & Flexibilidad Saludable",
+            "dayName": "Sábado",
+            "dayOfWeek": 6
+          },
+          {
+            "id": "day-7-1791592693850-wngr",
+            "meals": [
+              {
+                "id": "meal-7-1-1791592693850-q09m",
+                "name": "Desayuno",
+                "items": [
+                  {
+                    "id": "item-7-1-1-1791592693850-si39",
+                    "fatG": 15.3,
+                    "name": "Huevo entero fresco",
+                    "carbsG": 1.3,
+                    "itemType": "FOOD",
+                    "proteinG": 20.1,
+                    "energyKcal": 223,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 piezas (100g)"
+                  },
+                  {
+                    "id": "item-7-1-2-1791592693850-de8w",
+                    "fatG": 0.3,
+                    "name": "Espinacas frescas desinfectadas",
+                    "carbsG": 3.2,
+                    "itemType": "FOOD",
+                    "proteinG": 2.4,
+                    "energyKcal": 24,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1 taza (60g)"
+                  },
+                  {
+                    "id": "item-7-1-3-1791592693850-xwyd",
+                    "fatG": 0.3,
+                    "name": "Jitomate saladette picado",
+                    "carbsG": 4,
+                    "itemType": "FOOD",
+                    "proteinG": 1.3,
+                    "energyKcal": 24,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/2 pieza (60g)"
+                  },
+                  {
+                    "id": "item-7-1-4-1791592693850-oqda",
+                    "fatG": 1.6,
+                    "name": "Tortillas de maíz nixtamalizado",
+                    "carbsG": 44.7,
+                    "itemType": "FOOD",
+                    "proteinG": 4.8,
+                    "energyKcal": 207,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 piezas (50g)"
+                  },
+                  {
+                    "id": "item-7-1-5-1791592693850-q6ik",
+                    "fatG": 8,
+                    "name": "Aguacate Hass fresco",
+                    "carbsG": 2.4,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 80,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/3 pieza (35g)"
+                  }
+                ],
+                "mealOrder": 1,
+                "suggestedTime": "08:00"
+              },
+              {
+                "id": "meal-7-2-1791592693850-auz8",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-7-2-1-1791592693850-727m",
+                    "fatG": 0.2,
+                    "name": "Piña natural fresca en cubos",
+                    "carbsG": 23.9,
+                    "itemType": "FOOD",
+                    "proteinG": 1,
+                    "energyKcal": 96,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "3/4 taza (120g)"
+                  },
+                  {
+                    "id": "item-7-2-2-1791592693850-zzmz",
+                    "fatG": 0.3,
+                    "name": "Espinacas tiernas baby y pepino con jengibre",
+                    "carbsG": 6.4,
+                    "itemType": "FOOD",
+                    "proteinG": 2.4,
+                    "energyKcal": 32,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1 taza espinaca + 1/2 pepino"
+                  },
+                  {
+                    "id": "item-7-2-3-1791592693850-8iwm",
+                    "fatG": 3.2,
+                    "name": "Semillas de linaza molida",
+                    "carbsG": 2.4,
+                    "itemType": "FOOD",
+                    "proteinG": 1.6,
+                    "energyKcal": 40,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1 cdta (5g)"
+                  }
+                ],
+                "mealOrder": 2,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-7-3-1791592693850-5iwq",
+                "name": "Comida",
+                "items": [
+                  {
+                    "id": "item-7-3-1-1791592693850-rety",
+                    "fatG": 11.2,
+                    "name": "Fajitas de arrachera o bistec de res magro",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 55.8,
+                    "energyKcal": 351,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "130g cocido con cebolla y pimientos"
+                  },
+                  {
+                    "id": "item-7-3-2-1791592693850-vpzh",
+                    "fatG": 1.6,
+                    "name": "Tortillas de maíz recién calientes",
+                    "carbsG": 44.7,
+                    "itemType": "FOOD",
+                    "proteinG": 4.8,
+                    "energyKcal": 207,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 piezas"
+                  },
+                  {
+                    "id": "item-7-3-3-1791592693850-4v7z",
+                    "fatG": 0.5,
+                    "name": "Frijoles de la olla",
+                    "carbsG": 22.3,
+                    "itemType": "FOOD",
+                    "proteinG": 8,
+                    "energyKcal": 120,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/3 taza"
+                  },
+                  {
+                    "id": "item-7-3-4-1791592693850-vjmj",
+                    "fatG": 7.2,
+                    "name": "Guacamole tradicional y salsa verde",
+                    "carbsG": 2.4,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 72,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 cdas (30g)"
+                  }
+                ],
+                "mealOrder": 3,
+                "suggestedTime": "14:30"
+              },
+              {
+                "id": "meal-6-1791592893686-fbsb",
+                "name": "Colación Matutina",
+                "items": [
+                  {
+                    "id": "item-1791592893686-6-0",
+                    "fatG": 2,
+                    "name": "postre vegano sin azucar",
+                    "carbsG": 8,
+                    "itemType": "FOOD",
+                    "proteinG": 3,
+                    "energyKcal": 60,
+                    "portionQuantity": 1,
+                    "portionDescription": "gelatina de hueso de tiburon"
+                  }
+                ],
+                "mealOrder": 4,
+                "suggestedTime": "11:00"
+              },
+              {
+                "id": "meal-7-4-1791592693850-7mkr",
+                "name": "Cena",
+                "items": [
+                  {
+                    "id": "item-7-4-1-1791592693850-1kaf",
+                    "fatG": 2.4,
+                    "name": "Ceviche fresco de pescado o champiñones con pepino y cilantro",
+                    "carbsG": 8,
+                    "itemType": "RECIPE",
+                    "proteinG": 44.7,
+                    "energyKcal": 223,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "140g pescado o setas + vegetales"
+                  },
+                  {
+                    "id": "item-7-4-2-1791592693850-neq2",
+                    "fatG": 0.8,
+                    "name": "Tostadas horneadas de maíz",
+                    "carbsG": 19.1,
+                    "itemType": "FOOD",
+                    "proteinG": 2.4,
+                    "energyKcal": 96,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "2 piezas"
+                  },
+                  {
+                    "id": "item-7-4-3-1791592693850-f0x7",
+                    "fatG": 8,
+                    "name": "Aguacate picado en cubos",
+                    "carbsG": 2.4,
+                    "itemType": "FOOD",
+                    "proteinG": 0.8,
+                    "energyKcal": 80,
+                    "portionQuantity": 1.6,
+                    "portionDescription": "1/3 pieza (35g)"
+                  }
+                ],
+                "mealOrder": 5,
+                "suggestedTime": "20:30"
+              }
+            ],
+            "notes": "Digestión Ligera & Confort",
+            "dayName": "Domingo",
+            "dayOfWeek": 7
+          }
+        ],
+        "createdAt": "2026-10-10T00:39:12.886+00:00",
+        "updatedAt": "2026-10-10T00:39:12.886+00:00"
+      }
+    ],
+    "MEAL_LOGS": [
+      {
+        "id": "ml-1",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "mealType": "Desayuno",
+        "loggedAt": "2026-08-13T08:30:00Z",
+        "status": "Cumplí",
+        "description": "Omelette de espinaca con queso panela y 2 tortillas de maíz como indica el plan.",
+        "photoUrl": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=300&auto=format&fit=crop&q=80",
+        "aiEstimatedCalories": 380,
+        "aiEstimatedMacros": {
+          "protein": 26,
+          "carbs": 32,
+          "fat": 15
+        },
+        "patientComment": "Me sentí muy satisfecha con buena energía durante la mañana."
+      },
+      {
+        "id": "ml-2",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "mealType": "Comida",
+        "loggedAt": "2026-08-13T14:45:00Z",
+        "status": "Cumplí",
+        "description": "Pechuga a la plancha con arroz integral y nopales asados con pico de gallo.",
+        "photoUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80",
+        "aiEstimatedCalories": 485,
+        "aiEstimatedMacros": {
+          "protein": 38,
+          "carbs": 49,
+          "fat": 13
+        }
+      },
+      {
+        "id": "ml-3",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-12",
+        "mealType": "Cena",
+        "loggedAt": "2026-08-12T21:00:00Z",
+        "status": "Cumplí",
+        "description": "3 tostadas horneadas Sanissimo con atún y aguacate.",
+        "aiEstimatedCalories": 315
+      }
+    ],
+    "WATER_LOGS": [
+      {
+        "id": "wl-1",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "amountMl": 500,
+        "loggedAt": "2026-08-13T08:00:00Z"
+      },
+      {
+        "id": "wl-2",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "amountMl": 500,
+        "loggedAt": "2026-08-13T11:00:00Z"
+      },
+      {
+        "id": "wl-3",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "amountMl": 750,
+        "loggedAt": "2026-08-13T15:00:00Z"
+      },
+      {
+        "id": "wl-4",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "amountMl": 500,
+        "loggedAt": "2026-08-13T18:00:00Z"
+      }
+    ],
+    "SUPPLEMENTS": [
+      {
+        "id": "sup-1",
+        "patientId": "pat-ana-sofia",
+        "specialistId": "user-dra-valeria",
+        "productName": "Omega 3 Ultra Puro (EPA/DHA 1000mg)",
+        "dosage": "1 cápsula blanda",
+        "timing": "Con el desayuno junto con alimentos",
+        "frequency": "Diario",
+        "durationWeeks": 12,
+        "specialistInstructions": "Para apoyo cardiovascular y optimización de sensibilidad a la insulina.",
+        "isActive": true
+      },
+      {
+        "id": "sup-2",
+        "patientId": "pat-ana-sofia",
+        "specialistId": "user-dra-valeria",
+        "productName": "Citrato de Magnesio 400mg",
+        "dosage": "1 scoop o cápsula",
+        "timing": "30-45 minutos antes de dormir en agua tibia",
+        "frequency": "Diario en las noches",
+        "durationWeeks": 12,
+        "specialistInstructions": "Para relajación muscular y calidad de sueño profundo.",
+        "isActive": true
+      }
+    ],
+    "SUPPLEMENT_LOGS": [
+      {
+        "id": "supl-1",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "supplementName": "Omega 3 Ultra Puro (EPA/DHA 1000mg)",
+        "dosage": "1 cápsula",
+        "isTaken": true,
+        "takenAt": "2026-08-13T08:35:00Z"
+      },
+      {
+        "id": "supl-2",
+        "patientId": "pat-ana-sofia",
+        "date": "2026-08-13",
+        "supplementName": "Citrato de Magnesio 400mg",
+        "dosage": "400mg",
+        "isTaken": false
+      }
+    ],
+    "EXERCISE_ROUTINES": [
+      {
+        "id": "ex-ana-1",
+        "patientId": "pat-ana-sofia",
+        "title": "Rutina de Tonificación y Fuerza Funcional",
+        "goal": "Preservación de masa muscular y acondicionamiento cardiovascular",
+        "frequencyPerWeek": 4,
+        "isActive": true,
+        "items": [
+          {
+            "id": "ex-it-1",
+            "dayLabel": "Día 1 - Tren Inferior",
+            "exerciseName": "Sentadillas Goblet con Mancuerna",
+            "muscleGroup": "Pierna / Glúteo",
+            "sets": 4,
+            "reps": "12-15",
+            "restSeconds": 60,
+            "weightTarget": "10 kg"
+          },
+          {
+            "id": "ex-it-2",
+            "dayLabel": "Día 1 - Tren Inferior",
+            "exerciseName": "Puente de Glúteo con Banda",
+            "muscleGroup": "Glúteo",
+            "sets": 4,
+            "reps": "15-20",
+            "restSeconds": 45
+          },
+          {
+            "id": "ex-it-3",
+            "dayLabel": "Día 1 - Tren Inferior",
+            "exerciseName": "Desplantes Estáticos",
+            "muscleGroup": "Cuádriceps",
+            "sets": 3,
+            "reps": "12 por pierna",
+            "restSeconds": 60
+          },
+          {
+            "id": "ex-it-4",
+            "dayLabel": "Día 2 - Tren Superior & Core",
+            "exerciseName": "Press Militar con Mancuernas",
+            "muscleGroup": "Hombro",
+            "sets": 4,
+            "reps": "12",
+            "restSeconds": 60,
+            "weightTarget": "5 kg c/u"
+          },
+          {
+            "id": "ex-it-5",
+            "dayLabel": "Día 2 - Tren Superior & Core",
+            "exerciseName": "Remo con Mancuerna a 1 brazo",
+            "muscleGroup": "Espalda",
+            "sets": 4,
+            "reps": "12 por lado",
+            "restSeconds": 60,
+            "weightTarget": "8 kg"
+          },
+          {
+            "id": "ex-it-6",
+            "dayLabel": "Día 2 - Tren Superior & Core",
+            "exerciseName": "Plancha Abdominal Frontal",
+            "muscleGroup": "Core",
+            "sets": 3,
+            "reps": "45 segundos",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "APPOINTMENTS": [],
+    "PAYMENTS": [
+      {
+        "id": "pay-1",
+        "organizationId": "org-nutriluz-mexico",
+        "patientId": "pat-ana-sofia",
+        "patientName": "Ana Sofía García",
+        "concept": "Paquete de Seguimiento Nutricional 3 Meses",
+        "amount": 2400,
+        "currency": "MXN",
+        "status": "PAGADO",
+        "paymentMethod": "Tarjeta de Crédito (Stripe)",
+        "paidAt": "2026-08-01T10:30:00Z",
+        "invoiceRfc": "GARA950418XYZ"
+      },
+      {
+        "id": "pay-2",
+        "organizationId": "org-nutriluz-mexico",
+        "patientId": "pat-mariana-t",
+        "patientName": "Mariana Torres",
+        "concept": "Consulta de Evaluación Antropométrica InBody",
+        "amount": 950,
+        "currency": "MXN",
+        "status": "PAGADO",
+        "paymentMethod": "Transferencia SPEI",
+        "paidAt": "2026-08-05T12:15:00Z"
+      },
+      {
+        "id": "pay-3",
+        "organizationId": "org-nutriluz-mexico",
+        "patientId": "pat-roberto-m",
+        "patientName": "Roberto Navarro",
+        "concept": "Consulta Online Nutrición",
+        "amount": 850,
+        "currency": "MXN",
+        "status": "PENDIENTE",
+        "paymentMethod": "Pendiente de pago (Mercado Pago)",
+        "paidAt": "2026-08-15T00:00:00Z"
+      },
+      {
+        "id": "pay-4",
+        "organizationId": "org-nutriluz-mexico",
+        "patientId": "pat-claudia-h",
+        "patientName": "Claudia Hernández",
+        "concept": "Consulta de Seguimiento Quincenal",
+        "amount": 850,
+        "currency": "MXN",
+        "status": "PAGADO",
+        "paymentMethod": "Terminal Clip / Tarjeta Débito",
+        "paidAt": "2026-08-08T13:00:00Z"
+      }
+    ],
+    "MESSAGES": [
+      {
+        "id": "msg-1",
+        "conversationId": "conv-ana",
+        "senderId": "user-dra-valeria",
+        "senderName": "Dra. Valeria López",
+        "senderRole": "NUTRIOLOGO",
+        "content": "¡Hola Ana Sofía! Vi tus registros de comida y agua de esta semana. ¡Excelente adherencia con el nuevo desayuno!",
+        "isRead": true,
+        "createdAt": "2026-08-12T16:00:00Z"
+      },
+      {
+        "id": "msg-2",
+        "conversationId": "conv-ana",
+        "senderId": "pat-ana-sofia",
+        "senderName": "Ana Sofía García",
+        "senderRole": "PACIENTE",
+        "content": "¡Hola Dra.! Muchas gracias. La verdad me he sentido con mucha más energía por las tardes. ¿Para la cena del sábado puedo cambiar el atún por salmón a la plancha?",
+        "isRead": true,
+        "createdAt": "2026-08-12T17:15:00Z"
+      },
+      {
+        "id": "msg-3",
+        "conversationId": "conv-ana",
+        "senderId": "user-dra-valeria",
+        "senderName": "Dra. Valeria López",
+        "senderRole": "NUTRIOLOGO",
+        "content": "¡Claro que sí! Puedes usar 120g de salmón fresco. Como aporta un poco más de grasa saludable, solo omite la porción de aguacate en esa comida.",
+        "isRead": false,
+        "createdAt": "2026-08-12T18:00:00Z"
+      }
+    ],
+    "NOTIFICATIONS": [
+      {
+        "id": "notif-1",
+        "category": "PACIENTE",
+        "title": "⚠️ Atención requerida: Paciente en riesgo",
+        "message": "Diego Salazar lleva 12 días sin registrar comidas y no tiene cita futura agendada.",
+        "actionLink": "/pacientes/pat-diego-s",
+        "isRead": true,
+        "createdAt": "2026-08-13T09:00:00Z"
+      },
+      {
+        "id": "notif-2",
+        "category": "AGENDA",
+        "title": "Próxima consulta hoy",
+        "message": "Tienes consulta programada con Javier Orozco en 2 horas.",
+        "actionLink": "/agenda",
+        "isRead": true,
+        "createdAt": "2026-08-13T07:00:00Z"
+      },
+      {
+        "id": "notif-3",
+        "category": "IA",
+        "title": "NutriCopilot AI listo",
+        "message": "Se generó automáticamente el borrador de consulta para Ana Sofía García.",
+        "actionLink": "/nutricopilot",
+        "isRead": true,
+        "createdAt": "2026-08-12T20:00:00Z"
+      }
+    ],
+    "PRESCRIPTION_PRESETS": [
+      {
+        "id": "preset_1791556560293_5ludlf",
+        "goal": "perdida de grasa",
+        "name": "Deficit Agresivo",
+        "badge": "Metabólico",
+        "fatPct": 25,
+        "carbsPct": 25,
+        "isCustom": true,
+        "allergies": [],
+        "createdAt": "2026-10-09T14:36:00.294Z",
+        "dietStyle": "Omnívora Flexible / Mediterránea",
+        "prepStyle": "Práctica (<25 min) y Económica",
+        "updatedAt": "2026-10-09T14:36:00.294Z",
+        "conditions": [],
+        "isFavorite": true,
+        "mealsCount": 4,
+        "proteinGKg": 3.5,
+        "description": "",
+        "adjustmentValue": -300,
+        "recommendations": "",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "deficit_kcal"
+      },
+      {
+        "id": "deficit_insulin_res",
+        "goal": "Pérdida de Grasa y Sensibilidad a la Insulina",
+        "name": "Déficit Moderado + Resistencia a la Insulina",
+        "badge": "Metabólico",
+        "fatPct": 30,
+        "carbsPct": 40,
+        "isCustom": false,
+        "allergies": [],
+        "dietStyle": "Mediterránea / Bajo Índice Glucémico",
+        "prepStyle": "Práctica / <25 min",
+        "conditions": [
+          "Resistencia a la Insulina",
+          "Sobrepeso"
+        ],
+        "isFavorite": true,
+        "mealsCount": 4,
+        "proteinGKg": 1.9,
+        "description": "Control glucémico estricto con carbohidratos de bajo índice glucémico y alta saciedad proteica.",
+        "adjustmentValue": -350,
+        "recommendations": "Priorizar fibra soluble (chía, avena integral, verduras de hoja verde). Evitar azúcares simples y harinas refinadas. Realizar caminata ligera de 10 min post-comidas.",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "deficit_kcal"
+      },
+      {
+        "id": "hypertrophy_high_protein",
+        "goal": "Hipertrofia Muscular y Fuerza",
+        "name": "Hipertrofia Muscular Alta Proteína",
+        "badge": "Rendimiento",
+        "fatPct": 22,
+        "carbsPct": 50,
+        "isCustom": false,
+        "allergies": [],
+        "dietStyle": "Omnívora Flexible",
+        "prepStyle": "Meal Prep",
+        "conditions": [],
+        "isFavorite": true,
+        "mealsCount": 5,
+        "proteinGKg": 2.2,
+        "description": "Superávit energético controlado optimizando síntesis proteica con timing peri-entrenamiento.",
+        "adjustmentValue": 300,
+        "recommendations": "Distribuir proteína en 4-5 tomas de mínimo 30g. Ingerir carbohidratos complejos 90 min previos al entrenamiento y batido/comida recuperadora dentro de las 2h posteriores.",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "surplus_kcal"
+      },
+      {
+        "id": "vegan_balanced",
+        "goal": "Recomposición Corporal Vegetariana",
+        "name": "Plan Vegano / Vegetariano Equilibrado",
+        "badge": "Basado en Plantas",
+        "fatPct": 28,
+        "carbsPct": 52,
+        "isCustom": false,
+        "allergies": [
+          "Lácteos"
+        ],
+        "dietStyle": "Vegana Estricta / Plant-Based",
+        "prepStyle": "Equilibrada",
+        "conditions": [],
+        "isFavorite": false,
+        "mealsCount": 4,
+        "proteinGKg": 1.8,
+        "description": "Combinación de aminoácidos limitantes, leguminosas, semillas y control de micronutrientes (B12, Hierro, Zinc).",
+        "adjustmentValue": -15,
+        "recommendations": "Complementar cereales con leguminosas (ej. arroz + lentejas). Consumir fuentes de vitamina C junto a alimentos ricos en hierro vegetal. Suplementar cianocobalamina (B12) 2000mcg/semana.",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "deficit_pct"
+      },
+      {
+        "id": "cardioprotective_dash",
+        "goal": "Control de Presión Arterial y Perfil Lipídico",
+        "name": "Cardioprotector / DASH / Hipertensión",
+        "badge": "Cardiovascular",
+        "fatPct": 25,
+        "carbsPct": 50,
+        "isCustom": false,
+        "allergies": [],
+        "dietStyle": "Dieta DASH / Cardiosaludable",
+        "prepStyle": "Económica y Fresca",
+        "conditions": [
+          "Hipertensión Arterial",
+          "Dislipidemia"
+        ],
+        "isFavorite": false,
+        "mealsCount": 4,
+        "proteinGKg": 1.6,
+        "description": "Bajo en sodio (<1500mg), alto en potasio/magnesio y rico en grasas monoinsaturadas.",
+        "adjustmentValue": 0,
+        "recommendations": "Restringir sal añadida (<2g/día). Usar hierbas aromáticas y especias como sustituto. Aumentar consumo de frutos secos crudos (nueces) y aceite de oliva virgen extra crudo.",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "maintenance"
+      },
+      {
+        "id": "gastroprotective_fodmap",
+        "goal": "Salud Digestiva y Reducción de Inflamación",
+        "name": "Gastroprotector / Bajo en FODMAPs",
+        "badge": "Digestivo",
+        "fatPct": 30,
+        "carbsPct": 45,
+        "isCustom": false,
+        "allergies": [
+          "Lactosa",
+          "Trigo"
+        ],
+        "dietStyle": "Baja en FODMAPs / Fácil Digestión",
+        "prepStyle": "Suave / Cocción al Vapor",
+        "conditions": [
+          "Síndrome de Intestino Irritable (SII)",
+          "Gastritis"
+        ],
+        "isFavorite": false,
+        "mealsCount": 4,
+        "proteinGKg": 1.7,
+        "description": "Alivio de distensión, SII y gastritis excluyendo oligosacáridos, disacáridos y polioles fermentables.",
+        "adjustmentValue": 0,
+        "recommendations": "Comer en ambiente tranquilo y masticar lentamente. Evitar irritantes gástricos (café en ayunas, alcohol, picantes fuertes, bebidas carbonatadas). Fase de eliminación por 4-6 semanas.",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "maintenance"
+      },
+      {
+        "id": "sop_hormonal_balance",
+        "goal": "Balance Hormonal y Pérdida de Grasa Visceral",
+        "name": "Recomposición Femenina / SOP",
+        "badge": "Hormonal",
+        "fatPct": 32,
+        "carbsPct": 38,
+        "isCustom": false,
+        "allergies": [],
+        "dietStyle": "Antiinflamatoria / Mediterránea",
+        "prepStyle": "Práctica",
+        "conditions": [
+          "Síndrome de Ovario Poliquístico (SOP)",
+          "Resistencia a la Insulina"
+        ],
+        "isFavorite": false,
+        "mealsCount": 4,
+        "proteinGKg": 1.8,
+        "description": "Protocolo antiinflamatorio con modulación de insulina, grasas antiinflamatorias omega-3 y fitoestrógenos.",
+        "adjustmentValue": -300,
+        "recommendations": "Enfocarse en índice glucémico bajo y alto contenido de polifenoles (frutos rojos, cúrcuma, té verde). Incluir semillas de linaza molida y suplementación con Inositol según criterio.",
+        "isVisibleInQuickBar": true,
+        "caloricAdjustmentType": "deficit_kcal"
+      }
+    ],
+    "INITIALIZED": true
+  },
+  "deletedPatientIds": [
+    "pat-1787408465165",
+    "pat-gabriel-l",
+    "pat-pablo-c",
+    "pat-javier-o",
+    "pat-claudia-h",
+    "pat-diego-s",
+    "pat-roberto-m",
+    "pat-1791217781887",
+    "pat-1791403898691",
+    "pat-1787104364602",
+    "pat-1791261331895",
+    "test-dummy-delete-123",
+    "pat-1791416154847",
+    "pat-1791220451418",
+    "pat-valeria-s",
+    "pat-ana-sofia",
+    "pat-fernanda-p",
+    "pat-mariana-t",
+    "pat-1791591909849",
+    "pat-1791654296153",
+    "pat-1791654348947",
+    "pat-1791656217568",
+    "pat-1791656310169"
+  ]
+}

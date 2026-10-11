@@ -494,6 +494,152 @@ export const supabaseDb = {
     }
   },
 
+  // --- CLINICAL RECORDS (HISTORIA CLÍNICA & EXPEDIENTES) ---
+  async getClinicalRecord(patientId: string): Promise<ClinicalRecord | null> {
+    if (!supabase || !isSupabaseConfigured) return null;
+    try {
+      // 1. Try reading from dedicated clinical_records table
+      const { data, error } = await supabase
+        .from('clinical_records')
+        .select('*')
+        .eq('patient_id', patientId)
+        .maybeSingle();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          patientId: data.patient_id,
+          specialistId: data.specialist_id || 'user-dra-valeria',
+          familyHistory: data.family_history || undefined,
+          pathologicalHistory: data.pathological_history || undefined,
+          allergies: Array.isArray(data.allergies) ? data.allergies : [],
+          medications: Array.isArray(data.medications) ? data.medications : [],
+          lifestyleHabits: data.lifestyle_habits || undefined,
+          physicalActivity: data.physical_activity || undefined,
+          dietaryHabits: data.dietary_habits || undefined,
+          recall24h: data.recall_24h || '',
+          clinicalGoals: data.clinical_goals || '',
+          clinicalObservations: data.clinical_observations || '',
+          isCustomized: true,
+          updatedAt: data.updated_at || new Date().toISOString(),
+        };
+      }
+
+      // 2. Fallback: check medical_notes JSON in patients table
+      const { data: patData } = await supabase
+        .from('patients')
+        .select('medical_notes')
+        .eq('id', patientId)
+        .maybeSingle();
+
+      if (patData?.medical_notes) {
+        try {
+          const meta = JSON.parse(patData.medical_notes);
+          if (meta.clinicalRecord) {
+            return {
+              ...meta.clinicalRecord,
+              isCustomized: true,
+            };
+          }
+          if (meta.allergies || meta.pathologies || meta.customNotes) {
+            const allergiesList = typeof meta.allergies === 'string'
+              ? meta.allergies.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : (Array.isArray(meta.allergies) ? meta.allergies : []);
+            const pathList = typeof meta.pathologies === 'string'
+              ? meta.pathologies.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : (Array.isArray(meta.pathologies) ? meta.pathologies : []);
+            return {
+              id: `clin-${patientId}`,
+              patientId: patientId,
+              specialistId: meta.specialistId || 'user-dra-valeria',
+              pathologicalHistory: { diagnosedDiseases: pathList, surgeries: [] },
+              allergies: allergiesList,
+              medications: [],
+              clinicalGoals: meta.goal || '',
+              clinicalObservations: meta.customNotes || '',
+              isCustomized: true,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+        } catch {}
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  async saveClinicalRecord(rec: ClinicalRecord): Promise<boolean> {
+    if (!supabase || !isSupabaseConfigured) return false;
+    try {
+      if (rec.patientId) {
+        await this.ensurePatientExists(rec.patientId);
+      }
+      await this.ensureOrganizationAndUser();
+
+      const row = {
+        id: rec.id,
+        patient_id: rec.patientId,
+        specialist_id: rec.specialistId || 'user-dra-valeria',
+        family_history: rec.familyHistory || {},
+        pathological_history: rec.pathologicalHistory || {},
+        allergies: rec.allergies || [],
+        medications: rec.medications || [],
+        lifestyle_habits: rec.lifestyleHabits || {},
+        physical_activity: rec.physicalActivity || {},
+        dietary_habits: rec.dietaryHabits || {},
+        recall_24h: rec.recall24h || '',
+        clinical_goals: rec.clinicalGoals || '',
+        clinical_observations: rec.clinicalObservations || '',
+        updated_at: rec.updatedAt || new Date().toISOString(),
+      };
+
+      // 1. Primary write: Attempt upsert into clinical_records table
+      const { error } = await supabase
+        .from('clinical_records')
+        .upsert(row, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('[Supabase] Note on clinical_records upsert (falling back to patient metadata store):', error.message);
+      }
+
+      // 2. Secondary redundant write: Embed inside patients.medical_notes
+      // Guarantees zero data loss even if clinical_records table has not been migrated or has RLS restrictions
+      const { data: patRow } = await supabase
+        .from('patients')
+        .select('medical_notes')
+        .eq('id', rec.patientId)
+        .maybeSingle();
+
+      if (patRow) {
+        let meta: any = {};
+        try {
+          meta = JSON.parse(patRow.medical_notes || '{}');
+        } catch {
+          meta = {};
+        }
+        meta.clinicalRecord = {
+          ...rec,
+          isCustomized: true,
+          updatedAt: rec.updatedAt || new Date().toISOString(),
+        };
+        await supabase
+          .from('patients')
+          .update({
+            medical_notes: JSON.stringify(meta),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', rec.patientId);
+      }
+
+      return true;
+    } catch (e: any) {
+      console.error('[Supabase] Exception in saveClinicalRecord:', e?.message);
+      return false;
+    }
+  },
+
   // --- NUTRITION PLANS ---
   async getPlans(): Promise<NutritionPlan[] | null> {
     if (!supabase || !isSupabaseConfigured) return null;
@@ -689,10 +835,20 @@ export const supabaseDb = {
       if (lab.patientId) {
         await this.ensurePatientExists(lab.patientId);
       }
-      const row = mapLabToDb(lab);
+      let row = mapLabToDb(lab, false);
       let { error } = await supabase
         .from('lab_records')
         .upsert(row, { onConflict: 'id' });
+
+      // If schema cache error because user hasn't run the SQL migration yet for urea_mg_dl or custom_parameters
+      if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.code === 'PGRST204')) {
+        console.warn('[Supabase] Missing column in lab_records, saving with extra fields encoded in notes fallback:', error.message);
+        row = mapLabToDb(lab, true);
+        const retrySchema = await supabase
+          .from('lab_records')
+          .upsert(row, { onConflict: 'id' });
+        error = retrySchema.error;
+      }
 
       if (error && error.code === '23503' && lab.patientId) {
         await this.ensurePatientExists(lab.patientId);
@@ -953,7 +1109,7 @@ export const supabaseDb = {
 
       // 7. Sync Lab Records
       if (snapshot.labs && snapshot.labs.length > 0) {
-        const rows = snapshot.labs.map(mapLabToDb);
+        const rows = snapshot.labs.map((l) => mapLabToDb(l));
         const { error } = await supabase.from('lab_records').upsert(rows, { onConflict: 'id' });
         result.tables['lab_records'] = {
           success: !error,
@@ -1015,7 +1171,7 @@ export const supabaseDb = {
 
     try {
       // 1. Check table health & count
-      const tableNames = ['patients', 'anthropometry_records', 'nutrition_plans', 'appointments', 'payments', 'foods', 'recipes', 'lab_records'];
+      const tableNames = ['patients', 'clinical_records', 'anthropometry_records', 'nutrition_plans', 'appointments', 'payments', 'foods', 'recipes', 'lab_records'];
       let readOk = true;
 
       for (const t of tableNames) {
@@ -1076,8 +1232,23 @@ export const supabaseDb = {
 
 function mapPatientToDb(p: Patient): Record<string, any> {
   const orgId = p.organizationId || 'org-nutriluz-mexico';
+  let clinRec: any = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('nutriluz_clinical_records');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          clinRec = list.find((c: any) => c.patientId === p.id);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   // Embed comprehensive clinical history & somatometry into medical_notes JSON
-  const clinicalPayload = {
+  const clinicalPayload: Record<string, any> = {
     initialWeight: p.initialWeight,
     currentWeight: p.currentWeight,
     targetWeight: p.targetWeight,
@@ -1091,6 +1262,8 @@ function mapPatientToDb(p: Patient): Record<string, any> {
     address: p.address,
     photoUrl: p.photoUrl,
     customNotes: p.notes,
+    allergies: (p as any).allergies || '',
+    pathologies: (p as any).pathologies || '',
     lastConsultationDate: p.lastConsultationDate,
     nextConsultationDate: p.nextConsultationDate,
     assignedRecipeIds: Array.isArray(p.assignedRecipeIds) ? p.assignedRecipeIds : [],
@@ -1099,6 +1272,10 @@ function mapPatientToDb(p: Patient): Record<string, any> {
     portalPassword: p.portalPassword || null,
     portalLastLogin: p.portalLastLogin || null,
   };
+
+  if (clinRec) {
+    clinicalPayload.clinicalRecord = clinRec;
+  }
 
   return {
     id: p.id,
@@ -1132,9 +1309,41 @@ function mapDbToPatient(row: any): Patient {
     }
   }
 
+  if (meta.clinicalRecord && meta.clinicalRecord.patientId && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('nutriluz_clinical_records');
+      const list = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(list)) {
+        const rec = { ...meta.clinicalRecord, isCustomized: true };
+        const idx = list.findIndex((c: any) => c.id === rec.id || c.patientId === rec.patientId);
+        if (idx >= 0) {
+          list[idx] = rec;
+        } else {
+          list.unshift(rec);
+        }
+        localStorage.setItem('nutriluz_clinical_records', JSON.stringify(list));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const assignedRecipeIds: string[] = Array.isArray(meta.assignedRecipeIds)
     ? meta.assignedRecipeIds
     : (Array.isArray(row.assigned_recipe_ids) ? row.assigned_recipe_ids : []);
+
+  const allergiesStr =
+    meta.allergies ||
+    (Array.isArray(meta.clinicalRecord?.allergies) ? meta.clinicalRecord.allergies.join(', ') : '') ||
+    (Array.isArray(row.allergies) ? row.allergies.join(', ') : '') ||
+    '';
+
+  const pathologiesStr =
+    meta.pathologies ||
+    (Array.isArray(meta.clinicalRecord?.pathologicalHistory?.diagnosedDiseases)
+      ? meta.clinicalRecord.pathologicalHistory.diagnosedDiseases.join(', ')
+      : '') ||
+    '';
 
   return {
     id: row.id,
@@ -1162,6 +1371,8 @@ function mapDbToPatient(row: any): Patient {
     lastConsultationDate: meta.lastConsultationDate,
     nextConsultationDate: meta.nextConsultationDate,
     notes: meta.customNotes || '',
+    allergies: allergiesStr,
+    pathologies: pathologiesStr,
     assignedRecipeIds,
     portalAccessEnabled: meta.portalAccessEnabled !== undefined ? meta.portalAccessEnabled : true,
     portalUsername: meta.portalUsername || row.email || '',
@@ -1169,7 +1380,7 @@ function mapDbToPatient(row: any): Patient {
     portalLastLogin: meta.portalLastLogin || null,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString(),
-  };
+  } as Patient;
 }
 
 function mapAnthroToDb(a: AnthropometricRecord): Record<string, any> {
@@ -1353,40 +1564,86 @@ function mapDbToPayment(row: any): PaymentRecord {
   };
 }
 
-function mapLabToDb(l: LaboratoryResult): Record<string, any> {
-  return {
+function mapLabToDb(l: LaboratoryResult, omitNewColumns = false): Record<string, any> {
+  const row: Record<string, any> = {
     id: l.id,
     patient_id: l.patientId,
     test_date: l.testDate ? l.testDate.split('T')[0] : new Date().toISOString().split('T')[0],
-    glucose_mg_dl: l.glucoseMgDl ? Number(l.glucoseMgDl) : null,
-    hba1c_pct: l.hba1cPercentage ? Number(l.hba1cPercentage) : null,
-    total_cholesterol_mg_dl: l.totalCholesterolMgDl ? Number(l.totalCholesterolMgDl) : null,
-    triglycerides_mg_dl: l.triglyceridesMgDl ? Number(l.triglyceridesMgDl) : null,
-    hdl_mg_dl: l.hdlCholesterolMgDl ? Number(l.hdlCholesterolMgDl) : null,
-    ldl_mg_dl: l.ldlCholesterolMgDl ? Number(l.ldlCholesterolMgDl) : null,
-    uric_acid_mg_dl: l.uricAcidMgDl ? Number(l.uricAcidMgDl) : null,
-    creatinine_mg_dl: l.creatinineMgDl ? Number(l.creatinineMgDl) : null,
-    document_url: null,
+    glucose_mg_dl: l.glucoseMgDl !== undefined && l.glucoseMgDl !== null ? Number(l.glucoseMgDl) : null,
+    hba1c_pct: l.hba1cPercentage !== undefined && l.hba1cPercentage !== null ? Number(l.hba1cPercentage) : null,
+    total_cholesterol_mg_dl: l.totalCholesterolMgDl !== undefined && l.totalCholesterolMgDl !== null ? Number(l.totalCholesterolMgDl) : null,
+    triglycerides_mg_dl: l.triglyceridesMgDl !== undefined && l.triglyceridesMgDl !== null ? Number(l.triglyceridesMgDl) : null,
+    hdl_mg_dl: l.hdlCholesterolMgDl !== undefined && l.hdlCholesterolMgDl !== null ? Number(l.hdlCholesterolMgDl) : null,
+    ldl_mg_dl: l.ldlCholesterolMgDl !== undefined && l.ldlCholesterolMgDl !== null ? Number(l.ldlCholesterolMgDl) : null,
+    uric_acid_mg_dl: l.uricAcidMgDl !== undefined && l.uricAcidMgDl !== null ? Number(l.uricAcidMgDl) : null,
+    creatinine_mg_dl: l.creatinineMgDl !== undefined && l.creatinineMgDl !== null ? Number(l.creatinineMgDl) : null,
+    document_url: l.documentUrl || l.fileData || null,
     notes: l.specialistInterpretation || l.laboratoryName || 'Laboratorio Clínico',
     created_at: new Date().toISOString(),
   };
+
+  if (!omitNewColumns) {
+    if (l.ureaMgDl !== undefined && l.ureaMgDl !== null) {
+      row.urea_mg_dl = Number(l.ureaMgDl);
+    }
+    if (l.customParameters && l.customParameters.length > 0) {
+      row.custom_parameters = l.customParameters;
+    }
+    if (l.fileName) {
+      row.file_name = l.fileName;
+    }
+  } else {
+    try {
+      const extraMeta: Record<string, any> = {};
+      if (l.ureaMgDl !== undefined && l.ureaMgDl !== null) extraMeta.ureaMgDl = Number(l.ureaMgDl);
+      if (l.customParameters && l.customParameters.length > 0) extraMeta.customParameters = l.customParameters;
+      if (l.fileName) extraMeta.fileName = l.fileName;
+      if (Object.keys(extraMeta).length > 0) {
+        row.notes = `${row.notes || ''} [EXTRA_STUDIES:${JSON.stringify(extraMeta)}]`.trim();
+      }
+    } catch {}
+  }
+
+  return row;
 }
 
 function mapDbToLab(row: any): LaboratoryResult {
+  let urea = row.urea_mg_dl !== undefined && row.urea_mg_dl !== null ? Number(row.urea_mg_dl) : undefined;
+  let customParams = Array.isArray(row.custom_parameters) ? row.custom_parameters : undefined;
+  let fileName: string | undefined = row.file_name || undefined;
+  let cleanNotes = row.notes || '';
+
+  if (cleanNotes.includes('[EXTRA_STUDIES:')) {
+    try {
+      const match = cleanNotes.match(/\[EXTRA_STUDIES:(.*?)\]/);
+      if (match && match[1]) {
+        const parsed = JSON.parse(match[1]);
+        if (urea === undefined && parsed.ureaMgDl !== undefined) urea = Number(parsed.ureaMgDl);
+        if (!customParams && Array.isArray(parsed.customParameters)) customParams = parsed.customParameters;
+        if (!fileName && parsed.fileName) fileName = parsed.fileName;
+        cleanNotes = cleanNotes.replace(/\[EXTRA_STUDIES:.*?\]/, '').trim();
+      }
+    } catch {}
+  }
+
   return {
     id: row.id,
     patientId: row.patient_id,
     testDate: row.test_date,
     laboratoryName: 'Laboratorio Médico Certificado',
-    glucoseMgDl: row.glucose_mg_dl ? Number(row.glucose_mg_dl) : undefined,
-    hba1cPercentage: row.hba1c_pct ? Number(row.hba1c_pct) : undefined,
-    totalCholesterolMgDl: row.total_cholesterol_mg_dl ? Number(row.total_cholesterol_mg_dl) : undefined,
-    triglyceridesMgDl: row.triglycerides_mg_dl ? Number(row.triglycerides_mg_dl) : undefined,
-    hdlCholesterolMgDl: row.hdl_mg_dl ? Number(row.hdl_mg_dl) : undefined,
-    ldlCholesterolMgDl: row.ldl_mg_dl ? Number(row.ldl_mg_dl) : undefined,
-    uricAcidMgDl: row.uric_acid_mg_dl ? Number(row.uric_acid_mg_dl) : undefined,
-    creatinineMgDl: row.creatinine_mg_dl ? Number(row.creatinine_mg_dl) : undefined,
-    specialistInterpretation: row.notes || '',
+    glucoseMgDl: row.glucose_mg_dl !== undefined && row.glucose_mg_dl !== null ? Number(row.glucose_mg_dl) : undefined,
+    ureaMgDl: urea,
+    hba1cPercentage: row.hba1c_pct !== undefined && row.hba1c_pct !== null ? Number(row.hba1c_pct) : undefined,
+    totalCholesterolMgDl: row.total_cholesterol_mg_dl !== undefined && row.total_cholesterol_mg_dl !== null ? Number(row.total_cholesterol_mg_dl) : undefined,
+    triglyceridesMgDl: row.triglycerides_mg_dl !== undefined && row.triglycerides_mg_dl !== null ? Number(row.triglycerides_mg_dl) : undefined,
+    hdlCholesterolMgDl: row.hdl_mg_dl !== undefined && row.hdl_mg_dl !== null ? Number(row.hdl_mg_dl) : undefined,
+    ldlCholesterolMgDl: row.ldl_mg_dl !== undefined && row.ldl_mg_dl !== null ? Number(row.ldl_mg_dl) : undefined,
+    uricAcidMgDl: row.uric_acid_mg_dl !== undefined && row.uric_acid_mg_dl !== null ? Number(row.uric_acid_mg_dl) : undefined,
+    creatinineMgDl: row.creatinine_mg_dl !== undefined && row.creatinine_mg_dl !== null ? Number(row.creatinine_mg_dl) : undefined,
+    documentUrl: row.document_url || undefined,
+    fileName: fileName,
+    customParameters: customParams,
+    specialistInterpretation: cleanNotes,
   };
 }
 

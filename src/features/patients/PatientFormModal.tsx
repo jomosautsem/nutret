@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   User,
   Mail,
@@ -23,12 +23,38 @@ import {
   Eye,
   EyeOff,
   Lock,
+  FlaskConical,
+  Plus,
+  Edit2,
+  Apple,
+  Utensils,
+  BookmarkPlus,
+  FileText,
+  ChevronRight,
+  ChevronLeft,
+  AlertTriangle,
+  Info,
+  Sliders,
+  Check,
+  Save,
+  PieChart,
+  FileUp,
 } from 'lucide-react';
-import { Patient, RiskLevel, PatientStatus, AnthropometricRecord, ClinicalRecord } from '../../types';
+import {
+  Patient,
+  RiskLevel,
+  PatientStatus,
+  AnthropometricRecord,
+  ClinicalRecord,
+  LaboratoryResult,
+  NutritionPlan,
+} from '../../types';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
 import { storageService } from '../../lib/storage';
 import { optimizeImage, uploadPatientPhotoToSupabase } from '../../lib/imageOptimizer';
+import { ClinicalPreset, INITIAL_CLINICAL_PRESETS } from '../ai_copilot/prescriptionPresetsData';
+import { SMAE_CONSTANTS, SmaeConstant } from '../../services/clinicalEngineSmae';
 
 const AVATAR_PRESETS = [
   { label: 'Mujer 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', gender: 'F' },
@@ -58,6 +84,58 @@ const PORTAL_PASSWORD_PRESETS = [
   'FitVida2026!',
 ];
 
+const ALLERGIES_PRESETS = [
+  'Lactosa',
+  'Gluten',
+  'Mariscos',
+  'Frutos secos',
+  'Huevo',
+  'Cacahuate',
+  'Soya',
+  'Pescado',
+];
+
+const PATHOLOGY_PRESETS = [
+  'Resistencia a la Insulina',
+  'Diabetes Tipo 2',
+  'Hipertensión Arterial',
+  'Hipotiroidismo',
+  'Dislipidemia',
+  'Hígado Graso',
+  'Síndrome de Ovario Poliquístico (SOP)',
+  'Gastritis / Colitis',
+];
+
+export interface ClinicalStudyItem {
+  id: string;
+  name: string;
+  code?: string;
+  value: number | string;
+  unit: string;
+  refRange: string;
+  minNormal?: number;
+  maxNormal?: number;
+}
+
+const INITIAL_STUDIES: ClinicalStudyItem[] = [
+  { id: 'study-glucose', name: 'Glucosa en ayuno', code: 'glucose', value: 90, unit: 'mg/dL', refRange: '70 - 99 mg/dL', minNormal: 70, maxNormal: 99 },
+  { id: 'study-urea', name: 'Urea sérica', code: 'urea', value: 25, unit: 'mg/dL', refRange: '15 - 45 mg/dL', minNormal: 15, maxNormal: 45 },
+  { id: 'study-uric-acid', name: 'Ácido úrico', code: 'uric_acid', value: 4.5, unit: 'mg/dL', refRange: '3.5 - 7.2 mg/dL', minNormal: 3.5, maxNormal: 7.2 },
+  { id: 'study-creatinine', name: 'Creatinina sérica', code: 'creatinine', value: 0.9, unit: 'mg/dL', refRange: '0.7 - 1.3 mg/dL', minNormal: 0.7, maxNormal: 1.3 },
+  { id: 'study-triglycerides', name: 'Triglicéridos', code: 'triglycerides', value: 120, unit: 'mg/dL', refRange: '< 150 mg/dL', minNormal: 0, maxNormal: 150 },
+  { id: 'study-cholesterol', name: 'Colesterol total', code: 'cholesterol', value: 175, unit: 'mg/dL', refRange: '< 200 mg/dL', minNormal: 0, maxNormal: 200 },
+];
+
+export type ModalTabType =
+  | 'general'
+  | 'antropometria'
+  | 'clinico'
+  | 'estudios'
+  | 'smae'
+  | 'macros'
+  | 'credenciales'
+  | 'foto';
+
 interface PatientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -73,6 +151,9 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 }) => {
   const { showToast } = useToast();
   const isEditing = Boolean(patientToEdit);
+
+  // Active Tab
+  const [activeTab, setActiveTab] = useState<ModalTabType>('general');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -103,101 +184,131 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     showPassword: false,
   });
 
+  // Expedientes & Anamnesis State
+  const [anamnesisData, setAnamnesisData] = useState({
+    familyDiabetes: false,
+    familyHypertension: false,
+    familyCancer: false,
+    familyCardiovascular: false,
+    familyThyroid: false,
+    familyNotes: '',
+    surgeries: '',
+    medications: '',
+    sleepHours: 7,
+    waterLiters: 2.5,
+    stressLevel: 'Medio',
+    smoking: false,
+    alcoholFrequency: 'Ocasional',
+  });
+
+  // Clinical Studies State
+  const [studies, setStudies] = useState<ClinicalStudyItem[]>(INITIAL_STUDIES);
+  const [editingStudyId, setEditingStudyId] = useState<string | null>(null);
+  const [newStudyForm, setNewStudyForm] = useState({
+    name: '',
+    value: '',
+    unit: 'mg/dL',
+    refRange: '',
+  });
+  const [showAddStudyModal, setShowAddStudyModal] = useState(false);
+
+  // Lab File Upload State
+  const [labFile, setLabFile] = useState<{
+    name: string;
+    sizeKb: number;
+    dataUrl: string;
+    type: string;
+  } | null>(null);
+  const labFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Evaluador SMAE Portions State
+  const [smaePortions, setSmaePortions] = useState<Record<string, number>>({
+    'Verduras': 4,
+    'Frutas': 3,
+    'Cereales s/g': 5,
+    'Cereales c/g': 1,
+    'Leguminosas': 1.5,
+    'AOA Muy bajo aporte': 2,
+    'AOA Bajo aporte': 3,
+    'AOA Moderado aporte': 1,
+    'AOA Alto aporte': 0,
+    'Leche descremada': 1,
+    'Leche semidescremada': 0,
+    'Leche entera': 0,
+    'Leche c/azúcar': 0,
+    'Grasas s/proteína': 3,
+    'Grasas c/proteína': 1,
+    'Azúcares s/grasa': 0,
+  });
+
+  // Macros & Comidas State
+  const [activityFactor, setActivityFactor] = useState<number>(1.375); // Actividad ligera
+  const [targetKcal, setTargetKcal] = useState<number>(1800);
+  
+  // SUGGESTED MACRONUTRIENT DISTRIBUTION (MUST SUM TO EXACTLY 100%)
+  const [carbsPct, setCarbsPct] = useState<number>(50);
+  const [proteinPct, setProteinPct] = useState<number>(25);
+  const [fatPct, setFatPct] = useState<number>(25);
+
+  // Meal times distribution
+  const [mealDistribution, setMealDistribution] = useState({
+    desayuno: 25,
+    colacion1: 10,
+    comida: 35,
+    colacion2: 10,
+    cena: 20,
+  });
+
+  // Presets & Templates
+  const [presets, setPresets] = useState<ClinicalPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+  const [showNewTemplateModal, setShowNewTemplateModal] = useState(false);
+  const [newTemplateForm, setNewTemplateForm] = useState({
+    name: '',
+    badge: 'Personalizado',
+    description: '',
+    dietStyle: 'Equilibrada',
+  });
+
+  // Confirmation Modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'antropometria' | 'clinico' | 'credenciales' | 'foto'>('general');
 
   // Photo Upload State
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const [compressionStats, setCompressionStats] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // File Upload & Compression Handler
-  const handleFileSelected = async (file: File) => {
-    if (!file) return;
+  // Track open state to prevent overwriting user input on background sync
+  const wasOpenRef = useRef(false);
+  const loadedPatientIdRef = useRef<string | null>(null);
 
-    if (!file.type.startsWith('image/') && !file.name.match(/\.(jpg|jpeg|png|webp|gif|heic|svg)$/i)) {
-      showToast('Formato no válido', 'Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP o HEIC).', 'error');
+  // Load Presets on Mount
+  useEffect(() => {
+    const loaded = storageService.getPrescriptionPresets();
+    setPresets(loaded && loaded.length > 0 ? loaded : INITIAL_CLINICAL_PRESETS);
+  }, []);
+
+  // Populate when editing or opening
+  useEffect(() => {
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      loadedPatientIdRef.current = null;
       return;
     }
 
-    setIsUploading(true);
-    setUploadMessage('Optimizando y recortando imagen...');
+    const justOpened = !wasOpenRef.current;
+    wasOpenRef.current = true;
+    const currentId = patientToEdit?.id || null;
 
-    try {
-      // 1. Client-side bicubic optimization (<100KB, max 600x600, crisp quality)
-      const optResult = await optimizeImage(file, {
-        maxWidth: 600,
-        maxHeight: 600,
-        quality: 0.88,
-        format: 'image/webp',
-      });
-
-      const origKb = (optResult.originalSize / 1024).toFixed(0);
-      const compKb = (optResult.compressedSize / 1024).toFixed(0);
-      setCompressionStats(`${compKb} KB (Ahorro del ${optResult.savingsPct}%)`);
-
-      setUploadMessage('Guardando imagen en el expediente...');
-
-      // 2. Try Supabase Storage if configured, or use high-efficiency DataURL
-      const patientIdentifier = patientToEdit?.id || `patient_${Date.now()}`;
-      const uploadRes = await uploadPatientPhotoToSupabase(
-        optResult.blob,
-        patientIdentifier,
-        optResult.fileName
-      );
-
-      if (uploadRes.success && uploadRes.publicUrl) {
-        setFormData((prev) => ({ ...prev, photoUrl: uploadRes.publicUrl }));
-        showToast('Foto cargada', 'La imagen se subió a la nube y se vinculó al paciente.', 'success');
-      } else {
-        // Safe offline / local storage fallback using compressed WebP DataURL
-        setFormData((prev) => ({ ...prev, photoUrl: optResult.dataUrl }));
-        showToast('Foto optimizada', 'Fotografía procesada y guardada con éxito en el expediente.', 'success');
-      }
-    } catch (err: any) {
-      console.error('Error optimizando imagen del paciente:', err);
-      showToast('Error al procesar imagen', err?.message || 'No se pudo procesar la fotografía seleccionada.', 'error');
-    } finally {
-      setIsUploading(false);
-      setUploadMessage('');
+    if (!justOpened && loadedPatientIdRef.current === currentId) {
+      return;
     }
-  };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileSelected(e.dataTransfer.files[0]);
-    }
-  };
+    loadedPatientIdRef.current = currentId;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
-  const handleRemovePhoto = () => {
-    const defaultUrl =
-      formData.gender === 'F'
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
-        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80';
-    setFormData((prev) => ({ ...prev, photoUrl: defaultUrl }));
-    setCompressionStats(null);
-    showToast('Foto restaurada', 'Se ha restablecido el avatar clínico predeterminado.', 'info');
-  };
-
-  // Populate when editing
-  useEffect(() => {
     if (patientToEdit) {
-      // Find allergies & pathologies from patient or clinical record
       const clinRec = storageService.getClinicalRecordByPatientId(patientToEdit.id);
       const allergiesText = Array.isArray((patientToEdit as any).allergies)
         ? (patientToEdit as any).allergies.join(', ')
@@ -242,6 +353,75 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         portalPassword: patientToEdit.portalPassword || 'Nutri2026!',
         showPassword: false,
       });
+
+      if (clinRec) {
+        setAnamnesisData({
+          familyDiabetes: Boolean(clinRec.familyHistory?.diabetes),
+          familyHypertension: Boolean(clinRec.familyHistory?.hypertension),
+          familyCancer: Boolean(clinRec.familyHistory?.cancer),
+          familyCardiovascular: Boolean(clinRec.familyHistory?.cardiovascular),
+          familyThyroid: Boolean(clinRec.familyHistory?.thyroid),
+          familyNotes: clinRec.familyHistory?.notes || '',
+          surgeries: clinRec.pathologicalHistory?.surgeries?.join(', ') || '',
+          medications: clinRec.medications?.map((m) => `${m.name} ${m.dose}`).join(', ') || '',
+          sleepHours: clinRec.lifestyleHabits?.sleepHours || 7,
+          waterLiters: clinRec.lifestyleHabits?.waterDailyLiters || 2.5,
+          stressLevel: clinRec.lifestyleHabits?.stressLevel || 'Medio',
+          smoking: Boolean(clinRec.lifestyleHabits?.smoking),
+          alcoholFrequency: clinRec.lifestyleHabits?.alcohol || 'Ocasional',
+        });
+      }
+
+      // Check existing labs
+      const existingLabs = storageService.getLabRecordsByPatientId(patientToEdit.id);
+      if (existingLabs && existingLabs.length > 0) {
+        const latestLab = existingLabs[0];
+        const updatedStudies = [...INITIAL_STUDIES];
+        if (latestLab.glucoseMgDl) {
+          const s = updatedStudies.find((item) => item.code === 'glucose');
+          if (s) s.value = latestLab.glucoseMgDl;
+        }
+        if (latestLab.ureaMgDl) {
+          const s = updatedStudies.find((item) => item.code === 'urea');
+          if (s) s.value = latestLab.ureaMgDl;
+        }
+        if (latestLab.uricAcidMgDl) {
+          const s = updatedStudies.find((item) => item.code === 'uric_acid');
+          if (s) s.value = latestLab.uricAcidMgDl;
+        }
+        if (latestLab.creatinineMgDl) {
+          const s = updatedStudies.find((item) => item.code === 'creatinine');
+          if (s) s.value = latestLab.creatinineMgDl;
+        }
+        if (latestLab.triglyceridesMgDl) {
+          const s = updatedStudies.find((item) => item.code === 'triglycerides');
+          if (s) s.value = latestLab.triglyceridesMgDl;
+        }
+        if (latestLab.totalCholesterolMgDl) {
+          const s = updatedStudies.find((item) => item.code === 'cholesterol');
+          if (s) s.value = latestLab.totalCholesterolMgDl;
+        }
+        if (latestLab.customParameters && latestLab.customParameters.length > 0) {
+          latestLab.customParameters.forEach((cp, idx) => {
+            updatedStudies.push({
+              id: `custom-load-${idx}`,
+              name: cp.name,
+              value: cp.value,
+              unit: cp.unit,
+              refRange: cp.refRange,
+            });
+          });
+        }
+        setStudies(updatedStudies);
+        if (latestLab.documentUrl || latestLab.fileData) {
+          setLabFile({
+            name: latestLab.fileName || 'Estudio_Laboratorio_Adjunto.pdf',
+            sizeKb: 145,
+            dataUrl: latestLab.documentUrl || latestLab.fileData || '',
+            type: 'application/pdf',
+          });
+        }
+      }
     } else {
       // Defaults for new patient
       setFormData({
@@ -271,37 +451,311 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         portalPassword: 'Nutri2026!',
         showPassword: false,
       });
+      setStudies(INITIAL_STUDIES);
+      setLabFile(null);
+      setCarbsPct(50);
+      setProteinPct(25);
+      setFatPct(25);
     }
   }, [patientToEdit, isOpen]);
 
-  // Live BMI calculation
+  // Live Calculations (BMI, Age, Energy Expenditure)
   const heightM = (Number(formData.height) || 165) / 100;
   const currentWeightNum = Number(formData.currentWeight) || 70;
   const liveBmi = Number((currentWeightNum / (heightM * heightM)).toFixed(1));
 
-  const getBmiCategory = (val: number) => {
-    if (val < 18.5) return { label: 'Bajo Peso', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/50' };
-    if (val < 25) return { label: 'Normopeso', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50' };
-    if (val < 30) return { label: 'Sobrepeso', color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/50' };
-    if (val < 35) return { label: 'Obesidad Grado I', color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/50' };
-    return { label: 'Obesidad Grado II/III', color: 'text-red-700 bg-red-50 dark:bg-red-950/50' };
-  };
-
-  const bmiCat = getBmiCategory(liveBmi);
-
-  // Age calculation
   const birthYear = formData.birthDate ? new Date(formData.birthDate).getFullYear() : 1995;
   const ageYears = isNaN(birthYear) ? 29 : Math.max(1, new Date().getFullYear() - birthYear);
 
+  // Harris-Benedict & Mifflin-St Jeor Energy Expenditure
+  const computedGeb = useMemo(() => {
+    const isMale = formData.gender === 'M';
+    if (isMale) {
+      // Mifflin: 10*peso + 6.25*talla - 5*edad + 5
+      return Math.round(10 * currentWeightNum + 6.25 * Number(formData.height) - 5 * ageYears + 5);
+    } else {
+      // Mifflin: 10*peso + 6.25*talla - 5*edad - 161
+      return Math.round(10 * currentWeightNum + 6.25 * Number(formData.height) - 5 * ageYears - 161);
+    }
+  }, [formData.gender, currentWeightNum, formData.height, ageYears]);
+
+  const computedGet = useMemo(() => {
+    return Math.round(computedGeb * activityFactor);
+  }, [computedGeb, activityFactor]);
+
+  // Sync target kcal initially if not manually modified
+  useEffect(() => {
+    if (!isEditing && targetKcal === 1800 && computedGet > 1000) {
+      setTargetKcal(computedGet);
+    }
+  }, [computedGet, isEditing]);
+
+  // STRICT MACRONUTRIENT SUM VALIDATION (MUST BE EXACTLY 100%)
+  const totalMacrosPct = Number((carbsPct + proteinPct + fatPct).toFixed(1));
+  const isMacrosValid = totalMacrosPct === 100;
+
+  // Handlers for Macronutrients ensuring they never exceed 100%
+  const handleCarbsChange = (newVal: number) => {
+    const val = Math.max(0, Number(newVal) || 0);
+    const maxAllowed = Math.max(0, 100 - (proteinPct + fatPct));
+    if (val > maxAllowed) {
+      setCarbsPct(maxAllowed);
+      showToast('Límite 100%', `No puedes exceder el 100%. Carbohidratos ajustados a ${maxAllowed}%.`, 'info');
+    } else {
+      setCarbsPct(val);
+    }
+  };
+
+  const handleProteinChange = (newVal: number) => {
+    const val = Math.max(0, Number(newVal) || 0);
+    const maxAllowed = Math.max(0, 100 - (carbsPct + fatPct));
+    if (val > maxAllowed) {
+      setProteinPct(maxAllowed);
+      showToast('Límite 100%', `No puedes exceder el 100%. Proteínas ajustadas a ${maxAllowed}%.`, 'info');
+    } else {
+      setProteinPct(val);
+    }
+  };
+
+  const handleFatChange = (newVal: number) => {
+    const val = Math.max(0, Number(newVal) || 0);
+    const maxAllowed = Math.max(0, 100 - (carbsPct + proteinPct));
+    if (val > maxAllowed) {
+      setFatPct(maxAllowed);
+      showToast('Límite 100%', `No puedes exceder el 100%. Grasas ajustadas a ${maxAllowed}%.`, 'info');
+    } else {
+      setFatPct(val);
+    }
+  };
+
+  // Auto-balance remaining macro to reach exactly 100%
+  const handleAutoBalanceMacros = () => {
+    const currentSum = carbsPct + proteinPct;
+    if (currentSum <= 100) {
+      setFatPct(100 - currentSum);
+    } else {
+      setProteinPct(25);
+      setFatPct(25);
+      setCarbsPct(50);
+    }
+    showToast('Macros Equilibrados', 'Suma ajustada exactamente al 100%.', 'info');
+  };
+
+  // Macro Grams Calculation
+  const carbsGrams = Math.round((targetKcal * (carbsPct / 100)) / 4);
+  const proteinGrams = Math.round((targetKcal * (proteinPct / 100)) / 4);
+  const fatGrams = Math.round((targetKcal * (fatPct / 100)) / 9);
+  const proteinGPerKg = (proteinGrams / currentWeightNum).toFixed(2);
+
+  // SMAE Totals Calculation
+  const smaeTotals = useMemo(() => {
+    let kcal = 0;
+    let prot = 0;
+    let lip = 0;
+    let hc = 0;
+
+    SMAE_CONSTANTS.forEach((c) => {
+      const portions = smaePortions[c.grupo] || 0;
+      kcal += portions * c.energia_kcal;
+      prot += portions * c.prot_g;
+      lip += portions * c.lip_g;
+      hc += portions * c.hc_g;
+    });
+
+    return {
+      kcal: Math.round(kcal),
+      prot: Math.round(prot),
+      lip: Math.round(lip),
+      hc: Math.round(hc),
+      adequacyPct: targetKcal > 0 ? Number(((kcal / targetKcal) * 100).toFixed(1)) : 100,
+    };
+  }, [smaePortions, targetKcal]);
+
+  // Apply Quick Prescription Preset
+  const handleSelectPreset = (preset: ClinicalPreset) => {
+    setSelectedPresetId(preset.id);
+    setCarbsPct(preset.carbsPct);
+    setFatPct(preset.fatPct);
+    const calculatedProtein = Math.max(0, 100 - (preset.carbsPct + preset.fatPct));
+    setProteinPct(calculatedProtein);
+
+    // Apply caloric adjustment
+    if (preset.caloricAdjustmentType === 'deficit_kcal') {
+      setTargetKcal(Math.max(1200, computedGet + preset.adjustmentValue));
+    } else if (preset.caloricAdjustmentType === 'surplus_kcal') {
+      setTargetKcal(computedGet + preset.adjustmentValue);
+    } else if (preset.caloricAdjustmentType === 'deficit_pct') {
+      setTargetKcal(Math.round(computedGet * (1 + preset.adjustmentValue / 100)));
+    } else {
+      setTargetKcal(computedGet);
+    }
+
+    showToast(
+      'Plantilla Aplicada',
+      `"${preset.name}" seleccionada. Macros ajustados a ${preset.carbsPct}% C / ${calculatedProtein}% P / ${preset.fatPct}% G (100%).`,
+      'success'
+    );
+  };
+
+  // Save Current Setup as New Custom Template
+  const handleSaveAsNewTemplate = () => {
+    if (!newTemplateForm.name.trim()) {
+      showToast('Nombre requerido', 'Ingresa un nombre para la nueva plantilla.', 'error');
+      return;
+    }
+
+    const newPreset: ClinicalPreset = {
+      id: `preset-${Date.now()}`,
+      name: newTemplateForm.name.trim(),
+      badge: newTemplateForm.badge || 'Personalizado',
+      description: newTemplateForm.description || `Distribución ${carbsPct}% C / ${proteinPct}% P / ${fatPct}% G`,
+      goal: formData.goal,
+      caloricAdjustmentType: 'maintenance',
+      adjustmentValue: 0,
+      proteinGKg: Number(proteinGPerKg),
+      carbsPct: carbsPct,
+      fatPct: fatPct,
+      proteinPct: proteinPct,
+      dietStyle: newTemplateForm.dietStyle,
+      mealsCount: 5,
+      conditions: [],
+      allergies: [],
+      prepStyle: 'Equilibrada',
+      recommendations: 'Prescripción personalizada guardada desde el registro clínico.',
+      isVisibleInQuickBar: true,
+      isFavorite: true,
+      isCustom: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newPreset, ...presets];
+    setPresets(updated);
+    storageService.savePrescriptionPresets(updated);
+    setSelectedPresetId(newPreset.id);
+    setShowNewTemplateModal(false);
+    setNewTemplateForm({ name: '', badge: 'Personalizado', description: '', dietStyle: 'Equilibrada' });
+
+    showToast('Plantilla Guardada', `"${newPreset.name}" se guardó en la base de datos de plantillas.`, 'success');
+  };
+
+  // Lab File Handler
+  const handleLabFileSelected = (file: File) => {
+    if (!file) return;
+    const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isPdf && !isImage) {
+      showToast('Formato no admitido', 'Sube un archivo en formato PDF o imagen (JPG, PNG).', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setLabFile({
+        name: file.name,
+        sizeKb: Math.round(file.size / 1024),
+        dataUrl,
+        type: file.type,
+      });
+      showToast('Estudio Adjunto', `Archivo "${file.name}" cargado al expediente.`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Photo Upload & Compression Handler
+  const handlePhotoSelected = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/') && !file.name.match(/\.(jpg|jpeg|png|webp|gif|heic|svg)$/i)) {
+      showToast('Formato no válido', 'Selecciona una imagen válida (JPG, PNG, WebP).', 'error');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadMessage('Optimizando y recortando imagen...');
+
+    try {
+      const optResult = await optimizeImage(file, {
+        maxWidth: 600,
+        maxHeight: 600,
+        quality: 0.88,
+        format: 'image/webp',
+      });
+
+      const compKb = (optResult.compressedSize / 1024).toFixed(0);
+      setCompressionStats(`${compKb} KB (Ahorro del ${optResult.savingsPct}%)`);
+      setUploadMessage('Guardando imagen...');
+
+      const patientIdentifier = patientToEdit?.id || `patient_${Date.now()}`;
+      const uploadRes = await uploadPatientPhotoToSupabase(optResult.blob, patientIdentifier, optResult.fileName);
+
+      if (uploadRes.success && uploadRes.publicUrl) {
+        setFormData((prev) => ({ ...prev, photoUrl: uploadRes.publicUrl }));
+        showToast('Foto cargada', 'La imagen se subió a la nube y se vinculó al paciente.', 'success');
+      } else {
+        setFormData((prev) => ({ ...prev, photoUrl: optResult.dataUrl }));
+        showToast('Foto optimizada', 'Fotografía procesada con éxito.', 'success');
+      }
+    } catch (err: any) {
+      console.error('Error optimizando imagen del paciente:', err);
+      showToast('Error al procesar imagen', err?.message || 'No se pudo procesar la fotografía.', 'error');
+    } finally {
+      setIsUploading(false);
+      setUploadMessage('');
+    }
+  };
+
+  // TABS DEFINITION IN NATURAL CLINICAL SEQUENCE
+  const TABS: { id: ModalTabType; label: string; shortLabel: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'general', label: 'Datos Personales', shortLabel: 'Datos', icon: User },
+    { id: 'antropometria', label: 'Somatometría & Metas', shortLabel: 'Métricas', icon: Scale },
+    { id: 'clinico', label: 'Historial & Alergias', shortLabel: 'Historial', icon: HeartPulse },
+    { id: 'estudios', label: 'Estudios Clínicos', shortLabel: 'Estudios', icon: FlaskConical },
+    { id: 'smae', label: 'Evaluador SMAE', shortLabel: 'SMAE', icon: Apple },
+    { id: 'macros', label: 'Macros y Comidas', shortLabel: 'Macros', icon: Utensils },
+    { id: 'credenciales', label: 'Acceso Portal', shortLabel: 'Acceso', icon: KeyRound },
+    { id: 'foto', label: 'Foto & Finalizar', shortLabel: 'Foto', icon: ImageIcon },
+  ];
+
+  const currentStepIndex = TABS.findIndex((t) => t.id === activeTab);
+
+  const handleNextTab = () => {
+    if (currentStepIndex === 0 && !formData.firstName.trim()) {
+      showToast('Campo Requerido', 'Ingresa el nombre de pila del paciente.', 'error');
+      return;
+    }
+    if (activeTab === 'macros' && totalMacrosPct !== 100) {
+      showToast('Macros Desbalanceados', `La suma de macronutrientes debe ser exactamente 100% (actual: ${totalMacrosPct}%). Haz clic en "Equilibrar al 100%".`, 'error');
+      return;
+    }
+    if (currentStepIndex < TABS.length - 1) {
+      setActiveTab(TABS[currentStepIndex + 1].id);
+    }
+  };
+
+  const handlePrevTab = () => {
+    if (currentStepIndex > 0) {
+      setActiveTab(TABS[currentStepIndex - 1].id);
+    }
+  };
+
+  // SUBMIT FORM VALIDATION
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.firstName.trim()) {
       showToast('Campo requerido', 'Ingresa el nombre del paciente.', 'error');
+      setActiveTab('general');
+      return;
+    }
+    if (totalMacrosPct !== 100) {
+      showToast('Distribución de Macros Incompleta', `La distribución de macronutrientes debe sumar exactamente 100% (actual: ${totalMacrosPct}%).`, 'error');
+      setActiveTab('macros');
       return;
     }
     setShowConfirmModal(true);
   };
 
+  // CONFIRM SAVE IMPLEMENTATION
   const handleConfirmSave = async () => {
     setShowConfirmModal(false);
 
@@ -353,65 +807,134 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    // Save or update Patient in storage & wait for parent patient record
+    // 1. Save Patient
     await storageService.savePatient(savedPatient);
 
-    // If new patient, also create baseline anthropometric & clinical records
-    if (!isEditing) {
-      // Baseline anthropometric record: strictly real values provided in the form
-      const initialAnthro: AnthropometricRecord = {
-        id: `anthro-${Date.now()}`,
-        patientId: savedPatient.id,
-        date: new Date().toISOString().slice(0, 10),
-        weight: parsedCurrentWeight,
-        height: parsedHeight,
-        bmi: liveBmi,
-        measurementDevice: 'Báscula y Estadiómetro Clínico',
-        notes: 'Evaluación somatométrica basal de ingreso.',
-      };
-      await storageService.saveAnthropometricRecord(initialAnthro);
+    // 2. Save Anthropometry Record
+    const initialAnthro: AnthropometricRecord = {
+      id: `anthro-${Date.now()}`,
+      patientId: savedPatient.id,
+      date: new Date().toISOString().slice(0, 10),
+      weight: parsedCurrentWeight,
+      height: parsedHeight,
+      bmi: liveBmi,
+      measurementDevice: 'Báscula y Estadiómetro Clínico',
+      notes: 'Evaluación somatométrica basal de ingreso.',
+    };
+    await storageService.saveAnthropometricRecord(initialAnthro);
 
-      // Only create clinical record if the specialist entered allergies, pathologies or observations.
-      // NEVER invent lifestyle habits, sleep hours, water, alcohol, physical activity or meal logs.
-      if (allergiesArr.length > 0 || pathologiesArr.length > 0 || savedPatient.notes) {
-        const initialClinical: ClinicalRecord = {
-          id: `clin-${Date.now()}`,
-          patientId: savedPatient.id,
-          specialistId: savedPatient.specialistId || 'user-dra-valeria',
-          pathologicalHistory: {
-            diagnosedDiseases: pathologiesArr,
-            surgeries: [],
-          },
-          allergies: allergiesArr,
-          medications: [],
-          clinicalGoals: savedPatient.goal,
-          clinicalObservations: savedPatient.notes,
-          updatedAt: new Date().toISOString(),
-        };
-        storageService.saveClinicalRecord(initialClinical);
-      }
-    } else {
-      // If editing existing patient, update clinical allergies/pathologies if changed
-      const existingClinical = storageService.getClinicalRecordByPatientId(savedPatient.id);
-      if (existingClinical) {
-        const updatedClinical: ClinicalRecord = {
-          ...existingClinical,
-          allergies: allergiesArr,
-          pathologicalHistory: {
-            ...existingClinical.pathologicalHistory,
-            diagnosedDiseases: pathologiesArr,
-          },
-          clinicalGoals: savedPatient.goal,
-          clinicalObservations: savedPatient.notes || existingClinical.clinicalObservations,
-          updatedAt: new Date().toISOString(),
-        };
-        storageService.saveClinicalRecord(updatedClinical);
-      }
+    // 3. Save Clinical Record with Expedientes & Anamnesis
+    const clinicalRecordData: ClinicalRecord = {
+      id: `clin-${Date.now()}`,
+      patientId: savedPatient.id,
+      specialistId: savedPatient.specialistId || 'user-dra-valeria',
+      familyHistory: {
+        diabetes: anamnesisData.familyDiabetes,
+        hypertension: anamnesisData.familyHypertension,
+        cancer: anamnesisData.familyCancer,
+        cardiovascular: anamnesisData.familyCardiovascular,
+        thyroid: anamnesisData.familyThyroid,
+        notes: anamnesisData.familyNotes,
+      },
+      pathologicalHistory: {
+        diagnosedDiseases: pathologiesArr,
+        surgeries: anamnesisData.surgeries ? anamnesisData.surgeries.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      },
+      allergies: allergiesArr,
+      medications: anamnesisData.medications
+        ? anamnesisData.medications.split(',').map((m) => ({ name: m.trim(), dose: 'Prescrita', frequency: 'Diaria' }))
+        : [],
+      lifestyleHabits: {
+        sleepHours: Number(anamnesisData.sleepHours) || 7,
+        sleepQuality: 'Buena',
+        smoking: anamnesisData.smoking,
+        alcohol: anamnesisData.alcoholFrequency,
+        stressLevel: anamnesisData.stressLevel,
+        waterDailyLiters: Number(anamnesisData.waterLiters) || 2.5,
+      },
+      clinicalGoals: savedPatient.goal,
+      clinicalObservations: savedPatient.notes,
+      isCustomized: true,
+      updatedAt: new Date().toISOString(),
+    };
+    storageService.saveClinicalRecord(clinicalRecordData);
+
+    // 4. Save Laboratory / Clinical Studies Record
+    const glucoseVal = Number(studies.find((s) => s.code === 'glucose')?.value) || undefined;
+    const ureaVal = Number(studies.find((s) => s.code === 'urea')?.value) || undefined;
+    const uricAcidVal = Number(studies.find((s) => s.code === 'uric_acid')?.value) || undefined;
+    const creatinineVal = Number(studies.find((s) => s.code === 'creatinine')?.value) || undefined;
+    const triglyceridesVal = Number(studies.find((s) => s.code === 'triglycerides')?.value) || undefined;
+    const cholesterolVal = Number(studies.find((s) => s.code === 'cholesterol')?.value) || undefined;
+
+    const customStudies = studies
+      .filter((s) => !s.code)
+      .map((s) => ({
+        name: s.name,
+        value: String(s.value),
+        unit: s.unit,
+        refRange: s.refRange,
+      }));
+
+    if (glucoseVal || ureaVal || uricAcidVal || creatinineVal || triglyceridesVal || cholesterolVal || labFile || customStudies.length > 0) {
+      const labRecord: LaboratoryResult = {
+        id: `lab-${Date.now()}`,
+        patientId: savedPatient.id,
+        testDate: new Date().toISOString().slice(0, 10),
+        laboratoryName: 'Panel Clínico de Ingreso Nutriluz',
+        glucoseMgDl: glucoseVal,
+        ureaMgDl: ureaVal,
+        uricAcidMgDl: uricAcidVal,
+        creatinineMgDl: creatinineVal,
+        triglyceridesMgDl: triglyceridesVal,
+        totalCholesterolMgDl: cholesterolVal,
+        documentUrl: labFile?.dataUrl,
+        fileName: labFile?.name,
+        customParameters: customStudies,
+        specialistInterpretation: `Evaluación basal: Glucosa ${glucoseVal || '-'}, Urea ${ureaVal || '-'}, Ác. Úrico ${uricAcidVal || '-'}, Creatinina ${creatinineVal || '-'}, Triglicéridos ${triglyceridesVal || '-'}, Colesterol ${cholesterolVal || '-'}.`,
+      };
+      storageService.saveLabRecord(labRecord);
     }
+
+    // 5. Create or Update Baseline Nutrition Plan with SMAE & Macros
+    const initialPlan: NutritionPlan = {
+      id: `plan-${Date.now()}`,
+      organizationId: savedPatient.organizationId,
+      patientId: savedPatient.id,
+      specialistId: savedPatient.specialistId || 'user-dra-valeria',
+      title: `Plan Nutricional: ${savedPatient.goal}`,
+      goal: savedPatient.goal,
+      status: 'ACTIVE',
+      targetCaloriesKcal: targetKcal,
+      targetProteinG: proteinGrams,
+      targetCarbsG: carbsGrams,
+      targetFatG: fatGrams,
+      targetWaterLiters: anamnesisData.waterLiters || 2.5,
+      startDate: new Date().toISOString().slice(0, 10),
+      approvedBySpecialist: true,
+      generalInstructions: `Distribución de macronutrientes: ${carbsPct}% Carbohidratos (${carbsGrams}g), ${proteinPct}% Proteínas (${proteinGrams}g, ${proteinGPerKg} g/kg), ${fatPct}% Grasas (${fatGrams}g).`,
+      days: [
+        {
+          id: `day-1`,
+          dayOfWeek: 1,
+          dayName: 'Plan Diario SMAE',
+          meals: [
+            { id: 'm-desayuno', name: 'Desayuno', mealOrder: 1, suggestedTime: '08:00', items: [], notes: `${mealDistribution.desayuno}% de energía diaria` },
+            { id: 'm-colacion1', name: 'Colación Matutina', mealOrder: 2, suggestedTime: '11:00', items: [], notes: `${mealDistribution.colacion1}% de energía diaria` },
+            { id: 'm-comida', name: 'Comida', mealOrder: 3, suggestedTime: '14:30', items: [], notes: `${mealDistribution.comida}% de energía diaria` },
+            { id: 'm-colacion2', name: 'Colación Vespertina', mealOrder: 4, suggestedTime: '17:30', items: [], notes: `${mealDistribution.colacion2}% de energía diaria` },
+            { id: 'm-cena', name: 'Cena', mealOrder: 5, suggestedTime: '20:30', items: [], notes: `${mealDistribution.cena}% de energía diaria` },
+          ],
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    storageService.savePlan(initialPlan);
 
     showToast(
       isEditing ? 'Paciente actualizado con éxito' : 'Paciente registrado con éxito',
-      `El expediente de ${savedPatient.firstName} ${savedPatient.lastName} ha sido sincronizado en el sistema.`,
+      `El expediente completo, estudios clínicos, cálculo SMAE y macros de ${savedPatient.firstName} ${savedPatient.lastName} se guardaron correctamente.`,
       'success'
     );
 
@@ -428,90 +951,45 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         title={isEditing ? `Editar Paciente: ${patientToEdit?.firstName} ${patientToEdit?.lastName}` : 'Registrar Nuevo Paciente'}
-        subtitle={isEditing ? 'Actualiza los datos personales, métricas somatométricas y objetivos' : 'Completa la ficha de identificación y metas clínicas iniciales'}
+        subtitle={
+          isEditing
+            ? 'Actualiza el expediente, anamnesis, estudios de laboratorio y prescripción SMAE'
+            : 'Ficha completa de identificación, historia clínica, estudios, SMAE y macronutrientes'
+        }
         maxWidth="2xl"
       >
-        <form onSubmit={handleSubmit} noValidate className="space-y-5">
-          {/* Sub Navigation Tabs inside Modal */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl">
-            <button
-              type="button"
-              id="modal-tab-general"
-              onClick={() => setActiveTab('general')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'general'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Datos Personales</span>
-            </button>
-
-            <button
-              type="button"
-              id="modal-tab-antropometria"
-              onClick={() => setActiveTab('antropometria')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'antropometria'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <Scale className="w-3.5 h-3.5" />
-              <span>Somatometría & Metas</span>
-            </button>
-
-            <button
-              type="button"
-              id="modal-tab-clinico"
-              onClick={() => setActiveTab('clinico')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'clinico'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <HeartPulse className="w-3.5 h-3.5" />
-              <span>Historial & Alergias</span>
-            </button>
-
-            <button
-              type="button"
-              id="modal-tab-credenciales"
-              onClick={() => setActiveTab('credenciales')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'credenciales'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Acceso & Contraseña</span>
-              {formData.portalAccessEnabled && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              id="modal-tab-foto"
-              onClick={() => setActiveTab('foto')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'foto'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span>Foto / Avatar</span>
-              {formData.photoUrl && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              )}
-            </button>
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {/* Sub Navigation Tabs inside Modal with horizontal scroll */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl overflow-x-auto no-scrollbar scroll-smooth">
+            {TABS.map((tab, idx) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  id={`modal-tab-${tab.id}`}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                    isActive
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                    isActive ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="inline sm:hidden">{tab.shortLabel}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Hidden File Inputs for Local Upload & Camera */}
+          {/* Hidden File Inputs */}
           <input
             ref={fileInputRef}
             type="file"
@@ -519,7 +997,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
-                handleFileSelected(e.target.files[0]);
+                handlePhotoSelected(e.target.files[0]);
               }
             }}
           />
@@ -531,72 +1009,28 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
-                handleFileSelected(e.target.files[0]);
+                handlePhotoSelected(e.target.files[0]);
+              }
+            }}
+          />
+          <input
+            ref={labFileInputRef}
+            type="file"
+            accept=".pdf,image/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleLabFileSelected(e.target.files[0]);
               }
             }}
           />
 
-          {/* TAB 1: DATOS PERSONALES & CONTACTO */}
+          {/* TAB 1: DATOS PERSONALES */}
           {activeTab === 'general' && (
-            <div className="space-y-4 animate-fade-in">
-              {/* Quick Photo Header Bar inside Tab 1 */}
-              <div className="flex items-center justify-between gap-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-slate-50 dark:from-emerald-950/20 dark:via-slate-800/40 dark:to-slate-800/60 border border-emerald-100 dark:border-emerald-900/30">
-                <div className="flex items-center gap-3">
-                  <div className="relative group">
-                    <img
-                      src={formData.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-                      alt="Foto del paciente"
-                      className="w-14 h-14 rounded-2xl object-cover ring-2 ring-emerald-500/30 shadow-xs"
-                    />
-                    {isUploading && (
-                      <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
-                        <Loader2 className="w-5 h-5 text-white animate-spin" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                        {formData.firstName || formData.lastName
-                          ? `${formData.firstName} ${formData.lastName}`.trim()
-                          : 'Fotografía del Paciente'}
-                      </h4>
-                      {compressionStats && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                          {compressionStats}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Sube una fotografía de tu paciente o tómala directamente con la cámara.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/60 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Subir Foto</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('foto')}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                    title="Ver opciones avanzadas de foto y avatar"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4 animate-fade-in text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Nombre(s) *
                   </label>
                   <input
@@ -605,78 +1039,70 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Ej. Ana Lucía"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:border-emerald-500 font-medium text-slate-900 dark:text-white"
+                    placeholder="Ej. Ana Sofía"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Apellidos *
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Apellidos
                   </label>
                   <input
                     id="patient-form-lastname"
                     type="text"
-                    required
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Ej. Morales Sánchez"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:border-emerald-500 font-medium text-slate-900 dark:text-white"
+                    placeholder="Ej. González Ruiz"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Sexo Biológico
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Sexo Biológico *
                   </label>
                   <select
                     id="patient-form-gender"
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-medium"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   >
-                    <option value="F">Femenino (F)</option>
-                    <option value="M">Masculino (M)</option>
-                    <option value="Otro">Otro</option>
+                    <option value="F">Femenino</option>
+                    <option value="M">Masculino</option>
+                    <option value="Otro">Otro / No binario</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                    <span>Fecha Nacimiento</span>
-                    <span className="text-[10px] text-emerald-600 font-semibold">{ageYears} años</span>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Fecha de Nacimiento
                   </label>
                   <input
                     id="patient-form-birthdate"
                     type="date"
                     value={formData.birthDate}
                     onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Ocupación
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Edad Calculada
                   </label>
-                  <input
-                    id="patient-form-occupation"
-                    type="text"
-                    value={formData.occupation}
-                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                    placeholder="Ej. Abogado, Ingeniero..."
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
-                  />
+                  <div className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold">
+                    {ageYears} años
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <Mail className="w-3 h-3 text-slate-400" />
-                    <span>Correo Electrónico</span>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Correo Electrónico
                   </label>
                   <input
                     id="patient-form-email"
@@ -684,215 +1110,63 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="paciente@correo.com"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-slate-400" />
-                    <span>Teléfono Móvil</span>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Teléfono / WhatsApp
                   </label>
                   <input
                     id="patient-form-phone"
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value, whatsapp: e.target.value })}
                     placeholder="+52 55 1234 5678"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Ocupación / Profesión
+                  </label>
+                  <input
+                    id="patient-form-occupation"
+                    type="text"
+                    value={formData.occupation}
+                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                    placeholder="Ej. Ingeniero en Sistemas / Estudiante"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    WhatsApp Directo
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Ciudad / Domicilio
                   </label>
                   <input
-                    id="patient-form-whatsapp"
-                    type="tel"
-                    value={formData.whatsapp}
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                    placeholder="+52 55 1234 5678"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
+                    id="patient-form-address"
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Ej. CDMX, México"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Ciudad / Domicilio
-                </label>
-                <input
-                  id="patient-form-address"
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Ej. Benito Juárez, Ciudad de México"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
-                />
-              </div>
-
-              {/* ASIGNACIÓN DE CONTRASEÑA Y ACCESO A LA APP DEL PACIENTE */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-slate-50 dark:from-emerald-950/30 dark:via-slate-800/60 dark:to-slate-800/80 border border-emerald-200/90 dark:border-emerald-800/60 space-y-3.5 shadow-xs">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <KeyRound className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>Asignar Contraseña & Acceso a la App</span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                          Portal de Pacientes
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Credenciales con las que tu paciente iniciará sesión en su app móvil o portal web.
-                      </p>
-                    </div>
-                  </div>
-
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={formData.portalAccessEnabled}
-                      onChange={(e) => setFormData({ ...formData, portalAccessEnabled: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                  </label>
-                </div>
-
-                {formData.portalAccessEnabled ? (
-                  <div className="space-y-3 pt-1 border-t border-emerald-100/80 dark:border-emerald-900/30">
-                    {/* Usuario y Contraseña en 2 columnas */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Usuario */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            Usuario de Inicio de Sesión
-                          </label>
-                          <div className="flex items-center gap-1.5">
-                            {formData.email && (
-                              <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, portalUsername: formData.email })}
-                                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
-                              >
-                                Usar correo
-                              </button>
-                            )}
-                            {formData.phone && (
-                              <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, portalUsername: formData.phone.replace(/\D/g, '') })}
-                                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
-                              >
-                                Usar teléfono
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          value={formData.portalUsername}
-                          onChange={(e) => setFormData({ ...formData, portalUsername: e.target.value })}
-                          placeholder={formData.email || 'ej. usuario o correo'}
-                          className="w-full px-3 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs font-mono font-medium border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                        />
-                        <span className="text-[10px] text-slate-400 mt-0.5 block">
-                          Si queda vacío, se usa su correo o teléfono automáticamente.
-                        </span>
-                      </div>
-
-                      {/* Contraseña */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            Contraseña del Paciente *
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const randomNum = Math.floor(100 + Math.random() * 900);
-                              const preset = PORTAL_PASSWORD_PRESETS[Math.floor(Math.random() * PORTAL_PASSWORD_PRESETS.length)];
-                              const newPass = `${preset.slice(0, -1)}${randomNum}!`;
-                              setFormData({ ...formData, portalPassword: newPass });
-                              showToast('Contraseña Generada', `Asignada: ${newPass}`, 'info');
-                            }}
-                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            <span>🎲 Generar Automática</span>
-                          </button>
-                        </div>
-                        <div className="relative flex items-center">
-                          <input
-                            type={formData.showPassword ? 'text' : 'password'}
-                            value={formData.portalPassword}
-                            onChange={(e) => setFormData({ ...formData, portalPassword: e.target.value })}
-                            placeholder="Contraseña del paciente"
-                            className="w-full px-3 py-2 pr-9 bg-white dark:bg-slate-900 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, showPassword: !formData.showPassword })}
-                            className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                            title={formData.showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                          >
-                            {formData.showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                        {/* Preset Chips */}
-                        <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                          <span className="text-[10px] text-slate-400 font-medium">Sugeridas:</span>
-                          {PORTAL_PASSWORD_PRESETS.slice(0, 3).map((p) => (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => setFormData({ ...formData, portalPassword: p })}
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
-                                formData.portalPassword === p
-                                  ? 'bg-emerald-600 text-white font-bold'
-                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Resumen de Credenciales */}
-                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
-                      <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>
-                          Credenciales: Usuario: <strong className="font-mono text-emerald-700 dark:text-emerald-300">{formData.portalUsername || formData.email || 'correo del paciente'}</strong> | Pass: <strong className="font-mono text-emerald-700 dark:text-emerald-300">{formData.portalPassword || 'Nutri2026!'}</strong>
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-400">
-                        Podrás compartirlas por WhatsApp al terminar
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
-                    Acceso a la app desactivado. El paciente no podrá iniciar sesión en el portal a menos que lo actives.
-                  </p>
-                )}
               </div>
             </div>
           )}
 
           {/* TAB 2: SOMATOMETRÍA & METAS */}
           {activeTab === 'antropometria' && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="space-y-4 animate-fade-in text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Estatura (cm) *
                   </label>
                   <input
@@ -900,12 +1174,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="number"
                     value={formData.height}
                     onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Peso Inicial (kg)
                   </label>
                   <input
@@ -914,12 +1188,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     step="0.1"
                     value={formData.initialWeight}
                     onChange={(e) => setFormData({ ...formData, initialWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Peso Actual (kg) *
                   </label>
                   <input
@@ -928,12 +1202,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     step="0.1"
                     value={formData.currentWeight}
                     onChange={(e) => setFormData({ ...formData, currentWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-bold text-emerald-600 dark:text-emerald-400"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Peso Meta (kg)
                   </label>
                   <input
@@ -942,13 +1216,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     step="0.1"
                     value={formData.targetWeight}
                     onChange={(e) => setFormData({ ...formData, targetWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
 
-              {/* BMI Card Indicator */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              {/* BMI Card */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-emerald-600 text-white rounded-xl">
                     <Scale className="w-4 h-4" />
@@ -958,7 +1232,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       Índice de Masa Corporal (IMC Basal)
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Calculado automáticamente a partir de {formData.currentWeight} kg y {formData.height} cm
+                      Calculado a partir de {formData.currentWeight} kg y {formData.height} cm
                     </div>
                   </div>
                 </div>
@@ -967,15 +1241,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   <div className="text-base font-extrabold text-slate-900 dark:text-white">
                     {liveBmi} <span className="text-[11px] font-normal text-slate-400">kg/m²</span>
                   </div>
-                  <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md ${bmiCat.color}`}>
-                    {bmiCat.label}
-                  </span>
                 </div>
               </div>
 
-              {/* Objective Selection */}
+              {/* Goal */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Objetivo Principal del Paciente *
                 </label>
                 <input
@@ -984,16 +1255,15 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   value={formData.goal}
                   onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
                   placeholder="Ej. Pérdida de Grasa y Recomposición Corporal"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-medium"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white"
                 />
-                {/* Quick Goal Pills */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {QUICK_GOALS.map((qg, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => setFormData({ ...formData, goal: qg })}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:text-emerald-700 cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
                     >
                       + {qg}
                     </button>
@@ -1001,17 +1271,16 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 </div>
               </div>
 
-              {/* Status and Risk */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Estado en el Consultorio
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Estado Clínico
                   </label>
                   <select
                     id="patient-form-status"
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-medium"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
                     <option value="Activo">🟢 Activo</option>
                     <option value="En pausa">🟡 En pausa</option>
@@ -1021,14 +1290,14 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Nivel de Riesgo Clínico
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Nivel de Riesgo
                   </label>
                   <select
                     id="patient-form-risk"
                     value={formData.riskLevel}
                     onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-medium"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
                     <option value="NORMAL">🟢 Normal / Bajo Riesgo</option>
                     <option value="MEDIUM_RISK">🟡 Riesgo Medio (Comorbilidad)</option>
@@ -1037,7 +1306,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Adherencia Estimada (%)
                   </label>
                   <input
@@ -1047,19 +1316,117 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     max="100"
                     value={formData.adherenceRate}
                     onChange={(e) => setFormData({ ...formData, adherenceRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 3: HISTORIAL CLÍNICO & ALERGIAS */}
+          {/* TAB 3: HISTORIAL & ALERGIAS (CON "EXPEDIENTES & ANAMNESIS") */}
           {activeTab === 'clinico' && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-4 animate-fade-in text-xs">
+              {/* SUB-SECCIÓN DESTACADA: EXPEDIENTES & ANAMNESIS */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50/70 to-emerald-50/70 dark:from-teal-950/30 dark:to-emerald-950/30 border border-teal-200 dark:border-teal-800/50 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-teal-600 text-white">
+                    <HeartPulse className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs">
+                      Expedientes & Anamnesis Clínica
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Antecedentes heredofamiliares, patológicos y estilo de vida
+                    </p>
+                  </div>
+                </div>
+
+                {/* Heredofamiliares Checkbox Chips */}
+                <div>
+                  <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Antecedentes Heredofamiliares Relevantes:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { key: 'familyDiabetes', label: 'Diabetes Mellitus' },
+                      { key: 'familyHypertension', label: 'Hipertensión' },
+                      { key: 'familyCardiovascular', label: 'Cardiopatías' },
+                      { key: 'familyCancer', label: 'Cáncer' },
+                      { key: 'familyThyroid', label: 'Tiroides' },
+                    ].map((item) => (
+                      <label
+                        key={item.key}
+                        className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition-all ${
+                          (anamnesisData as any)[item.key]
+                            ? 'bg-teal-100/70 dark:bg-teal-950/60 border-teal-500 text-teal-900 dark:text-teal-200 font-bold'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={(anamnesisData as any)[item.key]}
+                          onChange={(e) => setAnamnesisData({ ...anamnesisData, [item.key]: e.target.checked })}
+                          className="rounded text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
+                        />
+                        <span className="text-[11px]">{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Estilo de vida en anamnesis */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Horas de Sueño / Noche
+                    </label>
+                    <input
+                      type="number"
+                      min="3"
+                      max="14"
+                      value={anamnesisData.sleepHours}
+                      onChange={(e) => setAnamnesisData({ ...anamnesisData, sleepHours: Number(e.target.value) })}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Consumo de Agua (L/día)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      max="8"
+                      value={anamnesisData.waterLiters}
+                      onChange={(e) => setAnamnesisData({ ...anamnesisData, waterLiters: Number(e.target.value) })}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Nivel de Estrés
+                    </label>
+                    <select
+                      value={anamnesisData.stressLevel}
+                      onChange={(e) => setAnamnesisData({ ...anamnesisData, stressLevel: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700"
+                    >
+                      <option value="Bajo">🟢 Bajo</option>
+                      <option value="Medio">🟡 Medio</option>
+                      <option value="Alto">🔴 Alto / Crónico</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alergias & Intolerancias */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Alergias o Intolerancias Alimentarias (separadas por coma)
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Alergias o Intolerancias Alimentarias
                 </label>
                 <input
                   id="patient-form-allergies"
@@ -1067,16 +1434,32 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   value={formData.allergies}
                   onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
                   placeholder="Ej. Lactosa, Mariscos, Frutos secos, Gluten..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Estas restricciones se tendrán en cuenta automáticamente en el NutriCopilot AI y recetario.
-                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <span className="text-[10px] text-slate-400 font-semibold self-center mr-1">Comunes:</span>
+                  {ALLERGIES_PRESETS.map((al) => (
+                    <button
+                      key={al}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.allergies ? formData.allergies.split(',').map((s) => s.trim()) : [];
+                        if (!current.includes(al)) {
+                          setFormData({ ...formData, allergies: [...current, al].join(', ') });
+                        }
+                      }}
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-600 dark:text-slate-300 hover:text-rose-600 cursor-pointer border border-slate-200/60 dark:border-slate-700"
+                    >
+                      + {al}
+                    </button>
+                  ))}
+                </div>
               </div>
 
+              {/* Patologías & Diagnósticos */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Patologías / Diagnósticos Previos (separadas por coma)
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Patologías / Diagnósticos Previos
                 </label>
                 <input
                   id="patient-form-pathologies"
@@ -1084,41 +1467,598 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   value={formData.pathologies}
                   onChange={(e) => setFormData({ ...formData, pathologies: e.target.value })}
                   placeholder="Ej. Resistencia a la Insulina, Hipotiroidismo, Hipertensión..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                 />
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <span className="text-[10px] text-slate-400 font-semibold self-center mr-1">Sugeridas:</span>
+                  {PATHOLOGY_PRESETS.slice(0, 5).map((pat) => (
+                    <button
+                      key={pat}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.pathologies ? formData.pathologies.split(',').map((s) => s.trim()) : [];
+                        if (!current.includes(pat)) {
+                          setFormData({ ...formData, pathologies: [...current, pat].join(', ') });
+                        }
+                      }}
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 cursor-pointer border border-slate-200/60 dark:border-slate-700"
+                    >
+                      + {pat}
+                    </button>
+                  ))}
+                </div>
               </div>
 
+              {/* Observaciones Generales */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Notas Clínicas / Observaciones Iniciales
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Observaciones Clínicas / Motivo de Consulta
                 </label>
                 <textarea
                   id="patient-form-notes"
-                  rows={3}
+                  rows={2}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Observaciones de estilo de vida, antecedentes relevantes o metas específicas acordadas..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-900 dark:text-white resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white resize-none"
                 />
               </div>
             </div>
           )}
 
-          {/* TAB 4: CREDENCIALES & ACCESO APP */}
+          {/* TAB 4: ESTUDIOS CLÍNICOS */}
+          {activeTab === 'estudios' && (
+            <div className="space-y-4 animate-fade-in text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <FlaskConical className="w-4 h-4 text-emerald-600" />
+                    <span>Panel de Estudios Clínicos de Laboratorio</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Registra o ajusta los analitos basales requeridos y sube tus archivos
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddStudyModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Agregar Estudio</span>
+                </button>
+              </div>
+
+              {/* File Upload Zone */}
+              <div
+                onClick={() => labFileInputRef.current?.click()}
+                className="p-3.5 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50/80 cursor-pointer transition-all flex flex-col sm:flex-row items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-300 rounded-xl shrink-0">
+                    <FileUp className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-slate-900 dark:text-white text-xs">
+                      {labFile ? `Archivo Cargado: ${labFile.name}` : 'Subir Resultados de Laboratorio (PDF o Imagen)'}
+                    </h5>
+                    <p className="text-[11px] text-slate-500">
+                      {labFile
+                        ? `${labFile.sizeKb} KB • Guardado en el expediente`
+                        : 'Arrastra tu archivo aquí o haz clic para seleccionarlo de tu dispositivo'}
+                    </p>
+                  </div>
+                </div>
+
+                {labFile ? (
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/80 px-2 py-1 rounded-lg">
+                      🟢 Listo
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLabFile(null)}
+                      className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer"
+                      title="Eliminar archivo"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 font-semibold text-[11px] shrink-0"
+                  >
+                    Examinar archivo
+                  </button>
+                )}
+              </div>
+
+              {/* Studies List (Editable, Deletable, Addable) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+                  <span>Analito / Estudio</span>
+                  <span>Resultado & Rango de Referencia</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {studies.map((study) => {
+                    const numVal = Number(study.value);
+                    const isOutOfRange =
+                      study.maxNormal && numVal > study.maxNormal
+                        ? 'high'
+                        : study.minNormal && numVal < study.minNormal
+                        ? 'low'
+                        : 'normal';
+
+                    return (
+                      <div
+                        key={study.id}
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900 dark:text-white truncate">
+                              {study.name}
+                            </span>
+                            {isOutOfRange === 'high' && (
+                              <span className="text-[9px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/60 px-1 rounded">
+                                Alto
+                              </span>
+                            )}
+                            {isOutOfRange === 'low' && (
+                              <span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/60 px-1 rounded">
+                                Bajo
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 block truncate">
+                            Ref: {study.refRange}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={study.value}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setStudies((prev) =>
+                                prev.map((s) => (s.id === study.id ? { ...s, value: val } : s))
+                              );
+                            }}
+                            className="w-20 px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-600 text-right font-bold text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <span className="text-[10px] text-slate-500 font-mono w-9">{study.unit}</span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStudies((prev) => prev.filter((s) => s.id !== study.id));
+                              showToast('Estudio eliminado', `Se quitó ${study.name} del formulario.`, 'info');
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-500 rounded cursor-pointer"
+                            title="Eliminar analito"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: EVALUADOR SMAE */}
+          {activeTab === 'smae' && (
+            <div className="space-y-4 animate-fade-in text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <Apple className="w-4 h-4 text-emerald-600" />
+                    <span>Evaluador Sistema Mexicano de Alimentos Equivalentes (SMAE)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Cálculo matemático de porciones por grupo de alimentos y adecuación calórica
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Auto-generate realistic SMAE portions based on target kcal
+                    const baseKcal = targetKcal || 1800;
+                    const factor = baseKcal / 1800;
+                    setSmaePortions({
+                      'Verduras': Math.max(2, Math.round(4 * factor)),
+                      'Frutas': Math.max(2, Math.round(3 * factor)),
+                      'Cereales s/g': Math.max(3, Math.round(5 * factor)),
+                      'Cereales c/g': Math.round(1 * factor),
+                      'Leguminosas': Math.max(1, Number((1.5 * factor).toFixed(1))),
+                      'AOA Muy bajo aporte': Math.round(2 * factor),
+                      'AOA Bajo aporte': Math.round(3 * factor),
+                      'AOA Moderado aporte': Math.round(1 * factor),
+                      'AOA Alto aporte': 0,
+                      'Leche descremada': 1,
+                      'Leche semidescremada': 0,
+                      'Leche entera': 0,
+                      'Leche c/azúcar': 0,
+                      'Grasas s/proteína': Math.max(2, Math.round(3 * factor)),
+                      'Grasas c/proteína': 1,
+                      'Azúcares s/grasa': 0,
+                    });
+                    showToast('SMAE Distribuido', `Porciones calculadas automáticamente para ${baseKcal} kcal.`, 'info');
+                  }}
+                  className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-slate-700 dark:text-slate-300 hover:text-emerald-700 text-[11px] font-bold rounded-xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Auto-distribuir</span>
+                </button>
+              </div>
+
+              {/* Real-time SMAE Totals Summary Banner */}
+              <div className="p-3 rounded-2xl bg-slate-900 text-white grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Kcal SMAE</span>
+                  <span className="text-base font-extrabold text-emerald-400">{smaeTotals.kcal}</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {targetKcal} kcal</span>
+                </div>
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Proteínas</span>
+                  <span className="text-base font-extrabold text-teal-400">{smaeTotals.prot}g</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {proteinGrams}g</span>
+                </div>
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Lípidos</span>
+                  <span className="text-base font-extrabold text-amber-400">{smaeTotals.lip}g</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {fatGrams}g</span>
+                </div>
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Carbohidratos</span>
+                  <span className="text-base font-extrabold text-blue-400">{smaeTotals.hc}g</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {carbsGrams}g</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 flex flex-col justify-center">
+                  <span className="text-[10px] text-slate-400 block">% Adecuación</span>
+                  <span className={`text-base font-extrabold ${
+                    smaeTotals.adequacyPct >= 95 && smaeTotals.adequacyPct <= 105
+                      ? 'text-emerald-400'
+                      : smaeTotals.adequacyPct < 95
+                      ? 'text-amber-400'
+                      : 'text-rose-400'
+                  }`}>
+                    {smaeTotals.adequacyPct}%
+                  </span>
+                </div>
+              </div>
+
+              {/* 16 Official SMAE Groups Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                {SMAE_CONSTANTS.map((c) => {
+                  const val = smaePortions[c.grupo] || 0;
+                  return (
+                    <div
+                      key={c.grupo}
+                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block truncate text-[11px]">
+                          {c.grupo}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {c.energia_kcal} kcal • P:{c.prot_g} L:{c.lip_g} C:{c.hc_g}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = smaePortions[c.grupo] || 0;
+                            setSmaePortions({ ...smaePortions, [c.grupo]: Math.max(0, Number((cur - 0.5).toFixed(1))) });
+                          }}
+                          className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-bold flex items-center justify-center cursor-pointer text-slate-700 dark:text-slate-200"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={val}
+                          onChange={(e) => {
+                            const num = Math.max(0, Number(e.target.value) || 0);
+                            setSmaePortions({ ...smaePortions, [c.grupo]: num });
+                          }}
+                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-900 dark:text-white text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = smaePortions[c.grupo] || 0;
+                            setSmaePortions({ ...smaePortions, [c.grupo]: Number((cur + 0.5).toFixed(1)) });
+                          }}
+                          className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-bold flex items-center justify-center cursor-pointer text-slate-700 dark:text-slate-200"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MACROS Y COMIDAS & PLANTILLAS DE PRESCRIPCIÓN */}
+          {activeTab === 'macros' && (
+            <div className="space-y-4 animate-fade-in text-xs">
+              {/* Prescripciones Rápidas & Selector de Plantillas */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/70 via-teal-50/60 to-slate-50 dark:from-emerald-950/30 dark:via-slate-800/60 dark:to-slate-800 border border-emerald-200/80 dark:border-emerald-900/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookmarkPlus className="w-4 h-4 text-emerald-600" />
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs">
+                      Plantillas de Prescripción Rápida
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewTemplateModal(true)}
+                    className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] hover:bg-emerald-50 cursor-pointer flex items-center gap-1 shadow-xs"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Guardar como Nueva Plantilla</span>
+                  </button>
+                </div>
+
+                {/* Quick Presets Pills */}
+                <div className="flex flex-wrap gap-1.5">
+                  {presets.slice(0, 6).map((preset) => {
+                    const isSelected = selectedPresetId === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleSelectPreset(preset)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                        }`}
+                      >
+                        <span>{preset.name}</span>
+                        <span className="text-[10px] opacity-80 ml-1">
+                          ({preset.carbsPct}C / {Math.max(0, 100 - preset.carbsPct - preset.fatPct)}P / {preset.fatPct}G)
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Fórmulas de Gasto Energético & Meta Calórica */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-bold mb-0.5">GEB (Mifflin-St Jeor)</span>
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-white">{computedGeb} kcal</span>
+                  <span className="text-[10px] text-slate-400 block">Gasto Basal Basado en Peso y Talla</span>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Factor de Actividad</label>
+                  <select
+                    value={activityFactor}
+                    onChange={(e) => setActivityFactor(Number(e.target.value))}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                  >
+                    <option value={1.2}>Sedentario (x1.2)</option>
+                    <option value={1.375}>Ligera (x1.375)</option>
+                    <option value={1.55}>Moderada (x1.55)</option>
+                    <option value={1.725}>Intensa (x1.725)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Meta Calórica Diaria *</label>
+                  <input
+                    type="number"
+                    step="50"
+                    value={targetKcal}
+                    onChange={(e) => setTargetKcal(Number(e.target.value))}
+                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-xs text-right"
+                  />
+                </div>
+              </div>
+
+              {/* SECCIÓN ESTRICTA: DISTRIBUCIÓN SUGERIDA DE MACRONUTRIENTES (EXACTAMENTE 100%) */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <PieChart className="w-4 h-4 text-emerald-600" />
+                      <span>Distribución Sugerida de Macronutrientes</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Entre proteínas, grasas saludables y carbohidratos complejos deben sumar exactamente 100%
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAutoBalanceMacros}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] hover:bg-emerald-100 cursor-pointer border border-emerald-200 dark:border-emerald-800"
+                  >
+                    Equilibrar al 100%
+                  </button>
+                </div>
+
+                {/* Progress bar segmented */}
+                <div className="space-y-1">
+                  <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                    <div
+                      style={{ width: `${carbsPct}%` }}
+                      className="bg-blue-500 h-full transition-all"
+                      title={`Carbohidratos: ${carbsPct}%`}
+                    />
+                    <div
+                      style={{ width: `${proteinPct}%` }}
+                      className="bg-emerald-500 h-full transition-all"
+                      title={`Proteínas: ${proteinPct}%`}
+                    />
+                    <div
+                      style={{ width: `${fatPct}%` }}
+                      className="bg-amber-500 h-full transition-all"
+                      title={`Grasas: ${fatPct}%`}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-blue-600 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Carbs: {carbsPct}% ({carbsGrams}g)
+                      </span>
+                      <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Proteína: {proteinPct}% ({proteinGrams}g, {proteinGPerKg} g/kg)
+                      </span>
+                      <span className="flex items-center gap-1 text-amber-600 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        Grasas: {fatPct}% ({fatGrams}g)
+                      </span>
+                    </div>
+
+                    <span
+                      className={`font-extrabold px-2 py-0.5 rounded-md text-[10px] ${
+                        isMacrosValid
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 animate-pulse'
+                      }`}
+                    >
+                      Total: {totalMacrosPct}% {isMacrosValid ? '✓ Correcto' : `(Falta/Excede ${100 - totalMacrosPct}%)`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Macro Sliders & Number Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Carbohidratos Complejos */}
+                  <div className="p-2.5 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-blue-900 dark:text-blue-200">
+                        Carbohidratos Complejos
+                      </label>
+                      <span className="text-[11px] font-extrabold text-blue-700 dark:text-blue-300 font-mono">
+                        {carbsPct}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={carbsPct}
+                      onChange={(e) => handleCarbsChange(Number(e.target.value))}
+                      className="w-full accent-blue-600 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-blue-600/80 mt-1">
+                      <span>{carbsGrams} gramos</span>
+                      <span>{Math.round(carbsGrams * 4)} kcal</span>
+                    </div>
+                  </div>
+
+                  {/* Proteínas */}
+                  <div className="p-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-emerald-900 dark:text-emerald-200">
+                        Proteínas
+                      </label>
+                      <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
+                        {proteinPct}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={proteinPct}
+                      onChange={(e) => handleProteinChange(Number(e.target.value))}
+                      className="w-full accent-emerald-600 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-emerald-600/80 mt-1">
+                      <span>{proteinGrams}g ({proteinGPerKg} g/kg)</span>
+                      <span>{Math.round(proteinGrams * 4)} kcal</span>
+                    </div>
+                  </div>
+
+                  {/* Grasas Saludables */}
+                  <div className="p-2.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                        Grasas Saludables
+                      </label>
+                      <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300 font-mono">
+                        {fatPct}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={fatPct}
+                      onChange={(e) => handleFatChange(Number(e.target.value))}
+                      className="w-full accent-amber-600 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-amber-600/80 mt-1">
+                      <span>{fatGrams} gramos</span>
+                      <span>{Math.round(fatGrams * 9)} kcal</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Distribución de Comidas */}
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  Distribución Sugerida por Tiempos de Comida (% de energía diaria):
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { label: 'Desayuno', key: 'desayuno', val: mealDistribution.desayuno },
+                    { label: 'Colación 1', key: 'colacion1', val: mealDistribution.colacion1 },
+                    { label: 'Comida', key: 'comida', val: mealDistribution.comida },
+                    { label: 'Colación 2', key: 'colacion2', val: mealDistribution.colacion2 },
+                    { label: 'Cena', key: 'cena', val: mealDistribution.cena },
+                  ].map((meal) => (
+                    <div key={meal.key} className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-500 font-semibold block">{meal.label}</span>
+                      <span className="font-extrabold text-slate-900 dark:text-white text-xs">{meal.val}%</span>
+                      <span className="text-[9px] text-slate-400 block">{Math.round(targetKcal * (meal.val / 100))} kcal</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: CREDENCIALES & ACCESO PORTAL */}
           {activeTab === 'credenciales' && (
             <div className="space-y-4 animate-fade-in text-xs">
-              {/* Access toggle banner */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                     <KeyRound className="w-5 h-5" />
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Habilitar Acceso a la App del Paciente
+                      Habilitar Acceso al Portal del Paciente
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Permite al paciente ingresar a su portal móvil para revisar su plan, fotos de platillos y registrar hábitos.
+                      Permite al paciente iniciar sesión en su teléfono móvil para ver su plan y SMAE
                     </p>
                   </div>
                 </div>
@@ -1134,148 +2074,97 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 </label>
               </div>
 
-              {formData.portalAccessEnabled ? (
-                <div className="space-y-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                  {/* Username / Email field */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Usuario o Correo de Acceso:
+              {formData.portalAccessEnabled && (
+                <div className="space-y-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Usuario de Inicio de Sesión
                       </label>
-                      <div className="flex items-center gap-2">
-                        {formData.email && (
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, portalUsername: formData.email })}
-                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
-                          >
-                            Usar su Correo
-                          </button>
-                        )}
-                        {formData.phone && (
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, portalUsername: formData.phone.replace(/\D/g, '') })}
-                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
-                          >
-                            Usar su Teléfono
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="relative flex items-center">
                       <input
                         type="text"
                         value={formData.portalUsername}
                         onChange={(e) => setFormData({ ...formData, portalUsername: e.target.value })}
-                        placeholder={formData.email || 'ej. ana.garcia@gmail.com o usuario123'}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-emerald-500"
+                        placeholder={formData.email || 'usuario o correo'}
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-mono font-medium border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                       />
                     </div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      Si lo dejas en blanco, se utilizará su correo electrónico registrado.
-                    </span>
-                  </div>
 
-                  {/* Password field */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Contraseña de Acceso:
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const randomNum = Math.floor(100 + Math.random() * 900);
-                          setFormData({ ...formData, portalPassword: `Nutri${randomNum}!` });
-                          showToast('Contraseña Generada', 'Se asignó una contraseña segura.', 'info');
-                        }}
-                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        <span>🎲 Generar Automática</span>
-                      </button>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          Contraseña Asignada *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const randomNum = Math.floor(100 + Math.random() * 900);
+                            const newPass = `Nutri${randomNum}!`;
+                            setFormData({ ...formData, portalPassword: newPass });
+                            showToast('Contraseña Generada', `Asignada: ${newPass}`, 'info');
+                          }}
+                          className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>🎲 Generar</span>
+                        </button>
+                      </div>
+
+                      <div className="relative flex items-center">
+                        <input
+                          type={formData.showPassword ? 'text' : 'password'}
+                          value={formData.portalPassword}
+                          onChange={(e) => setFormData({ ...formData, portalPassword: e.target.value })}
+                          className="w-full px-3 py-2 pr-9 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, showPassword: !formData.showPassword })}
+                          className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {formData.showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="relative flex items-center">
-                      <input
-                        type={formData.showPassword ? 'text' : 'password'}
-                        value={formData.portalPassword}
-                        onChange={(e) => setFormData({ ...formData, portalPassword: e.target.value })}
-                        placeholder="Contraseña del paciente"
-                        className="w-full px-3 py-2.5 pr-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold tracking-wide focus:ring-2 focus:ring-emerald-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, showPassword: !formData.showPassword })}
-                        className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                        title={formData.showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                      >
-                        {formData.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      Esta contraseña es la que el paciente tecleará para entrar en su celular o tableta.
-                    </span>
                   </div>
 
-                  {/* Share helper preview */}
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Credenciales listas para entregar</span>
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 flex items-center gap-2 text-[11px]">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Credenciales listas: Usuario: <strong className="font-mono text-emerald-700 dark:text-emerald-300">{formData.portalUsername || formData.email || 'correo'}</strong> | Clave: <strong className="font-mono text-emerald-700 dark:text-emerald-300">{formData.portalPassword || 'Nutri2026!'}</strong>
                     </span>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-mono bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200/80 dark:border-slate-800">
-                      Usuario: <strong>{formData.portalUsername || formData.email || 'correo del paciente'}</strong> | Contraseña: <strong>{formData.portalPassword || 'Nutri2026!'}</strong>
-                    </p>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-center text-slate-500 dark:text-slate-400 text-xs">
-                  El acceso a la app está deshabilitado para este paciente. Puedes activarlo con el interruptor superior para asignarle usuario y contraseña.
                 </div>
               )}
             </div>
           )}
 
-          {/* TAB 5: FOTO & AVATAR */}
+          {/* TAB 8: FOTO / AVATAR & FINALIZAR (ÚLTIMO APARTADO - AQUÍ Y SOLO AQUÍ SE VE EL BOTÓN DE REGISTRAR) */}
           {activeTab === 'foto' && (
-            <div className="space-y-5 animate-fade-in">
-              {/* Photo Preview & Live Status */}
-              <div className="flex flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-emerald-50/30 to-teal-50/20 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-emerald-950/20 border border-slate-200/80 dark:border-slate-700">
+            <div className="space-y-4 animate-fade-in text-xs">
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-50 via-emerald-50/30 to-slate-50 dark:from-slate-800/80 dark:via-slate-800 dark:to-emerald-950/20 border border-slate-200/80 dark:border-slate-700">
                 <div className="relative group shrink-0">
                   <img
                     src={formData.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
                     alt="Foto del paciente"
-                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-emerald-500/20 shadow-md transition-all group-hover:scale-105"
+                    className="w-24 h-24 rounded-2xl object-cover ring-2 ring-emerald-500/30 shadow-md"
                   />
                   {isUploading && (
-                    <div className="absolute inset-0 bg-black/60 rounded-3xl flex flex-col items-center justify-center text-white p-2">
-                      <Loader2 className="w-6 h-6 animate-spin mb-1 text-emerald-400" />
-                      <span className="text-[10px] font-bold text-center">Procesando</span>
+                    <div className="absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-white">
+                      <Loader2 className="w-5 h-5 animate-spin mb-1 text-emerald-400" />
+                      <span className="text-[9px] font-bold">Optimizando</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex-1 text-center sm:text-left space-y-2">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                      {formData.firstName || formData.lastName
-                        ? `${formData.firstName} ${formData.lastName}`.trim()
-                        : 'Fotografía Oficial'}
-                    </h4>
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
-                      Alta Resolución
-                    </span>
-                    {compressionStats && (
-                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300">
-                        {compressionStats}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-                    Esta imagen se mostrará en el expediente médico, panel de control, consultas en vivo y en los reportes clínicos PDF exportables.
+                <div className="flex-1 text-center sm:text-left space-y-1.5">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {formData.firstName || formData.lastName
+                      ? `${formData.firstName} ${formData.lastName}`.trim()
+                      : 'Fotografía Oficial del Paciente'}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md">
+                    Se utilizará en el expediente clínico, portal del paciente y en los reportes PDF.
                   </p>
 
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
@@ -1283,142 +2172,81 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-900/10 cursor-pointer transition-all active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs cursor-pointer transition-all active:scale-95"
                     >
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Subir desde Dispositivo</span>
+                      <span>Subir Imagen</span>
                     </button>
-
                     <button
                       type="button"
                       onClick={() => cameraInputRef.current?.click()}
                       disabled={isUploading}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 cursor-pointer transition-all active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 cursor-pointer transition-all active:scale-95"
                     >
                       <Camera className="w-3.5 h-3.5 text-slate-500" />
                       <span>Cámara</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleRemovePhoto}
-                      disabled={isUploading}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
-                      title="Restablecer avatar por defecto"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Restablecer</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Drag and Drop Zone */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={() => fileInputRef.current?.click()}
-                className={`relative p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-2 ${
-                  isDragOver
-                    ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 scale-[1.01]'
-                    : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 hover:border-emerald-400 dark:hover:border-emerald-600'
-                }`}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
-                  {isUploading ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <Upload className="w-6 h-6" />
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">
-                    {isUploading
-                      ? uploadMessage || 'Procesando y optimizando imagen...'
-                      : 'Arrastra una fotografía aquí o haz clic para examinar'}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Admite JPG, PNG, WebP, HEIC y SVG (Compresión automática ultrarrápida a WebP)
-                  </p>
-                </div>
-              </div>
-
-              {/* Avatar Presets */}
+              {/* Avatares Preconfigurados */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center justify-between">
-                  <span>O selecciona un avatar clínico preestablecido:</span>
-                  <span className="text-[10px] text-slate-400 font-normal">8 opciones de muestra</span>
-                </label>
-                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2.5">
-                  {AVATAR_PRESETS.map((av, idx) => (
+                <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  O selecciona un avatar clínico sugerido:
+                </span>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  {AVATAR_PRESETS.map((avatar, idx) => (
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => {
-                        setFormData({ ...formData, photoUrl: av.url, gender: av.gender as any });
-                        setCompressionStats(null);
-                        showToast('Avatar seleccionado', `Se asignó el perfil preestablecido (${av.label}).`, 'info');
-                      }}
-                      className={`group relative rounded-2xl overflow-hidden aspect-square border-2 transition-all cursor-pointer ${
-                        formData.photoUrl === av.url
-                          ? 'border-emerald-500 ring-2 ring-emerald-500/30 scale-105 shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500'
+                      onClick={() => setFormData({ ...formData, photoUrl: avatar.url })}
+                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all cursor-pointer ${
+                        formData.photoUrl === avatar.url
+                          ? 'border-emerald-600 ring-2 ring-emerald-500/30 scale-105'
+                          : 'border-transparent hover:opacity-80'
                       }`}
                     >
-                      <img src={av.url} alt={av.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                      {formData.photoUrl === av.url && (
-                        <div className="absolute inset-0 bg-emerald-600/40 backdrop-blur-[1px] flex items-center justify-center">
-                          <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent py-0.5 text-[9px] font-bold text-white text-center">
-                        {av.label}
-                      </div>
+                      <img src={avatar.url} alt={avatar.label} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Manual URL fallback */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Enlace Web de Fotografía Externa (Opcional)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="patient-form-photo-url"
-                    type="url"
-                    value={formData.photoUrl}
-                    onChange={(e) => {
-                      setFormData({ ...formData, photoUrl: e.target.value });
-                      setCompressionStats(null);
-                    }}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                  {formData.photoUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open(formData.photoUrl, '_blank');
-                      }}
-                      className="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-                      title="Probar enlace"
-                    >
-                      Ver
-                    </button>
-                  )}
+              {/* Resumen Final de Registro */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Paciente:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {formData.firstName} {formData.lastName} ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}, {ageYears} años)
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Métricas:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {formData.currentWeight} kg • {formData.height} cm (IMC: {liveBmi})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Prescripción Calórica:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                    {targetKcal} kcal ({carbsPct}% C / {proteinPct}% P / {fatPct}% G = 100%)
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Estudios de Laboratorio:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {studies.length} analitos registrados {labFile ? '• Archivo adjunto ✓' : ''}
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Footer Controls */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          {/* FOOTER CONTROLS: "REGISTRAR UN PACIENTE" SOLO SE VE EN EL ÚLTIMO APARTADO ('foto') */}
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
             <div className="text-[11px] text-slate-400">
-              * Campos obligatorios para el expediente clínico
+              Paso {currentStepIndex + 1} de {TABS.length}: <span className="font-semibold text-slate-600 dark:text-slate-300">{TABS[currentStepIndex].label}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1426,18 +2254,45 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 type="button"
                 id="patient-form-cancel-btn"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
-              <button
-                type="submit"
-                id="patient-form-submit-btn"
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/20 cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
-              >
-                <FileCheck className="w-4 h-4" />
-                <span>{isEditing ? 'Guardar Cambios' : 'Registrar Paciente'}</span>
-              </button>
+
+              {activeTab !== 'general' && (
+                <button
+                  type="button"
+                  id="patient-form-prev-btn"
+                  onClick={handlePrevTab}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Anterior</span>
+                </button>
+              )}
+
+              {/* Botón Siguiente si no estamos en el último paso */}
+              {activeTab !== 'foto' ? (
+                <button
+                  type="button"
+                  id="patient-form-next-btn"
+                  onClick={handleNextTab}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/15 cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+                >
+                  <span>Siguiente Paso</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                /* BOTÓN DE REGISTRAR PACIENTE: SOLO VISIBLE EN EL ÚLTIMO APARTADO */
+                <button
+                  type="submit"
+                  id="patient-form-submit-btn"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/20 cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <FileCheck className="w-4 h-4" />
+                  <span>{isEditing ? 'Guardar Cambios' : 'Registrar un Paciente'}</span>
+                </button>
+              )}
             </div>
           </div>
         </form>
@@ -1449,11 +2304,11 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         title={isEditing ? 'Confirmar Actualización de Expediente' : 'Confirmar Registro de Paciente'}
-        subtitle="Verifica los datos principales antes de sincronizar"
+        subtitle="Verifica los datos principales antes de guardar en el sistema"
         maxWidth="md"
       >
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 flex items-start gap-3">
+        <div className="space-y-4 text-xs">
+          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 flex items-start gap-3">
             <div className="p-2 bg-emerald-600 text-white rounded-xl shrink-0 mt-0.5">
               <ShieldCheck className="w-5 h-5" />
             </div>
@@ -1462,14 +2317,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 {isEditing ? '¿Deseas guardar los cambios del paciente?' : '¿Deseas registrar este nuevo paciente?'}
               </h4>
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                {isEditing
-                  ? 'Se actualizará el perfil del paciente y su historial clínico en la base de datos.'
-                  : 'Se creará el expediente clínico, la primera evaluación somatométrica y el perfil en el sistema.'}
+                Se sincronizará el perfil del paciente, expediente clínico con anamnesis, estudios de laboratorio, matriz SMAE y prescripción de macronutrientes.
               </p>
             </div>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200 dark:border-slate-700 space-y-2">
             <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
               <span className="text-slate-500">Nombre completo:</span>
               <span className="font-bold text-slate-900 dark:text-white">
@@ -1489,48 +2342,211 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
               </span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
-              <span className="text-slate-500">Estado / Riesgo:</span>
-              <span className="font-medium text-slate-800 dark:text-slate-200">
-                {formData.status} • {formData.riskLevel}
-              </span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
-              <span className="text-slate-500">Acceso a App:</span>
-              <span className="font-bold text-slate-900 dark:text-white">
-                {formData.portalAccessEnabled ? '🟢 Habilitado' : '🔴 Deshabilitado'}
-              </span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
-              <span className="text-slate-500">Usuario de acceso:</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {formData.portalUsername || formData.email || formData.phone || 'Correo del paciente'}
+              <span className="text-slate-500">Prescripción:</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                {targetKcal} kcal ({carbsPct}% C / {proteinPct}% P / {fatPct}% G = 100%)
               </span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-slate-500">Contraseña asignada:</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {formData.portalPassword || 'Nutri2026!'}
+              <span className="text-slate-500">Portal del Paciente:</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {formData.portalAccessEnabled ? `🟢 Activo (${formData.portalUsername || formData.email})` : '🔴 Inactivo'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
-              id="confirm-patient-cancel-btn"
               onClick={() => setShowConfirmModal(false)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 transition-colors"
             >
               Revisar datos
             </button>
             <button
               type="button"
-              id="confirm-patient-accept-btn"
               onClick={handleConfirmSave}
-              className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/20 transition-all flex items-center gap-1.5 active:scale-95"
+              className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all flex items-center gap-1.5 active:scale-95"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isEditing ? 'Sí, Guardar Cambios' : 'Sí, Registrar Paciente'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal para Agregar Nuevo Estudio Clínico Personalizado */}
+      <Modal
+        id="add-custom-study-modal"
+        isOpen={showAddStudyModal}
+        onClose={() => setShowAddStudyModal(false)}
+        title="Agregar Estudio Clínico"
+        subtitle="Registra un nuevo analito o parámetro de laboratorio"
+        maxWidth="sm"
+      >
+        <div className="space-y-3 text-xs">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Nombre del Estudio o Analito *
+            </label>
+            <input
+              type="text"
+              value={newStudyForm.name}
+              onChange={(e) => setNewStudyForm({ ...newStudyForm, name: e.target.value })}
+              placeholder="Ej. HbA1c, Insulina Basal, TSH..."
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-medium"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Valor Resultado
+              </label>
+              <input
+                type="text"
+                value={newStudyForm.value}
+                onChange={(e) => setNewStudyForm({ ...newStudyForm, value: e.target.value })}
+                placeholder="Ej. 5.6"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Unidad
+              </label>
+              <input
+                type="text"
+                value={newStudyForm.unit}
+                onChange={(e) => setNewStudyForm({ ...newStudyForm, unit: e.target.value })}
+                placeholder="Ej. %, mg/dL, uUI/mL"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Rango de Referencia
+            </label>
+            <input
+              type="text"
+              value={newStudyForm.refRange}
+              onChange={(e) => setNewStudyForm({ ...newStudyForm, refRange: e.target.value })}
+              placeholder="Ej. 4.0 - 5.6 %"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowAddStudyModal(false)}
+              className="px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!newStudyForm.name.trim()) {
+                  showToast('Nombre Requerido', 'Ingresa el nombre del analito.', 'error');
+                  return;
+                }
+                const newStudy: ClinicalStudyItem = {
+                  id: `study-custom-${Date.now()}`,
+                  name: newStudyForm.name.trim(),
+                  value: newStudyForm.value || '0',
+                  unit: newStudyForm.unit || 'mg/dL',
+                  refRange: newStudyForm.refRange || 'Normal',
+                };
+                setStudies((prev) => [...prev, newStudy]);
+                setShowAddStudyModal(false);
+                setNewStudyForm({ name: '', value: '', unit: 'mg/dL', refRange: '' });
+                showToast('Estudio Agregado', `${newStudy.name} añadido a los estudios del paciente.`, 'success');
+              }}
+              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal para Guardar Configuración como Nueva Plantilla */}
+      <Modal
+        id="save-new-template-modal"
+        isOpen={showNewTemplateModal}
+        onClose={() => setShowNewTemplateModal(false)}
+        title="Crear Nueva Plantilla de Prescripción"
+        subtitle="Guarda la distribución actual de macros y calorías para usarla con otros pacientes"
+        maxWidth="sm"
+      >
+        <div className="space-y-3 text-xs">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Nombre de la Plantilla *
+            </label>
+            <input
+              type="text"
+              value={newTemplateForm.name}
+              onChange={(e) => setNewTemplateForm({ ...newTemplateForm, name: e.target.value })}
+              placeholder="Ej. Mi Plan Reducción Grasa SMAE"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-medium"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Categoría / Distintivo
+            </label>
+            <select
+              value={newTemplateForm.badge}
+              onChange={(e) => setNewTemplateForm({ ...newTemplateForm, badge: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold"
+            >
+              <option value="Personalizado">Personalizado</option>
+              <option value="Metabólico">Metabólico</option>
+              <option value="Rendimiento">Rendimiento</option>
+              <option value="Cardiovascular">Cardiovascular</option>
+              <option value="Basado en Plantas">Basado en Plantas</option>
+              <option value="Digestivo">Digestivo</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Descripción o Recomendaciones
+            </label>
+            <textarea
+              rows={2}
+              value={newTemplateForm.description}
+              onChange={(e) => setNewTemplateForm({ ...newTemplateForm, description: e.target.value })}
+              placeholder="Instrucciones clínicas clave, tiempos de comida o grupo objetivo..."
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 resize-none"
+            />
+          </div>
+
+          <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl font-mono text-[11px] text-slate-600 dark:text-slate-300">
+            Macros a guardar: {carbsPct}% Carbohidratos • {proteinPct}% Proteína • {fatPct}% Grasas = 100%
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowNewTemplateModal(false)}
+              className="px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAsNewTemplate}
+              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Guardar Plantilla</span>
             </button>
           </div>
         </div>

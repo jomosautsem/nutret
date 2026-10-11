@@ -28,6 +28,8 @@ import {
   Sliders,
   Eye,
   Layers,
+  Copy,
+  Code2,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/common/Toast';
@@ -60,9 +62,68 @@ const PRESET_AVATARS = [
   },
 ];
 
+export const CLINICAL_RECORDS_SQL = `-- ============================================================================
+-- SQL para crear y actualizar la tabla clinical_records (Expedientes Clínicos)
+-- Compatible al 100% con los IDs de pacientes y usuarios existentes
+-- ============================================================================
+
+-- 1. Crear tabla clinical_records si no existe
+CREATE TABLE IF NOT EXISTS public.clinical_records (
+  id VARCHAR(100) PRIMARY KEY,
+  patient_id VARCHAR(100) NOT NULL REFERENCES public.patients(id) ON DELETE CASCADE,
+  specialist_id VARCHAR(100) REFERENCES public.users(id) ON DELETE SET NULL,
+  
+  -- Antecedentes heredofamiliares
+  family_history JSONB DEFAULT '{}'::jsonb,
+  
+  -- Antecedentes patológicos, alergias y medicamentos
+  pathological_history JSONB DEFAULT '{}'::jsonb,
+  allergies JSONB DEFAULT '[]'::jsonb,
+  medications JSONB DEFAULT '[]'::jsonb,
+  
+  -- Estilo de vida y actividad física
+  lifestyle_habits JSONB DEFAULT '{}'::jsonb,
+  physical_activity JSONB DEFAULT '{}'::jsonb,
+  
+  -- Hábitos dietéticos y Recordatorio 24 Horas
+  dietary_habits JSONB DEFAULT '{}'::jsonb,
+  recall_24h TEXT DEFAULT '',
+  recall_24h_ai_analysis JSONB DEFAULT '{}'::jsonb,
+  
+  -- Objetivos y observaciones del nutriólogo
+  clinical_goals TEXT DEFAULT '',
+  clinical_observations TEXT DEFAULT '',
+  custom_fields JSONB DEFAULT '{}'::jsonb,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Crear índice para búsquedas por paciente
+CREATE INDEX IF NOT EXISTS idx_clinical_records_patient_id ON public.clinical_records(patient_id);
+
+-- 3. Habilitar seguridad de nivel de fila (RLS) y permitir operaciones a la app
+ALTER TABLE public.clinical_records ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'clinical_records' 
+    AND policyname = 'Allow public all access on clinical_records'
+  ) THEN
+    CREATE POLICY "Allow public all access on clinical_records"
+      ON public.clinical_records FOR ALL
+      TO public
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;`;
+
 export const SettingsView: React.FC = () => {
   const { currentUser, updateCurrentUser, organization, updateOrganization } = useAuth();
   const { showToast } = useToast();
+  const [showSqlScript, setShowSqlScript] = useState(false);
 
   // Nutritionist Profile State
   const [firstName, setFirstName] = useState(currentUser.firstName || '');
@@ -214,6 +275,13 @@ export const SettingsView: React.FC = () => {
     } finally {
       setIsSyncingCloud(false);
     }
+  };
+
+  const handleCopySql = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(CLINICAL_RECORDS_SQL);
+    }
+    showToast('Código SQL Copiado', 'Pégalo en el SQL Editor de tu consola de Supabase y presiona Run.', 'success');
   };
 
   useEffect(() => {
@@ -462,6 +530,58 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* SQL Script for clinical_records table */}
+        <div className="mt-3 pt-3 border-t border-slate-800/80">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[11px] text-slate-400">
+              ¿Quieres habilitar la tabla dedicada <strong>clinical_records</strong> en Supabase?
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSqlScript(!showSqlScript)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            >
+              <Code2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{showSqlScript ? 'Ocultar Código SQL' : 'Ver Código SQL para Supabase'}</span>
+            </button>
+          </div>
+
+          {showSqlScript && (
+            <div className="mt-3 bg-slate-950 p-4 rounded-2xl border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Script SQL de Actualización de Expedientes</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Copia y ejecuta este script en el <strong>SQL Editor</strong> de Supabase para tener la tabla de expedientes lista.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopySql}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copiar SQL</span>
+                </button>
+              </div>
+
+              <pre className="p-3 bg-slate-900 rounded-xl text-[11px] text-emerald-300 font-mono overflow-x-auto max-h-60 border border-slate-800 select-all">
+                {CLINICAL_RECORDS_SQL}
+              </pre>
+
+              <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>
+                  Nota: El sistema ya cuenta con respaldo redundante en tiempo real (medical_notes), por lo que tus datos nunca se pierden aunque aún no ejecutes este script.
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">

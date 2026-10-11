@@ -38,33 +38,34 @@ CREATE TABLE patients (
 );
 
 -- Clinical Records (Expediente Clínico)
-CREATE TABLE clinical_records (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-  specialist_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+-- Clinical Records (Expediente Clínico)
+CREATE TABLE IF NOT EXISTS clinical_records (
+  id VARCHAR(100) PRIMARY KEY,
+  patient_id VARCHAR(100) NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  specialist_id VARCHAR(100) REFERENCES users(id) ON DELETE SET NULL,
   
   -- Heredofamiliares
-  family_history JSONB DEFAULT '{"diabetes": false, "hypertension": false, "cancer": false, "cardiovascular": false, "thyroid": false, "notes": ""}',
+  family_history JSONB DEFAULT '{}',
   
   -- Personales patológicos y no patológicos
-  pathological_history JSONB DEFAULT '{"diagnosed_diseases": [], "previous_treatments": "", "surgeries": []}',
-  allergies JSONB DEFAULT '[]', -- ['Lácteos', 'Mariscos', 'Cacahuates']
-  medications JSONB DEFAULT '[]', -- [{name: 'Metformina', dose: '850mg', frequency: 'Cada 12h'}]
+  pathological_history JSONB DEFAULT '{}',
+  allergies JSONB DEFAULT '[]',
+  medications JSONB DEFAULT '[]',
   
   -- Hábitos de vida
-  lifestyle_habits JSONB DEFAULT '{"sleep_hours": 7, "sleep_quality": "Buena", "smoking": false, "alcohol": "Ocasional", "stress_level": "Moderado", "water_daily_liters": 2.0}',
+  lifestyle_habits JSONB DEFAULT '{}',
   
   -- Actividad física
-  physical_activity JSONB DEFAULT '{"activity_level": "Moderada", "exercise_type": "Fuerza y funcional", "frequency_days_per_week": 4, "duration_minutes": 60}',
+  physical_activity JSONB DEFAULT '{}',
   
   -- Hábitos dietéticos y 24h recall
-  dietary_habits JSONB DEFAULT '{"meals_per_day": 4, "preferred_foods": [], "disliked_foods": [], "food_allergies": [], "eating_out_frequency": "1 vez por semana", "binge_eating": false}',
-  recall_24h TEXT,
-  recall_24h_ai_analysis JSONB,
+  dietary_habits JSONB DEFAULT '{}',
+  recall_24h TEXT DEFAULT '',
+  recall_24h_ai_analysis JSONB DEFAULT '{}',
   
   -- Objetivos y observaciones clínicas
-  clinical_goals TEXT,
-  clinical_observations TEXT,
+  clinical_goals TEXT DEFAULT '',
+  clinical_observations TEXT DEFAULT '',
   
   -- Dynamic custom questions answers
   custom_fields JSONB DEFAULT '{}',

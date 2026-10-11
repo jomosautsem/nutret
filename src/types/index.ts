@@ -92,6 +92,8 @@ export interface Patient {
   lastConsultationDate?: string;
   nextConsultationDate?: string;
   notes?: string;
+  allergies?: string;
+  pathologies?: string;
   portalAccessEnabled?: boolean;
   portalUsername?: string;
   portalPassword?: string;
@@ -150,6 +152,7 @@ export interface ClinicalRecord {
   clinicalGoals?: string;
   clinicalObservations?: string;
   customFields?: Record<string, any>;
+  isCustomized?: boolean;
   updatedAt: string;
 }
 
@@ -206,6 +209,9 @@ export interface LaboratoryResult {
     unit: string;
     refRange: string;
   }>;
+  documentUrl?: string;
+  fileName?: string;
+  fileData?: string;
   aiAnalysisSummary?: string;
   specialistInterpretation?: string;
 }
