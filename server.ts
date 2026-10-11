@@ -353,7 +353,10 @@ Genera una propuesta de plan nutricional clínico integral, riguroso, dinámico 
 - Alergias e Intolerancias alimentarias: ${payload.allergiesAndIntolerances || "Sin restricciones alérgicas"}
 - Medicamentos Actuales: ${payload.currentMedications || "Sin fármacos"}
 
-### 5. HÁBITOS, PREFERENCIAS Y ESTRUCTURA:
+### 5. ESTUDIOS CLÍNICOS Y RESULTADOS DE LABORATORIO (SINCRONIZADOS):
+- Analitos y Parámetros Basales: ${payload.laboratorySummary || "Sin laboratorios registrados"}
+
+### 6. HÁBITOS, PREFERENCIAS Y ESTRUCTURA:
 - Estilo Dietético: ${payload.dietStyle || "Omnívoro"}
 - Alimentos Excluidos / Aversiones: ${payload.dislikedFoods || "Ninguno"}
 - Número de Tomas al Día: ${payload.mealsCount || 4} comidas
@@ -549,6 +552,7 @@ ${mealsCount >= 5 ? `- ${currentVariation.snack2}\n` : ''}- ${currentVariation.d
 
 **5. Consideraciones Clínicas Especiales:**
 - **Condiciones y Patologías:** ${conditions} (Se prioriza control de índice glucémico y fibra soluble >28g).
+- **Estudios de Laboratorio Sincronizados:** ${payload?.laboratorySummary || "Sin analitos basales registrados"}.
 - **Alergias / Exclusiones:** ${allergies} (Totalmente libre de alérgenos indicados).
 - **Medicamentos:** ${payload?.currentMedications || "Sin fármacos reportados"}.`;
   }

@@ -29,7 +29,13 @@ import { ExecutivePdfExportModal } from '../../components/ExecutivePdfExportModa
 export const NutriCopilotView: React.FC = () => {
   const { showToast } = useToast();
   const { organization, currentUser } = useAuth();
-  const patients = storageService.getPatients();
+  const [patients, setPatients] = useState(() => storageService.getPatients());
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(() => {
+    const active = storageService.getActiveClinicalPatientId();
+    const all = storageService.getPatients();
+    if (active && all.some((p) => p.id === active)) return active;
+    return all[0]?.id || '';
+  });
 
   const [activeTool, setActiveTool] = useState<
     'chat' | 'draft_plan' | 'parse_24h' | 'consultation_prep' | 'labs' | 'meal_photo' | 'risk_detector'
@@ -37,9 +43,53 @@ export const NutriCopilotView: React.FC = () => {
 
   // Wizard Modal State
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [wizardPatientId, setWizardPatientId] = useState<string>(patients[0]?.id || '');
+  const [wizardPatientId, setWizardPatientId] = useState<string>(selectedPatientId);
   const [editingPlanForPdf, setEditingPlanForPdf] = useState<NutritionPlan | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+
+  // Sync with DB updates
+  React.useEffect(() => {
+    const handleDbUpdate = () => {
+      const all = storageService.getPatients();
+      setPatients(all);
+      const active = storageService.getActiveClinicalPatientId();
+      if (active && all.some((p) => p.id === active)) {
+        setSelectedPatientId(active);
+        setWizardPatientId(active);
+        setPlanPatientId(active);
+        const activePat = all.find((p) => p.id === active);
+        if (activePat?.goal) setPlanGoal(activePat.goal);
+      }
+    };
+    handleDbUpdate();
+    window.addEventListener('nutriluz:db_updated', handleDbUpdate);
+    window.addEventListener('nutriluz:active_patient_changed', handleDbUpdate);
+    return () => {
+      window.removeEventListener('nutriluz:db_updated', handleDbUpdate);
+      window.removeEventListener('nutriluz:active_patient_changed', handleDbUpdate);
+    };
+  }, []);
+
+  // Sync laboratory results into labInput interpreter
+  React.useEffect(() => {
+    if (selectedPatientId) {
+      const labs = storageService.getLabRecordsByPatientId(selectedPatientId);
+      if (labs && labs.length > 0) {
+        const l = labs[0];
+        const parts = [
+          l.glucoseMgDl !== undefined ? `Glucosa: ${l.glucoseMgDl} mg/dL` : null,
+          l.ureaMgDl !== undefined ? `Urea: ${l.ureaMgDl} mg/dL` : null,
+          l.uricAcidMgDl !== undefined ? `Ácido Úrico: ${l.uricAcidMgDl} mg/dL` : null,
+          l.creatinineMgDl !== undefined ? `Creatinina: ${l.creatinineMgDl} mg/dL` : null,
+          l.triglyceridesMgDl !== undefined ? `Triglicéridos: ${l.triglyceridesMgDl} mg/dL` : null,
+          l.totalCholesterolMgDl !== undefined ? `Colesterol Total: ${l.totalCholesterolMgDl} mg/dL` : null,
+        ].filter(Boolean);
+        if (parts.length > 0) {
+          setLabInput(`Estudios de Laboratorio Clínico de Ingreso:\n${parts.join('\n')}`);
+        }
+      }
+    }
+  }, [selectedPatientId]);
 
   // Interactive Chat State
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
@@ -57,8 +107,11 @@ export const NutriCopilotView: React.FC = () => {
   const [recallResult, setRecallResult] = useState<string | null>(null);
 
   // Quick Plan Generator State
-  const [planPatientId, setPlanPatientId] = useState(patients[0]?.id || '');
-  const [planGoal, setPlanGoal] = useState(patients[0]?.goal || '');
+  const [planPatientId, setPlanPatientId] = useState(selectedPatientId);
+  const [planGoal, setPlanGoal] = useState(() => {
+    const p = storageService.getPatients().find((item) => item.id === selectedPatientId);
+    return p?.goal || storageService.getPatients()[0]?.goal || '';
+  });
   const [planResult, setPlanResult] = useState<string | null>(null);
 
   // Lab interpreter state
@@ -106,15 +159,19 @@ export const NutriCopilotView: React.FC = () => {
   const handleRunDraftPlan = async () => {
     setIsLoading(true);
     const patient = patients.find((p) => p.id === planPatientId) || patients[0];
+    const currentYear = new Date().getFullYear();
+    const birthYear = patient?.birthDate ? new Date(patient.birthDate).getFullYear() : currentYear - 30;
+    const realAge = Math.max(1, currentYear - birthYear);
+
     const response = await aiService.queryNutriCopilot({
       action: 'draft_plan',
       payload: {
-        patientName: `${patient.firstName} ${patient.lastName}`,
-        age: 28,
-        gender: patient.gender,
-        weight: patient.currentWeight,
-        height: patient.height,
-        goal: planGoal,
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Paciente',
+        age: realAge,
+        gender: patient?.gender || 'F',
+        weight: patient?.currentWeight || 70,
+        height: patient?.height || 165,
+        goal: planGoal || patient?.goal || 'Recomposición Corporal',
       },
     });
     setIsLoading(false);
@@ -184,9 +241,37 @@ export const NutriCopilotView: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="bg-white/15 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 flex items-center gap-2.5 text-xs">
+            <UserCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] text-emerald-200 font-semibold">Paciente para Prescripción:</span>
+              <select
+                value={selectedPatientId}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedPatientId(newId);
+                  storageService.setActiveClinicalPatientId(newId);
+                  setWizardPatientId(newId);
+                  setPlanPatientId(newId);
+                  const p = patients.find((item) => item.id === newId);
+                  if (p?.goal) setPlanGoal(p.goal);
+                }}
+                className="bg-transparent text-white font-bold text-xs focus:outline-hidden cursor-pointer"
+              >
+                {patients.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                    {p.firstName} {p.lastName} ({p.currentWeight} kg - {p.goal || 'Sin meta'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <button
             onClick={() => {
-              setWizardPatientId(planPatientId || patients[0]?.id || '');
+              const activeId = storageService.getActiveClinicalPatientId() || selectedPatientId || planPatientId || patients[0]?.id || '';
+              setSelectedPatientId(activeId);
+              setWizardPatientId(activeId);
               setIsWizardOpen(true);
             }}
             className="px-5 py-3 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 font-extrabold text-xs shadow-lg shadow-emerald-950/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"

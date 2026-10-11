@@ -146,6 +146,7 @@ export interface ClinicalRecord {
     dislikedFoods: string[];
     eatingOutFrequency: string;
     bingeEating: boolean;
+    preferredDiet?: string;
   };
   recall24h?: string;
   recall24hAiAnalysis?: any;

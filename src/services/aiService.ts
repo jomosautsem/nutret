@@ -142,6 +142,7 @@ ${mealsCount >= 5 ? `- ${currentVariation.snack2}\n` : ''}- ${currentVariation.d
 
 **5. Consideraciones Clínicas Especiales:**
 - **Condiciones y Patologías:** ${conditions} (Se prioriza control de índice glucémico y fibra soluble >28g).
+- **Estudios de Laboratorio Sincronizados:** ${payload?.laboratorySummary || 'Sin analitos basales registrados'}.
 - **Alergias / Exclusiones:** ${allergies} (Totalmente libre de alérgenos indicados).
 - **Medicamentos:** ${payload?.currentMedications || 'Sin fármacos reportados'}.`;
   }

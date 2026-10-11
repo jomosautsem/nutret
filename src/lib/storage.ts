@@ -2576,6 +2576,28 @@ export const storageService = {
     safeDispatchEvent('nutriluz:db_updated', { type: 'patient_session', patientId: id });
   },
 
+  getActiveClinicalPatientId(): string | null {
+    return this.get('nutriluz_active_clinical_patient_id', null as string | null);
+  },
+
+  setActiveClinicalPatientId(id: string | null) {
+    try {
+      if (id) {
+        this.set('nutriluz_active_clinical_patient_id', id);
+      } else {
+        this.remove('nutriluz_active_clinical_patient_id');
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('nutriluz_active_clinical_patient_id');
+        }
+      }
+    } catch (e) {
+      console.error('Error updating active clinical patient ID in storage:', e);
+    }
+
+    safeDispatchEvent('nutriluz:active_patient_changed', { patientId: id });
+    safeDispatchEvent('nutriluz:db_updated', { type: 'active_patient', patientId: id });
+  },
+
   authenticatePatient(login: string, pass: string): Patient | null {
     const cleanLogin = login.trim().toLowerCase();
     const cleanPass = pass.trim();

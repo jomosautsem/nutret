@@ -230,6 +230,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     const refreshData = () => {
       const p = storageService.getPatientById(patientId);
       setPatient(p);
+      storageService.setActiveClinicalPatientId(patientId);
       setPlans(storageService.getPlansByPatientId(patientId));
       setAnthroRecords(storageService.getAnthropometricsByPatientId(patientId));
       setAppointments(storageService.getAppointmentsByPatientId(patientId));

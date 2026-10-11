@@ -35,8 +35,19 @@ import {
   Plus,
   Edit3,
   Calculator,
+  FlaskConical,
+  FileCheck,
 } from 'lucide-react';
-import { Patient, NutritionPlan, NutritionPlanDay, NutritionPlanMeal, NutritionPlanItem, AnthropometricRecord, ClinicalRecord } from '../../types';
+import {
+  Patient,
+  NutritionPlan,
+  NutritionPlanDay,
+  NutritionPlanMeal,
+  NutritionPlanItem,
+  AnthropometricRecord,
+  ClinicalRecord,
+  LaboratoryResult,
+} from '../../types';
 import { storageService } from '../../lib/storage';
 import { aiService } from '../../services/aiService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -108,18 +119,23 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
   onApplyPlanToPlanner,
   onOpenPdfEditor,
 }) => {
-  const { organization, currentUser } = useAuth();
   const { showToast } = useToast();
-  const patients = storageService.getPatients();
+  const { organization, currentUser } = useAuth();
+  const [patients, setPatients] = useState<Patient[]>(() => storageService.getPatients());
+  const [patientLabRecord, setPatientLabRecord] = useState<LaboratoryResult | null>(null);
 
   // Wizard Step: 1 = Biometrics & Goal, 2 = Clinical & Allergies, 3 = Habits & Meals, 4 = Clinical SMAE Engine, 5 = Review & AI Generate
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [overrideTargetKcal, setOverrideTargetKcal] = useState<number | null>(null);
 
   // Selected Patient
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(
-    initialPatientId || patients[0]?.id || ''
-  );
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(() => {
+    const active = storageService.getActiveClinicalPatientId();
+    const all = storageService.getPatients();
+    if (initialPatientId && all.some((p) => p.id === initialPatientId)) return initialPatientId;
+    if (active && all.some((p) => p.id === active)) return active;
+    return all[0]?.id || '';
+  });
   const [patientAutoFilled, setPatientAutoFilled] = useState(false);
 
   // --- STEP 1: Somatometría & Perfil Biológico ---
@@ -662,7 +678,7 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
 
     setSelectedPatientId(pat.id);
 
-    // 1. Reset ALL clinical, bioimpedance and preference fields to clean state to avoid ghost/mock data
+    // 1. Reset base fields to clean state
     setSelectedConditions([]);
     setCustomCondition('');
     setSelectedAllergies([]);
@@ -692,22 +708,22 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
     if (pat.height) setHeightCm(pat.height);
     if (pat.currentWeight) setWeightKg(pat.currentWeight);
 
-    // 3. Anthropometrics from REAL measurements (leave empty if not recorded)
+    // 3. Anthropometrics from REAL measurements (Bioimpedancia)
     const anthros = storageService.getAnthropometricsByPatientId(pat.id);
     if (anthros && anthros.length > 0) {
       const latest = anthros[0];
-      if (latest.bodyFatPercentage !== undefined && latest.bodyFatPercentage !== null && latest.bodyFatPercentage > 0) {
-        setBodyFatPct(latest.bodyFatPercentage);
+      if (latest.bodyFatPercentage !== undefined && latest.bodyFatPercentage !== null && Number(latest.bodyFatPercentage) > 0) {
+        setBodyFatPct(Number(latest.bodyFatPercentage));
       }
-      if (latest.muscleMassKg !== undefined && latest.muscleMassKg !== null && latest.muscleMassKg > 0) {
-        setMuscleMassKg(latest.muscleMassKg);
+      if (latest.muscleMassKg !== undefined && latest.muscleMassKg !== null && Number(latest.muscleMassKg) > 0) {
+        setMuscleMassKg(Number(latest.muscleMassKg));
       }
-      if (latest.visceralFatLevel !== undefined && latest.visceralFatLevel !== null && latest.visceralFatLevel > 0) {
-        setVisceralFatLevel(latest.visceralFatLevel);
+      if (latest.visceralFatLevel !== undefined && latest.visceralFatLevel !== null && Number(latest.visceralFatLevel) > 0) {
+        setVisceralFatLevel(Number(latest.visceralFatLevel));
       }
     }
 
-    // 4. Medical Record & Clinical History from REAL record (leave empty if none exists)
+    // 4. Medical Record & Clinical History from REAL record
     const clin = storageService.getClinicalRecordByPatientId(pat.id);
     let hasClinicalData = false;
     if (clin) {
@@ -734,30 +750,88 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
       if (clin.dietaryHabits?.mealsPerDay && clin.dietaryHabits.mealsPerDay > 0) {
         setMealsCount(clin.dietaryHabits.mealsPerDay);
       }
-      if (clin.physicalActivity?.exerciseType) {
-        setTrainingType(clin.physicalActivity.exerciseType);
+      if (clin.dietaryHabits?.preferredDiet) {
+        setDietStyle(clin.dietaryHabits.preferredDiet);
       }
-      if (clin.physicalActivity?.frequencyDaysPerWeek) {
-        setTrainingFrequencyDays(clin.physicalActivity.frequencyDaysPerWeek);
-      }
-      if (clin.physicalActivity?.durationMinutes) {
-        setTrainingDurationMinutes(clin.physicalActivity.durationMinutes);
+      if (clin.physicalActivity) {
+        if (clin.physicalActivity.activityLevel) {
+          setActivityLevel(clin.physicalActivity.activityLevel as any);
+        }
+        if (clin.physicalActivity.exerciseType) {
+          setTrainingType(clin.physicalActivity.exerciseType);
+        }
+        if (clin.physicalActivity.frequencyDaysPerWeek) {
+          setTrainingFrequencyDays(clin.physicalActivity.frequencyDaysPerWeek);
+        }
+        if (clin.physicalActivity.durationMinutes) {
+          setTrainingDurationMinutes(clin.physicalActivity.durationMinutes);
+        }
       }
     }
 
-    // Preload previous general recommendations if available
+    // 5. Laboratory Results / Estudios Clínicos
+    const labs = storageService.getLabRecordsByPatientId(pat.id);
+    const latestLab = labs && labs.length > 0 ? labs[0] : null;
+    setPatientLabRecord(latestLab);
+
+    if (latestLab) {
+      const autoConds: string[] = [];
+      if (latestLab.glucoseMgDl && latestLab.glucoseMgDl >= 100) {
+        autoConds.push(latestLab.glucoseMgDl >= 126 ? 'Diabetes Tipo 2' : 'Resistencia a la Insulina');
+      }
+      if ((latestLab.triglyceridesMgDl && latestLab.triglyceridesMgDl > 150) || (latestLab.totalCholesterolMgDl && latestLab.totalCholesterolMgDl > 200)) {
+        autoConds.push('Dislipidemia (Colesterol/Triglicéridos)');
+      }
+      if (latestLab.uricAcidMgDl && latestLab.uricAcidMgDl > 7.0) {
+        autoConds.push('Hiperuricemia / Gota');
+      }
+      if (autoConds.length > 0) {
+        setSelectedConditions((prev) => Array.from(new Set([...prev, ...autoConds])));
+        hasClinicalData = true;
+      }
+    }
+
+    // 6. Preload Nutrition Plan, Target Calories, and Exact 100% Macros Distribution
     const existingPlans = storageService.getPlansByPatientId(pat.id);
-    if (existingPlans && existingPlans.length > 0 && existingPlans[0].generalInstructions) {
-      setGeneralRecommendations(existingPlans[0].generalInstructions);
-      setIncludeGeneralRecommendations(true);
+    const activePlan = existingPlans && existingPlans.length > 0 ? existingPlans[0] : null;
+    let hasPlanData = false;
+
+    if (activePlan) {
+      if (activePlan.targetCaloriesKcal && activePlan.targetCaloriesKcal > 0) {
+        setOverrideTargetKcal(activePlan.targetCaloriesKcal);
+        hasPlanData = true;
+      }
+
+      if (activePlan.targetCaloriesKcal && activePlan.targetProteinG && activePlan.targetFatG && activePlan.targetCarbsG) {
+        const k = activePlan.targetCaloriesKcal;
+        const pG = activePlan.targetProteinG;
+        const fG = activePlan.targetFatG;
+
+        const calculatedProteinPct = Math.round(((pG * 4) / k) * 100);
+        const calculatedFatPct = Math.round(((fG * 9) / k) * 100);
+        const calculatedCarbsPct = Math.max(0, 100 - (calculatedProteinPct + calculatedFatPct));
+
+        setCarbsPct(calculatedCarbsPct);
+        setFatPct(calculatedFatPct);
+        if (pat.currentWeight && pat.currentWeight > 0) {
+          setProteinGKg(Number((pG / pat.currentWeight).toFixed(1)));
+        }
+      }
+
+      if (activePlan.days && activePlan.days[0]?.meals && activePlan.days[0].meals.length > 0) {
+        setMealsCount(activePlan.days[0].meals.length);
+      }
+
+      if (activePlan.generalInstructions) {
+        setGeneralRecommendations(activePlan.generalInstructions);
+        setIncludeGeneralRecommendations(true);
+      }
     }
 
     setPatientAutoFilled(true);
     showToast(
       'Expediente Sincronizado',
-      hasClinicalData
-        ? `Datos clínicos y somatométricos de ${pat.firstName} ${pat.lastName} sincronizados fielmente.`
-        : `Datos somatométricos de ${pat.firstName} ${pat.lastName} sincronizados (sin diagnósticos ni fármacos previos en el historial).`,
+      `Datos de ${pat.firstName} ${pat.lastName} sincronizados: somatometría, ${latestLab ? 'laboratorios, ' : ''}${hasPlanData ? 'meta calórica y macros (100%), ' : ''}patologías y fármacos.`,
       'success'
     );
   };
@@ -765,7 +839,15 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
   // Trigger auto-fill on mount, modal open, or patient change
   useEffect(() => {
     if (isOpen) {
-      const patientIdToLoad = initialPatientId || selectedPatientId || patients[0]?.id || '';
+      const freshPatients = storageService.getPatients();
+      setPatients(freshPatients);
+      const active = storageService.getActiveClinicalPatientId();
+      const patientIdToLoad = (initialPatientId && freshPatients.some((p) => p.id === initialPatientId))
+        ? initialPatientId
+        : (active && freshPatients.some((p) => p.id === active))
+        ? active
+        : selectedPatientId || freshPatients[0]?.id || '';
+
       if (patientIdToLoad) {
         setSelectedPatientId(patientIdToLoad);
         handleAutoFillFromPatient(patientIdToLoad);
@@ -977,6 +1059,24 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
       mealsCount,
       budgetAndPrepStyle: budgetPrepStyle,
       clinicalCompletenessScore: `${completenessAnalysis.score}%`,
+
+      // 6. Estudios Clínicos y Laboratorios Sincronizados
+      laboratorySummary: patientLabRecord
+        ? [
+            patientLabRecord.glucoseMgDl !== undefined ? `Glucosa: ${patientLabRecord.glucoseMgDl} mg/dL` : null,
+            patientLabRecord.ureaMgDl !== undefined ? `Urea: ${patientLabRecord.ureaMgDl} mg/dL` : null,
+            patientLabRecord.uricAcidMgDl !== undefined ? `Ácido Úrico: ${patientLabRecord.uricAcidMgDl} mg/dL` : null,
+            patientLabRecord.creatinineMgDl !== undefined ? `Creatinina: ${patientLabRecord.creatinineMgDl} mg/dL` : null,
+            patientLabRecord.triglyceridesMgDl !== undefined ? `Triglicéridos: ${patientLabRecord.triglyceridesMgDl} mg/dL` : null,
+            patientLabRecord.totalCholesterolMgDl !== undefined ? `Colesterol Total: ${patientLabRecord.totalCholesterolMgDl} mg/dL` : null,
+            patientLabRecord.customParameters && patientLabRecord.customParameters.length > 0
+              ? `Estudios Adicionales: ${patientLabRecord.customParameters.map((c) => `${c.name}: ${c.value} ${c.unit}`).join(', ')}`
+              : null,
+            patientLabRecord.fileName ? `Documento adjunto: ${patientLabRecord.fileName}` : null,
+          ]
+            .filter(Boolean)
+            .join(' | ')
+        : 'Sin estudios de laboratorio registrados',
     };
 
     try {
@@ -1892,6 +1992,150 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
                 placeholder="Ej. Metformina 850mg (1 vez al día con la cena), Levotiroxina 50mcg (ayuno)"
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-sans"
               />
+            </div>
+
+            {/* Estudios Clínicos y Laboratorios Sincronizados */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/70 via-teal-50/60 to-cyan-50/60 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30 border border-teal-200/80 dark:border-teal-800/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-teal-600 text-white">
+                    <FlaskConical className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>Estudios Clínicos & Resultados de Laboratorio</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-extrabold">
+                        ✓ Sincronizado
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Resultados basales del expediente que nutren el razonamiento clínico de NutriCopilot AI.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {patientLabRecord ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    {/* Glucosa */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Glucosa</span>
+                      <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                        {patientLabRecord.glucoseMgDl !== undefined ? `${patientLabRecord.glucoseMgDl} mg/dL` : '—'}
+                      </div>
+                      <span className={`text-[9px] font-bold block mt-0.5 ${
+                        !patientLabRecord.glucoseMgDl ? 'text-slate-400' :
+                        patientLabRecord.glucoseMgDl > 125 ? 'text-rose-600 font-black' :
+                        patientLabRecord.glucoseMgDl >= 100 ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                        {!patientLabRecord.glucoseMgDl ? 'Sin registro' :
+                         patientLabRecord.glucoseMgDl > 125 ? '⚠️ Diabetes' :
+                         patientLabRecord.glucoseMgDl >= 100 ? '⚠️ Prediabetes' : 'Normal (70-99)'}
+                      </span>
+                    </div>
+
+                    {/* Urea */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Urea</span>
+                      <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                        {patientLabRecord.ureaMgDl !== undefined ? `${patientLabRecord.ureaMgDl} mg/dL` : '—'}
+                      </div>
+                      <span className={`text-[9px] font-bold block mt-0.5 ${
+                        !patientLabRecord.ureaMgDl ? 'text-slate-400' :
+                        patientLabRecord.ureaMgDl > 45 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}>
+                        {!patientLabRecord.ureaMgDl ? 'Sin registro' :
+                         patientLabRecord.ureaMgDl > 45 ? '⚠️ Elevada' : 'Normal (15-45)'}
+                      </span>
+                    </div>
+
+                    {/* Ácido Úrico */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Ácido Úrico</span>
+                      <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                        {patientLabRecord.uricAcidMgDl !== undefined ? `${patientLabRecord.uricAcidMgDl} mg/dL` : '—'}
+                      </div>
+                      <span className={`text-[9px] font-bold block mt-0.5 ${
+                        !patientLabRecord.uricAcidMgDl ? 'text-slate-400' :
+                        patientLabRecord.uricAcidMgDl > 7.0 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}>
+                        {!patientLabRecord.uricAcidMgDl ? 'Sin registro' :
+                         patientLabRecord.uricAcidMgDl > 7.0 ? '⚠️ Hiperuricemia' : 'Normal (<7.0)'}
+                      </span>
+                    </div>
+
+                    {/* Creatinina */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Creatinina</span>
+                      <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                        {patientLabRecord.creatinineMgDl !== undefined ? `${patientLabRecord.creatinineMgDl} mg/dL` : '—'}
+                      </div>
+                      <span className={`text-[9px] font-bold block mt-0.5 ${
+                        !patientLabRecord.creatinineMgDl ? 'text-slate-400' :
+                        patientLabRecord.creatinineMgDl > 1.3 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}>
+                        {!patientLabRecord.creatinineMgDl ? 'Sin registro' :
+                         patientLabRecord.creatinineMgDl > 1.3 ? '⚠️ Revisar FG' : 'Normal (0.6-1.2)'}
+                      </span>
+                    </div>
+
+                    {/* Triglicéridos */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Triglicéridos</span>
+                      <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                        {patientLabRecord.triglyceridesMgDl !== undefined ? `${patientLabRecord.triglyceridesMgDl} mg/dL` : '—'}
+                      </div>
+                      <span className={`text-[9px] font-bold block mt-0.5 ${
+                        !patientLabRecord.triglyceridesMgDl ? 'text-slate-400' :
+                        patientLabRecord.triglyceridesMgDl > 150 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}>
+                        {!patientLabRecord.triglyceridesMgDl ? 'Sin registro' :
+                         patientLabRecord.triglyceridesMgDl > 150 ? '⚠️ Dislipidemia' : 'Óptimo (<150)'}
+                      </span>
+                    </div>
+
+                    {/* Colesterol Total */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 font-bold uppercase">Colesterol</span>
+                      <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                        {patientLabRecord.totalCholesterolMgDl !== undefined ? `${patientLabRecord.totalCholesterolMgDl} mg/dL` : '—'}
+                      </div>
+                      <span className={`text-[9px] font-bold block mt-0.5 ${
+                        !patientLabRecord.totalCholesterolMgDl ? 'text-slate-400' :
+                        patientLabRecord.totalCholesterolMgDl > 200 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}>
+                        {!patientLabRecord.totalCholesterolMgDl ? 'Sin registro' :
+                         patientLabRecord.totalCholesterolMgDl > 200 ? '⚠️ Elevado' : 'Deseable (<200)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Custom Parameters if any */}
+                  {patientLabRecord.customParameters && patientLabRecord.customParameters.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {patientLabRecord.customParameters.map((cp, idx) => (
+                        <div key={idx} className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                          <span className="font-bold text-teal-700 dark:text-teal-400">{cp.name}:</span> {cp.value} {cp.unit}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Attached file if any */}
+                  {(patientLabRecord.fileName || patientLabRecord.documentUrl) && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-teal-800 dark:text-teal-300 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl border border-teal-200 dark:border-teal-800">
+                      <FileCheck className="w-4 h-4 text-emerald-600" />
+                      <span>Documento de laboratorio adjunto: <strong>{patientLabRecord.fileName || 'Reporte de laboratorio'}</strong></span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-3 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                  <p className="text-slate-400 text-xs">Sin estudios clínicos registrados aún en el expediente.</p>
+                  <p className="text-slate-400 text-[11px]">NutriCopilot basará su propuesta en la somatometría y metas del paciente.</p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-2">

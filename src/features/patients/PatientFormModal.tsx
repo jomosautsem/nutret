@@ -170,6 +170,9 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     initialWeight: 70,
     currentWeight: 70,
     targetWeight: 62,
+    bodyFatPct: '' as number | string,
+    muscleMassKg: '' as number | string,
+    visceralFatLevel: '' as number | string,
     goal: 'Pérdida de Grasa y Recomposición Corporal',
     status: 'Activo' as PatientStatus,
     riskLevel: 'NORMAL' as RiskLevel,
@@ -310,6 +313,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
     if (patientToEdit) {
       const clinRec = storageService.getClinicalRecordByPatientId(patientToEdit.id);
+      const anthros = storageService.getAnthropometricsByPatientId(patientToEdit.id);
+      const latestAnthro = anthros && anthros.length > 0 ? anthros[0] : null;
       const allergiesText = Array.isArray((patientToEdit as any).allergies)
         ? (patientToEdit as any).allergies.join(', ')
         : typeof (patientToEdit as any).allergies === 'string'
@@ -336,6 +341,9 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         initialWeight: patientToEdit.initialWeight || patientToEdit.currentWeight || 70,
         currentWeight: patientToEdit.currentWeight || 70,
         targetWeight: patientToEdit.targetWeight || 62,
+        bodyFatPct: latestAnthro?.bodyFatPercentage !== undefined ? latestAnthro.bodyFatPercentage : '',
+        muscleMassKg: latestAnthro?.muscleMassKg !== undefined ? latestAnthro.muscleMassKg : '',
+        visceralFatLevel: latestAnthro?.visceralFatLevel !== undefined ? latestAnthro.visceralFatLevel : '',
         goal: patientToEdit.goal || 'Pérdida de Grasa y Recomposición Corporal',
         status: patientToEdit.status || 'Activo',
         riskLevel: patientToEdit.riskLevel || 'NORMAL',
@@ -438,6 +446,9 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         initialWeight: 72,
         currentWeight: 72,
         targetWeight: 62,
+        bodyFatPct: '',
+        muscleMassKg: '',
+        visceralFatLevel: '',
         goal: 'Pérdida de Grasa y Recomposición Corporal',
         status: 'Activo',
         riskLevel: 'NORMAL',
@@ -818,7 +829,10 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       weight: parsedCurrentWeight,
       height: parsedHeight,
       bmi: liveBmi,
-      measurementDevice: 'Báscula y Estadiómetro Clínico',
+      bodyFatPercentage: formData.bodyFatPct !== '' ? Number(formData.bodyFatPct) : undefined,
+      muscleMassKg: formData.muscleMassKg !== '' ? Number(formData.muscleMassKg) : undefined,
+      visceralFatLevel: formData.visceralFatLevel !== '' ? Number(formData.visceralFatLevel) : undefined,
+      measurementDevice: 'Báscula y Estadiómetro Clínico / Bioimpedancia',
       notes: 'Evaluación somatométrica basal de ingreso.',
     };
     await storageService.saveAnthropometricRecord(initialAnthro);
@@ -851,6 +865,20 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         alcohol: anamnesisData.alcoholFrequency,
         stressLevel: anamnesisData.stressLevel,
         waterDailyLiters: Number(anamnesisData.waterLiters) || 2.5,
+      },
+      physicalActivity: {
+        activityLevel: activityFactor >= 1.725 ? 'VERY_ACTIVE' : activityFactor >= 1.55 ? 'MODERATE' : activityFactor >= 1.375 ? 'LIGHT' : 'SEDENTARY',
+        exerciseType: 'Acondicionamiento físico',
+        frequencyDaysPerWeek: activityFactor >= 1.725 ? 6 : activityFactor >= 1.55 ? 4 : activityFactor >= 1.375 ? 3 : 1,
+        durationMinutes: 45,
+      },
+      dietaryHabits: {
+        mealsPerDay: Object.values(mealDistribution).filter((v) => v > 0).length || 4,
+        preferredFoods: [],
+        dislikedFoods: [],
+        eatingOutFrequency: '1-2 veces por semana',
+        bingeEating: false,
+        preferredDiet: presets.find((p) => p.id === selectedPresetId)?.dietStyle || 'Omnívora Flexible',
       },
       clinicalGoals: savedPatient.goal,
       clinicalObservations: savedPatient.notes,
@@ -931,6 +959,11 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
     storageService.savePlan(initialPlan);
+    storageService.setActiveClinicalPatientId(savedPatient.id);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nutriluz:active_patient_changed', { detail: { patientId: savedPatient.id } }));
+      window.dispatchEvent(new CustomEvent('nutriluz:db_updated', { detail: { type: 'patient', patientId: savedPatient.id } }));
+    }
 
     showToast(
       isEditing ? 'Paciente actualizado con éxito' : 'Paciente registrado con éxito',
@@ -1218,6 +1251,59 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, targetWeight: Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
                   />
+                </div>
+              </div>
+
+              {/* Bioimpedancia Basal & Composición Corporal */}
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="font-bold text-[11px] text-slate-900 dark:text-white">Composición Corporal & Bioimpedancia (Basal)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(Sincronizada con NutriCopilot AI)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      % Grasa Corporal
+                    </label>
+                    <input
+                      id="patient-form-fat-pct"
+                      type="number"
+                      step="0.1"
+                      placeholder="Ej. 22.5"
+                      value={formData.bodyFatPct}
+                      onChange={(e) => setFormData({ ...formData, bodyFatPct: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Masa Muscular (kg)
+                    </label>
+                    <input
+                      id="patient-form-muscle-mass"
+                      type="number"
+                      step="0.1"
+                      placeholder="Ej. 48.0"
+                      value={formData.muscleMassKg}
+                      onChange={(e) => setFormData({ ...formData, muscleMassKg: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Nivel de Grasa Visceral
+                    </label>
+                    <input
+                      id="patient-form-visceral-fat"
+                      type="number"
+                      step="1"
+                      placeholder="Ej. 5 (1-12)"
+                      value={formData.visceralFatLevel}
+                      onChange={(e) => setFormData({ ...formData, visceralFatLevel: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
                 </div>
               </div>
 
