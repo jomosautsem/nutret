@@ -2143,13 +2143,43 @@ export const storageService = {
 
   getOrganization(): Organization {
     const org: Organization = this.get(STORAGE_KEYS.ORGANIZATION, initialOrganization);
-    if (!org.logoUrl && initialOrganization.logoUrl) {
-      org.logoUrl = initialOrganization.logoUrl;
+    if (!org.logoUrl) {
+      const savedLogo = typeof window !== 'undefined' ? localStorage.getItem('nutriluz_organization_logo') : null;
+      if (savedLogo) {
+        org.logoUrl = savedLogo;
+      } else if (initialOrganization.logoUrl) {
+        org.logoUrl = initialOrganization.logoUrl;
+      }
+    }
+    if (typeof org.watermarkOpacity !== 'number') {
+      const savedOpacity = typeof window !== 'undefined' ? localStorage.getItem('nutriluz_watermark_opacity') : null;
+      if (savedOpacity) {
+        const parsed = parseFloat(savedOpacity);
+        if (!isNaN(parsed)) org.watermarkOpacity = parsed;
+      } else {
+        org.watermarkOpacity = 0.22;
+      }
     }
     return org;
   },
   saveOrganization(org: Organization) {
     this.set(STORAGE_KEYS.ORGANIZATION, org);
+    if (org.logoUrl && typeof window !== 'undefined') {
+      localStorage.setItem('nutriluz_organization_logo', org.logoUrl);
+    }
+    if (typeof org.watermarkOpacity === 'number' && typeof window !== 'undefined') {
+      localStorage.setItem('nutriluz_watermark_opacity', org.watermarkOpacity.toString());
+    }
+    // Synchronize to backend server database
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization: org }),
+      }).catch((err) => {
+        console.warn('[Storage] Server organization sync fallback:', err);
+      });
+    }
     // Real-time synchronization to Supabase PostgreSQL
     supabaseDb.saveOrganization(org).catch((err) => {
       console.warn('[Storage] Background error syncing organization to Supabase:', err);

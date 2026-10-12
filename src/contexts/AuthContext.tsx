@@ -184,10 +184,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             supabaseDb.getOrganization(),
           ]);
 
-          if (cloudOrg && cloudOrg.logoUrl && isMounted) {
+          if (cloudOrg && isMounted) {
             setOrganizationState((prev) => {
-              if (prev.logoUrl === cloudOrg.logoUrl && prev.name === cloudOrg.name) return prev;
-              const merged = { ...prev, ...cloudOrg };
+              const savedLogo = typeof window !== 'undefined' ? localStorage.getItem('nutriluz_organization_logo') : null;
+              const effectiveLogo = cloudOrg.logoUrl || savedLogo || prev.logoUrl;
+              const savedOpacity = typeof window !== 'undefined' ? localStorage.getItem('nutriluz_watermark_opacity') : null;
+              const effectiveOpacity = cloudOrg.watermarkOpacity ?? (savedOpacity ? parseFloat(savedOpacity) : prev.watermarkOpacity);
+
+              if (prev.logoUrl === effectiveLogo && prev.name === cloudOrg.name && prev.watermarkOpacity === effectiveOpacity) {
+                return prev;
+              }
+              const merged = {
+                ...prev,
+                ...cloudOrg,
+                logoUrl: effectiveLogo,
+                watermarkOpacity: typeof effectiveOpacity === 'number' ? effectiveOpacity : (prev.watermarkOpacity ?? 0.22),
+              };
               storageService.saveOrganization(merged);
               return merged;
             });
@@ -214,9 +226,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Priority 2: Backend server database store (/api/user/profile)
-        const res = await fetch('/api/user/profile');
-        if (res.ok && isMounted) {
+        // Priority 2: Backend server database store (/api/user/profile & /api/organization)
+        const [res, orgRes] = await Promise.all([
+          fetch('/api/user/profile').catch(() => null),
+          fetch('/api/organization').catch(() => null),
+        ]);
+
+        if (res && res.ok && isMounted) {
           const data = await res.json();
           if (data.success && data.user) {
             const serverUser: UserProfile = data.user;
@@ -224,9 +240,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const merged: UserProfile = {
               ...current,
               ...serverUser,
+              avatarUrl: serverUser.avatarUrl || current.avatarUrl,
             };
             storageService.saveCurrentUserLocally(merged);
             applyUserUpdate(merged, false);
+          }
+        }
+
+        if (orgRes && orgRes.ok && isMounted) {
+          const orgData = await orgRes.json();
+          if (orgData.success && orgData.organization) {
+            setOrganizationState((prev) => {
+              const savedLogo = typeof window !== 'undefined' ? localStorage.getItem('nutriluz_organization_logo') : null;
+              const savedOpacity = typeof window !== 'undefined' ? localStorage.getItem('nutriluz_watermark_opacity') : null;
+              const merged = {
+                ...prev,
+                ...orgData.organization,
+                logoUrl: orgData.organization.logoUrl || savedLogo || prev.logoUrl,
+                watermarkOpacity: orgData.organization.watermarkOpacity ?? (savedOpacity ? parseFloat(savedOpacity) : prev.watermarkOpacity),
+              };
+              storageService.saveOrganization(merged);
+              return merged;
+            });
           }
         }
       } catch (err) {

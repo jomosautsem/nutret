@@ -56,13 +56,14 @@ export const supabaseDb = {
         id: data.id,
         name: data.name || 'Nutri Luz Elena',
         slug: data.slug || 'nutri-luz-elena',
-        logoUrl: data.logo_url || undefined,
+        logoUrl: data.logo_url || (typeof window !== 'undefined' ? localStorage.getItem('nutriluz_organization_logo') || undefined : undefined),
         primaryColor: data.primary_color || '#059669',
         secondaryColor: '#047857',
         currency: 'MXN',
         country: 'México',
         phone: data.phone || '7773846122',
         address: data.address || 'Temixco, Morelos',
+        watermarkOpacity: (data as any).watermark_opacity ?? (typeof window !== 'undefined' ? (parseFloat(localStorage.getItem('nutriluz_watermark_opacity') || '0.22') || 0.22) : 0.22),
       };
     } catch (e) {
       console.warn('Error fetching organization from Supabase:', e);
@@ -153,7 +154,7 @@ export const supabaseDb = {
       ];
 
       for (const bUser of baselineUsers) {
-        await supabase.from('users').upsert(bUser, { onConflict: 'id' });
+        await supabase.from('users').upsert(bUser, { onConflict: 'id', ignoreDuplicates: true });
       }
 
       // 3. Resolve current user profile dynamically from param or local storage

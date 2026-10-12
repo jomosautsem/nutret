@@ -250,11 +250,45 @@ app.post("/api/user/profile", (req, res) => {
       serverDatabaseStore.collections.user = user;
       serverDatabaseStore.collections.currentUser = user;
       serverDatabaseStore.lastSync = new Date().toISOString();
+      saveServerStore(serverDatabaseStore);
       console.log(`[Server] Nutritionist profile updated in backend database: ${user.firstName} ${user.lastName}`);
     }
     res.json({
       success: true,
       message: "Perfil del nutriólogo actualizado con éxito en la base de datos",
+      syncedAt: serverDatabaseStore.lastSync,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Organization, Clinic Logo & Watermark API
+app.get("/api/organization", (req, res) => {
+  const organization = serverDatabaseStore.collections?.organization || serverDatabaseStore.collections?.ORGANIZATION || null;
+  res.json({
+    success: true,
+    organization,
+    lastSync: serverDatabaseStore.lastSync,
+  });
+});
+
+app.post("/api/organization", (req, res) => {
+  try {
+    const { organization } = req.body;
+    if (organization && typeof organization === "object") {
+      if (!serverDatabaseStore.collections) {
+        serverDatabaseStore.collections = {};
+      }
+      serverDatabaseStore.collections.organization = organization;
+      serverDatabaseStore.collections.ORGANIZATION = organization;
+      serverDatabaseStore.lastSync = new Date().toISOString();
+      saveServerStore(serverDatabaseStore);
+      console.log(`[Server] Organization settings, logo & watermark updated in backend database: ${organization.name}`);
+    }
+    res.json({
+      success: true,
+      message: "Configuración de clínica, logotipo y marca de agua guardados con éxito",
       syncedAt: serverDatabaseStore.lastSync,
     });
   } catch (error: any) {

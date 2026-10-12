@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Settings as SettingsIcon,
   Building,
@@ -38,6 +38,7 @@ import { supabaseDb, SupabaseHealthReport } from '../../lib/supabaseDb';
 import { storageService } from '../../lib/storage';
 import { clearWatermarkCache } from '../../lib/pdf';
 import { ClinicLogoUploader } from './ClinicLogoUploader';
+import { optimizeImage } from '../../lib/imageOptimizer';
 
 const PRESET_AVATARS = [
   {
@@ -155,14 +156,51 @@ export const SettingsView: React.FC = () => {
   });
   const [geminiEnabled, setGeminiEnabled] = useState(true);
   const [whatsappAutomation, setWhatsappAutomation] = useState(true);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
 
-  // Instantly sync logo change to Organization state and invalidate watermark cache
+  // Direct nutritionist avatar photo upload and optimization
+  const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Formato No Válido', 'Por favor selecciona un archivo de imagen (JPG, PNG o WebP).', 'error');
+      return;
+    }
+
+    setIsProcessingAvatar(true);
+    try {
+      const opt = await optimizeImage(file, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.88,
+        format: 'image/jpeg',
+      });
+      setAvatarUrl(opt.dataUrl);
+      updateCurrentUser({ avatarUrl: opt.dataUrl });
+      showToast(
+        'Fotografía de Nutrióloga Actualizada',
+        'Tu foto de perfil se ha optimizado y guardado con éxito. Aparece de inmediato en recetas y encabezados.',
+        'success'
+      );
+    } catch (err: any) {
+      showToast('Error al Procesar Foto', err.message || 'No se pudo optimizar la fotografía.', 'error');
+    } finally {
+      setIsProcessingAvatar(false);
+    }
+  };
+
+  // Instantly sync logo change to Organization state, localStorage, and invalidate watermark cache
   const handleLogoChange = (newUrl: string) => {
     setLogoUrl(newUrl);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nutriluz_organization_logo', newUrl);
+    }
     updateOrganization({ logoUrl: newUrl });
     clearWatermarkCache();
     showToast(
-      newUrl ? 'Logotipo y Marca de Agua Sincronizados' : 'Logotipo Removido',
+      newUrl ? 'Logotipo y Marca de Agua Guardados' : 'Logotipo Removido',
       newUrl
         ? 'El nuevo logotipo se ha aplicado al sistema y a la marca de agua de todos los PDFs automáticamente.'
         : 'Se ha removido el logotipo personalizado.',
@@ -361,6 +399,7 @@ export const SettingsView: React.FC = () => {
     });
 
     if (typeof window !== 'undefined' && window.localStorage) {
+      if (logoUrl) localStorage.setItem('nutriluz_organization_logo', logoUrl);
       localStorage.setItem('nutriluz_watermark_opacity', watermarkOpacity.toString());
     }
     clearWatermarkCache();
@@ -632,15 +671,41 @@ export const SettingsView: React.FC = () => {
 
           {/* Avatar Selector */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Fotografía de Perfil / Avatar
-            </label>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Fotografía de Perfil / Avatar del Nutriólogo
+              </label>
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isProcessingAvatar}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-all self-start sm:self-auto"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>{isProcessingAvatar ? 'Optimizando foto...' : 'Subir Foto desde tu Equipo'}</span>
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
+                onChange={handleAvatarFileSelected}
+                className="hidden"
+              />
+            </div>
+
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+              Selecciona una imagen de tu dispositivo o elige un avatar predeterminado:
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {PRESET_AVATARS.map((preset, idx) => (
                 <button
                   type="button"
                   key={idx}
-                  onClick={() => setAvatarUrl(preset.url)}
+                  onClick={() => {
+                    setAvatarUrl(preset.url);
+                    updateCurrentUser({ avatarUrl: preset.url });
+                  }}
                   className={`relative p-0.5 rounded-xl border-2 transition-all cursor-pointer ${
                     avatarUrl === preset.url
                       ? 'border-emerald-600 scale-105 shadow-md shadow-emerald-500/20'

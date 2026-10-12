@@ -902,8 +902,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     { id: 'antropometria', label: 'Somatometría & Metas', shortLabel: 'Métricas', icon: Scale },
     { id: 'clinico', label: 'Historial & Alergias', shortLabel: 'Historial', icon: HeartPulse },
     { id: 'estudios', label: 'Estudios Clínicos', shortLabel: 'Estudios', icon: FlaskConical },
-    { id: 'smae', label: 'Evaluador SMAE', shortLabel: 'SMAE', icon: Apple },
     { id: 'macros', label: 'Macros y Comidas', shortLabel: 'Macros', icon: Utensils },
+    { id: 'smae', label: 'Evaluador SMAE', shortLabel: 'SMAE', icon: Apple },
     { id: 'credenciales', label: 'Acceso Portal', shortLabel: 'Acceso', icon: KeyRound },
     { id: 'foto', label: 'Foto & Finalizar', shortLabel: 'Foto', icon: ImageIcon },
   ];
@@ -1927,148 +1927,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             </div>
           )}
 
-          {/* TAB 5: EVALUADOR SMAE */}
-          {activeTab === 'smae' && (
-            <div className="space-y-4 animate-fade-in text-xs">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
-                    <Apple className="w-4 h-4 text-emerald-600" />
-                    <span>Evaluador Sistema Mexicano de Alimentos Equivalentes (SMAE)</span>
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Cálculo matemático de porciones por grupo de alimentos y adecuación calórica
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Auto-generate realistic SMAE portions based on target kcal
-                    const baseKcal = targetKcal || 1800;
-                    const factor = baseKcal / 1800;
-                    setSmaePortions({
-                      'Verduras': Math.max(2, Math.round(4 * factor)),
-                      'Frutas': Math.max(2, Math.round(3 * factor)),
-                      'Cereales s/g': Math.max(3, Math.round(5 * factor)),
-                      'Cereales c/g': Math.round(1 * factor),
-                      'Leguminosas': Math.max(1, Number((1.5 * factor).toFixed(1))),
-                      'AOA Muy bajo aporte': Math.round(2 * factor),
-                      'AOA Bajo aporte': Math.round(3 * factor),
-                      'AOA Moderado aporte': Math.round(1 * factor),
-                      'AOA Alto aporte': 0,
-                      'Leche descremada': 1,
-                      'Leche semidescremada': 0,
-                      'Leche entera': 0,
-                      'Leche c/azúcar': 0,
-                      'Grasas s/proteína': Math.max(2, Math.round(3 * factor)),
-                      'Grasas c/proteína': 1,
-                      'Azúcares s/grasa': 0,
-                    });
-                    showToast('SMAE Distribuido', `Porciones calculadas automáticamente para ${baseKcal} kcal.`, 'info');
-                  }}
-                  className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-slate-700 dark:text-slate-300 hover:text-emerald-700 text-[11px] font-bold rounded-xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Auto-distribuir</span>
-                </button>
-              </div>
-
-              {/* Real-time SMAE Totals Summary Banner */}
-              <div className="p-3 rounded-2xl bg-slate-900 text-white grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Kcal SMAE</span>
-                  <span className="text-base font-extrabold text-emerald-400">{smaeTotals.kcal}</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {targetKcal} kcal</span>
-                </div>
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Proteínas</span>
-                  <span className="text-base font-extrabold text-teal-400">{smaeTotals.prot}g</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {proteinGrams}g</span>
-                </div>
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Lípidos</span>
-                  <span className="text-base font-extrabold text-amber-400">{smaeTotals.lip}g</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {fatGrams}g</span>
-                </div>
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Carbohidratos</span>
-                  <span className="text-base font-extrabold text-blue-400">{smaeTotals.hc}g</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {carbsGrams}g</span>
-                </div>
-                <div className="col-span-2 sm:col-span-1 flex flex-col justify-center">
-                  <span className="text-[10px] text-slate-400 block">% Adecuación</span>
-                  <span className={`text-base font-extrabold ${
-                    smaeTotals.adequacyPct >= 95 && smaeTotals.adequacyPct <= 105
-                      ? 'text-emerald-400'
-                      : smaeTotals.adequacyPct < 95
-                      ? 'text-amber-400'
-                      : 'text-rose-400'
-                  }`}>
-                    {smaeTotals.adequacyPct}%
-                  </span>
-                </div>
-              </div>
-
-              {/* 16 Official SMAE Groups Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
-                {SMAE_CONSTANTS.map((c) => {
-                  const val = smaePortions[c.grupo] || 0;
-                  return (
-                    <div
-                      key={c.grupo}
-                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0">
-                        <span className="font-bold text-slate-800 dark:text-slate-200 block truncate text-[11px]">
-                          {c.grupo}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {c.energia_kcal} kcal • P:{c.prot_g} L:{c.lip_g} C:{c.hc_g}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = smaePortions[c.grupo] || 0;
-                            setSmaePortions({ ...smaePortions, [c.grupo]: Math.max(0, Number((cur - 0.5).toFixed(1))) });
-                          }}
-                          className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-bold flex items-center justify-center cursor-pointer text-slate-700 dark:text-slate-200"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          value={val}
-                          onChange={(e) => {
-                            const num = Math.max(0, Number(e.target.value) || 0);
-                            setSmaePortions({ ...smaePortions, [c.grupo]: num });
-                          }}
-                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-900 dark:text-white text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = smaePortions[c.grupo] || 0;
-                            setSmaePortions({ ...smaePortions, [c.grupo]: Number((cur + 0.5).toFixed(1)) });
-                          }}
-                          className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-bold flex items-center justify-center cursor-pointer text-slate-700 dark:text-slate-200"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 6: MACROS Y COMIDAS & PLANTILLAS DE PRESCRIPCIÓN */}
+          {/* TAB 5: MACROS Y COMIDAS & PLANTILLAS DE PRESCRIPCIÓN */}
           {activeTab === 'macros' && (
             <div className="space-y-4 animate-fade-in text-xs">
               {/* Prescripciones Rápidas & Selector de Plantillas */}
@@ -2996,6 +2855,176 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: EVALUADOR SMAE */}
+          {activeTab === 'smae' && (
+            <div className="space-y-4 animate-fade-in text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <Apple className="w-4 h-4 text-emerald-600" />
+                    <span>Evaluador Sistema Mexicano de Alimentos Equivalentes (SMAE)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Cálculo matemático de porciones por grupo de alimentos y adecuación calórica
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Deterministic SMAE portion distribution reaching EXACT 100% adequacy
+                    const baseKcal = targetKcal || 1800;
+                    const factor = baseKcal / 1800;
+                    const portions: Record<string, number> = {
+                      'Verduras': Math.max(2, Math.round(4 * factor)),
+                      'Frutas': Math.max(2, Math.round(3 * factor)),
+                      'Cereales s/g': Math.max(3, Math.round(5 * factor)),
+                      'Cereales c/g': Math.max(0, Math.round(1 * factor)),
+                      'Leguminosas': 1.5,
+                      'AOA Muy bajo aporte': Math.max(1, Math.round(2 * factor)),
+                      'AOA Bajo aporte': Math.max(2, Math.round(3 * factor)),
+                      'AOA Moderado aporte': Math.max(0, Math.round(1 * factor)),
+                      'AOA Alto aporte': 0,
+                      'Leche descremada': 1,
+                      'Leche semidescremada': 0,
+                      'Leche entera': 0,
+                      'Leche c/azúcar': 0,
+                      'Grasas s/proteína': Math.max(2, Math.round(3 * factor)),
+                      'Grasas c/proteína': 1,
+                      'Azúcares s/grasa': 0,
+                    };
+
+                    const calcCurrentKcal = () => {
+                      let k = 0;
+                      SMAE_CONSTANTS.forEach((c) => {
+                        k += (portions[c.grupo] || 0) * c.energia_kcal;
+                      });
+                      return k;
+                    };
+
+                    // 1. Adjust whole Cereales s/g (70 kcal)
+                    while (baseKcal - calcCurrentKcal() >= 70) portions['Cereales s/g']++;
+                    while (baseKcal - calcCurrentKcal() <= -70 && portions['Cereales s/g'] > 2) portions['Cereales s/g']--;
+
+                    // 2. Adjust Grasas s/p (45 kcal)
+                    while (baseKcal - calcCurrentKcal() >= 45) portions['Grasas s/proteína']++;
+                    while (baseKcal - calcCurrentKcal() <= -45 && portions['Grasas s/proteína'] > 1) portions['Grasas s/proteína']--;
+
+                    // 3. Adjust Verduras (25 kcal)
+                    while (baseKcal - calcCurrentKcal() >= 25) portions['Verduras']++;
+                    while (baseKcal - calcCurrentKcal() <= -25 && portions['Verduras'] > 2) portions['Verduras']--;
+
+                    // 4. Fine-tune with exact Verduras adjustment to ensure Math.round(kcal) === baseKcal (100% adequacy)
+                    const diff = baseKcal - calcCurrentKcal();
+                    if (Math.abs(diff) > 0.01) {
+                      const vStep = Number((diff / 25).toFixed(2));
+                      portions['Verduras'] = Number((portions['Verduras'] + vStep).toFixed(2));
+                    }
+
+                    setSmaePortions(portions);
+                    showToast('Adecuación SMAE al 100%', `Porciones auto-distribuidas exitosamente para alcanzar exactamente el 100% de adecuación calórica (${baseKcal} kcal).`, 'success');
+                  }}
+                  className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-slate-700 dark:text-slate-300 hover:text-emerald-700 text-[11px] font-bold rounded-xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Auto-distribuir</span>
+                </button>
+              </div>
+
+              {/* Real-time SMAE Totals Summary Banner */}
+              <div className="p-3 rounded-2xl bg-slate-900 text-white grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Kcal SMAE</span>
+                  <span className="text-base font-extrabold text-emerald-400">{smaeTotals.kcal}</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {targetKcal} kcal</span>
+                </div>
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Proteínas</span>
+                  <span className="text-base font-extrabold text-teal-400">{smaeTotals.prot}g</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {proteinGrams}g</span>
+                </div>
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Lípidos</span>
+                  <span className="text-base font-extrabold text-amber-400">{smaeTotals.lip}g</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {fatGrams}g</span>
+                </div>
+                <div className="border-r border-slate-800 pr-2">
+                  <span className="text-[10px] text-slate-400 block">Carbohidratos</span>
+                  <span className="text-base font-extrabold text-blue-400">{smaeTotals.hc}g</span>
+                  <span className="text-[10px] text-slate-400 block">Meta: {carbsGrams}g</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 flex flex-col justify-center">
+                  <span className="text-[10px] text-slate-400 block">% Adecuación</span>
+                  <span className={`text-base font-extrabold ${
+                    smaeTotals.adequacyPct >= 95 && smaeTotals.adequacyPct <= 105
+                      ? 'text-emerald-400'
+                      : smaeTotals.adequacyPct < 95
+                      ? 'text-amber-400'
+                      : 'text-rose-400'
+                  }`}>
+                    {smaeTotals.adequacyPct}%
+                  </span>
+                </div>
+              </div>
+
+              {/* 16 Official SMAE Groups Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                {SMAE_CONSTANTS.map((c) => {
+                  const val = smaePortions[c.grupo] || 0;
+                  return (
+                    <div
+                      key={c.grupo}
+                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block truncate text-[11px]">
+                          {c.grupo}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {c.energia_kcal} kcal • P:{c.prot_g} L:{c.lip_g} C:{c.hc_g}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = smaePortions[c.grupo] || 0;
+                            setSmaePortions({ ...smaePortions, [c.grupo]: Math.max(0, Number((cur - 0.5).toFixed(1))) });
+                          }}
+                          className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-bold flex items-center justify-center cursor-pointer text-slate-700 dark:text-slate-200"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={val}
+                          onChange={(e) => {
+                            const num = Math.max(0, Number(e.target.value) || 0);
+                            setSmaePortions({ ...smaePortions, [c.grupo]: num });
+                          }}
+                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-900 dark:text-white text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = smaePortions[c.grupo] || 0;
+                            setSmaePortions({ ...smaePortions, [c.grupo]: Number((cur + 0.5).toFixed(1)) });
+                          }}
+                          className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-bold flex items-center justify-center cursor-pointer text-slate-700 dark:text-slate-200"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
