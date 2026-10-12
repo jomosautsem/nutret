@@ -48,7 +48,7 @@ export const AgendaView: React.FC = () => {
       branchId: 'branch-1',
       patientId: patient?.id || 'pat-demo',
       patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Paciente General',
-      specialistId: 'user-dra-valeria',
+      specialistId: 'user-lic-luz-elena',
       appointmentType: formData.appointmentType,
       startTime: startTime,
       endTime: endObj.toISOString(),

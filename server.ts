@@ -153,23 +153,56 @@ app.post("/api/db/ping", async (req, res) => {
 app.post("/api/db/sync", (req, res) => {
   try {
     const { collections, deletedPatientIds } = req.body;
-    if (deletedPatientIds && Array.isArray(deletedPatientIds)) {
-      serverDatabaseStore.deletedPatientIds = Array.from(
-        new Set([...(serverDatabaseStore.deletedPatientIds || []), ...deletedPatientIds])
-      );
-    }
+    const TEST_PATIENT_IDS = [
+      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
+      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
+      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123'
+    ];
+    const incomingDeleted = Array.isArray(deletedPatientIds) ? deletedPatientIds : [];
+    serverDatabaseStore.deletedPatientIds = Array.from(
+      new Set([...(serverDatabaseStore.deletedPatientIds || []), ...incomingDeleted, ...TEST_PATIENT_IDS])
+    );
 
     if (collections && typeof collections === "object") {
+      const delIds = new Set(serverDatabaseStore.deletedPatientIds);
+
       // Filter out any deleted patients from incoming collections
       if (collections.PATIENTS && Array.isArray(collections.PATIENTS)) {
-        collections.PATIENTS = collections.PATIENTS.filter(
-          (p: any) => !serverDatabaseStore.deletedPatientIds.includes(p.id)
-        );
+        collections.PATIENTS = collections.PATIENTS.filter((p: any) => !delIds.has(p.id));
       }
       if (collections.patients && Array.isArray(collections.patients)) {
-        collections.patients = collections.patients.filter(
-          (p: any) => !serverDatabaseStore.deletedPatientIds.includes(p.id)
+        collections.patients = collections.patients.filter((p: any) => !delIds.has(p.id));
+      }
+
+      // Filter out test/deleted payments
+      if (collections.PAYMENTS && Array.isArray(collections.PAYMENTS)) {
+        collections.PAYMENTS = collections.PAYMENTS.filter(
+          (p: any) => !delIds.has(p.patientId) && !['pay-1', 'pay-2', 'pay-3', 'pay-4'].includes(p.id)
         );
+      }
+
+      // Filter out test/deleted messages
+      if (collections.MESSAGES && Array.isArray(collections.MESSAGES)) {
+        collections.MESSAGES = collections.MESSAGES.filter(
+          (m: any) =>
+            !delIds.has(m.conversationId) &&
+            !delIds.has(m.senderId) &&
+            m.conversationId !== 'conv-ana' &&
+            !['msg-1', 'msg-2', 'msg-3'].includes(m.id) &&
+            !m.senderName?.toLowerCase().includes('valeria') &&
+            !m.senderName?.toLowerCase().includes('carlos')
+        );
+      }
+
+      // Filter out test specialists
+      if (collections.SPECIALISTS && Array.isArray(collections.SPECIALISTS)) {
+        collections.SPECIALISTS = collections.SPECIALISTS.filter((s: any) => {
+          const name = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
+          if (s.id === 'user-dr-carlos' || s.email === 'dr.carlos@nutriluz.mx') return false;
+          if (name.includes('carlos mendoza')) return false;
+          if (name.includes('valeria') && !name.includes('luz elena')) return false;
+          return true;
+        });
       }
 
       serverDatabaseStore.collections = {
@@ -178,7 +211,7 @@ app.post("/api/db/sync", (req, res) => {
       };
       serverDatabaseStore.lastSync = new Date().toISOString();
       saveServerStore(serverDatabaseStore);
-    } else if (deletedPatientIds && Array.isArray(deletedPatientIds)) {
+    } else {
       serverDatabaseStore.lastSync = new Date().toISOString();
       saveServerStore(serverDatabaseStore);
     }
@@ -206,17 +239,28 @@ app.delete("/api/patients/:id", (req, res) => {
       serverDatabaseStore.deletedPatientIds.push(patientId);
     }
 
-    // Clean up from memory collections if present
-    if (serverDatabaseStore.collections?.PATIENTS && Array.isArray(serverDatabaseStore.collections.PATIENTS)) {
-      serverDatabaseStore.collections.PATIENTS = serverDatabaseStore.collections.PATIENTS.filter((p: any) => p.id !== patientId);
-    }
-    if (serverDatabaseStore.collections?.patients && Array.isArray(serverDatabaseStore.collections.patients)) {
-      serverDatabaseStore.collections.patients = serverDatabaseStore.collections.patients.filter((p: any) => p.id !== patientId);
+    // Cascade clean up from memory collections if present
+    const c = serverDatabaseStore.collections;
+    if (c) {
+      if (Array.isArray(c.PATIENTS)) c.PATIENTS = c.PATIENTS.filter((p: any) => p.id !== patientId);
+      if (Array.isArray(c.patients)) c.patients = c.patients.filter((p: any) => p.id !== patientId);
+      if (Array.isArray(c.PAYMENTS)) c.PAYMENTS = c.PAYMENTS.filter((p: any) => p.patientId !== patientId);
+      if (Array.isArray(c.MESSAGES)) c.MESSAGES = c.MESSAGES.filter((m: any) => m.conversationId !== patientId && m.senderId !== patientId);
+      if (Array.isArray(c.APPOINTMENTS)) c.APPOINTMENTS = c.APPOINTMENTS.filter((a: any) => a.patientId !== patientId);
+      if (Array.isArray(c.CLINICAL_RECORDS)) c.CLINICAL_RECORDS = c.CLINICAL_RECORDS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.ANTHROPOMETRY)) c.ANTHROPOMETRY = c.ANTHROPOMETRY.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.LABS)) c.LABS = c.LABS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.PLANS)) c.PLANS = c.PLANS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.MEAL_LOGS)) c.MEAL_LOGS = c.MEAL_LOGS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.WATER_LOGS)) c.WATER_LOGS = c.WATER_LOGS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.SUPPLEMENTS)) c.SUPPLEMENTS = c.SUPPLEMENTS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.SUPPLEMENT_LOGS)) c.SUPPLEMENT_LOGS = c.SUPPLEMENT_LOGS.filter((r: any) => r.patientId !== patientId);
+      if (Array.isArray(c.EXERCISE_ROUTINES)) c.EXERCISE_ROUTINES = c.EXERCISE_ROUTINES.filter((r: any) => r.patientId !== patientId);
     }
 
     serverDatabaseStore.lastSync = new Date().toISOString();
     saveServerStore(serverDatabaseStore);
-    console.log(`[Server] Patient ${patientId} registered and saved in persistent deleted list.`);
+    console.log(`[Server] Patient ${patientId} registered and deleted across all collections.`);
     res.json({ success: true, deletedId: patientId, deletedPatientIds: serverDatabaseStore.deletedPatientIds });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

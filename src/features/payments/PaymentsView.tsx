@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   CreditCard,
   Plus,
+  Trash2,
   DollarSign,
   TrendingUp,
   Clock,
   CheckCircle2,
   AlertCircle,
-  Download,
-  Filter,
-  Search,
+  Receipt,
+  Users,
 } from 'lucide-react';
 import { Payment } from '../../types';
 import { storageService } from '../../lib/storage';
@@ -30,23 +30,36 @@ export const PaymentsView: React.FC = () => {
     status: 'PAGADO' as 'PAGADO' | 'PENDIENTE' | 'REEMBOLSADO',
   });
 
-  const totalCollected = payments
+  const activePatientIds = useMemo(() => new Set(patients.map((p) => p.id)), [patients]);
+
+  // Filter out any payments for deleted patients or orphaned records
+  const validPayments = useMemo(() => {
+    return payments.filter((p) => activePatientIds.has(p.patientId));
+  }, [payments, activePatientIds]);
+
+  const totalCollected = validPayments
     .filter((p) => p.status === 'PAGADO')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalPending = payments
+  const totalPending = validPayments
     .filter((p) => p.status === 'PENDIENTE')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const avgTicket = Math.round(totalCollected / (payments.filter((p) => p.status === 'PAGADO').length || 1));
+  const paidCount = validPayments.filter((p) => p.status === 'PAGADO').length;
+  const avgTicket = paidCount > 0 ? Math.round(totalCollected / paidCount) : 0;
 
   const handleCreatePayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.patientId) {
+      showToast('Atención', 'Selecciona un paciente para registrar el cobro', 'info');
+      return;
+    }
     const patient = patients.find((p) => p.id === formData.patientId) || patients[0];
+    if (!patient) return;
 
     const newPay: Payment = {
       id: `pay-${Date.now()}`,
-      organizationId: 'org-demo-1',
+      organizationId: 'org-nutriluz-mexico',
       patientId: patient.id,
       patientName: `${patient.firstName} ${patient.lastName}`,
       concept: formData.concept,
@@ -64,6 +77,13 @@ export const PaymentsView: React.FC = () => {
     showToast('Cobro Registrado', `Transacción de $${newPay.amount} MXN registrada para ${newPay.patientName}`, 'success');
   };
 
+  const handleDeletePayment = (paymentId: string) => {
+    const updated = payments.filter((p) => p.id !== paymentId);
+    setPayments(updated);
+    storageService.savePayments(updated);
+    showToast('Cobro Eliminado', 'El registro de pago ha sido eliminado.', 'info');
+  };
+
   return (
     <div id="payments-view" className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -74,14 +94,23 @@ export const PaymentsView: React.FC = () => {
             <span>Finanzas, Pagos & Facturación</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Control de ingresos, cobros pendientes, enlaces de pago en línea (Stripe / Mercado Pago) y paquetes
+            Control de ingresos, cobros pendientes, enlaces de pago en línea y paquetes nutricionales
           </p>
         </div>
 
         <button
           id="new-payment-btn"
-          onClick={() => setIsNewModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/20 transition-all"
+          onClick={() => {
+            if (patients.length === 0) {
+              showToast('Sin Pacientes', 'Registra al menos un paciente para poder crear cobros.', 'info');
+              return;
+            }
+            if (!formData.patientId && patients[0]) {
+              setFormData((prev) => ({ ...prev, patientId: patients[0].id }));
+            }
+            setIsNewModalOpen(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-900/20 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Registrar Cobro</span>
@@ -127,33 +156,60 @@ export const PaymentsView: React.FC = () => {
                 <th className="py-3.5 px-4">Fecha</th>
                 <th className="py-3.5 px-4 text-center">Estado</th>
                 <th className="py-3.5 px-4 text-right">Monto</th>
+                <th className="py-3.5 px-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {payments.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="py-3.5 px-5 font-bold text-slate-900 dark:text-white">{p.patientName}</td>
-                  <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-200">{p.concept}</td>
-                  <td className="py-3.5 px-4">{p.paymentMethod}</td>
-                  <td className="py-3.5 px-4 text-slate-400">
-                    {new Date(p.paidAt || (p as any).createdAt || new Date()).toLocaleDateString('es-MX')}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        p.status === 'PAGADO'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                      }`}
-                    >
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 dark:text-white">
-                    ${p.amount.toLocaleString('es-MX')} {p.currency}
+              {validPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 px-4 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-2 text-slate-400">
+                      <Receipt className="w-10 h-10 stroke-[1.5]" />
+                      <p className="font-semibold text-xs text-slate-600 dark:text-slate-300">
+                        No hay cobros ni transacciones registradas aún
+                      </p>
+                      <p className="text-[11px] max-w-sm">
+                        Los pagos de consultas, paquetes o transferencias registrados aparecerán aquí con su historial y estado.
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                validPayments.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="py-3.5 px-5 font-bold text-slate-900 dark:text-white">{p.patientName}</td>
+                    <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-200">{p.concept}</td>
+                    <td className="py-3.5 px-4">{p.paymentMethod}</td>
+                    <td className="py-3.5 px-4 text-slate-400">
+                      {new Date(p.paidAt || (p as any).createdAt || new Date()).toLocaleDateString('es-MX')}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          p.status === 'PAGADO'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 dark:text-white">
+                      ${p.amount.toLocaleString('es-MX')} {p.currency}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePayment(p.id)}
+                        title="Eliminar cobro"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -241,7 +297,7 @@ export const PaymentsView: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer"
             >
               Guardar Cobro
             </button>

@@ -41,7 +41,7 @@ export const PublicProfileView: React.FC = () => {
 
   const specialistName = currentUser
     ? `${currentUser.firstName} ${currentUser.lastName}`
-    : 'Dra. Valeria Montesinos';
+    : 'Lic. Luz Elena Alcocer';
 
   return (
     <div id="public-profile-view" className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-16">

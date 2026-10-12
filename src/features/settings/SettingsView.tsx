@@ -748,7 +748,7 @@ export const SettingsView: React.FC = () => {
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Ej. Valeria, Carlos, Mariana..."
+                placeholder="Ej. María, Roberto, Andrea..."
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
               />
             </div>

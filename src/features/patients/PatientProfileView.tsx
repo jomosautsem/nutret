@@ -426,7 +426,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     const updatedRecord: ClinicalRecord = {
       id: clinicalRecord?.id || `clin-${Date.now()}`,
       patientId: patient.id,
-      specialistId: currentUser?.id || 'user-dra-valeria',
+      specialistId: currentUser?.id || 'user-lic-luz-elena',
       familyHistory: hasFamilyHistoryInput
         ? {
             diabetes: clinicalForm.diabetes,

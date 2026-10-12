@@ -947,7 +947,7 @@ async function drawExecutiveHeader(
     textStartX = margin + 29;
   }
 
-  const rawName = `${specialist.firstName || 'Valeria'} ${specialist.lastName || 'López'}`.trim();
+  const rawName = `${specialist.firstName || 'Luz Elena'} ${specialist.lastName || 'Alcocer'}`.trim();
   const cleanName = rawName.replace(/^nutri[oó]loga\s+/i, '').replace(/^lic\.\s+en\s+nutrici[oó]n\s+/i, '').trim();
   const nutriologaTitle = `NUTRIÓLOGA ${cleanName.toUpperCase()}`;
 
@@ -1180,7 +1180,7 @@ function applyFooters(
   watermarkDataUrl?: string
 ) {
   const pageCount = (doc as any).internal.getNumberOfPages();
-  const rawName = `${specialist?.firstName || 'Valeria'} ${specialist?.lastName || 'López'}`.trim();
+  const rawName = `${specialist?.firstName || 'Luz Elena'} ${specialist?.lastName || 'Alcocer'}`.trim();
   const specName = rawName.replace(/^nutri[oó]loga\s+/i, '').replace(/^lic\.\s+en\s+nutrici[oó]n\s+/i, '').trim();
 
   for (let i = 1; i <= pageCount; i++) {
@@ -2472,7 +2472,7 @@ export async function drawWeeklyScheduleLandscapePages(
       doc.setFontSize(6.5);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      const rawName = `${specialist?.firstName || 'Valeria'} ${specialist?.lastName || 'López'}`.trim();
+      const rawName = `${specialist?.firstName || 'Luz Elena'} ${specialist?.lastName || 'Alcocer'}`.trim();
       const specName = rawName.replace(/^nutri[oó]loga\s+/i, '').replace(/^lic\.\s+en\s+nutrici[oó]n\s+/i, '').trim();
       const footerMsg = `Nutrióloga ${specName} • Paciente: ${patient.firstName} ${patient.lastName} • Plan Nutricional Personalizado • Página ${pageNum} de ${totalPages}`;
       doc.text(cleanPdfText(footerMsg), pageWidth / 2, pageHeight - 3, { align: 'center' });

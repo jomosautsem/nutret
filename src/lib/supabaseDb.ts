@@ -128,28 +128,12 @@ export const supabaseDb = {
       // 2. Ensure baseline clinical specialists exist in users table so foreign keys NEVER fail
       const baselineUsers = [
         {
-          id: 'user-dra-valeria',
-          organization_id: orgId,
-          email: 'valeria.gomez@nutriluz.com',
-          full_name: 'Dra. Valeria Gómez',
-          role: 'ADMIN',
-          phone: '+52 55 9876 5432',
-        },
-        {
           id: 'user-lic-luz-elena',
           organization_id: orgId,
-          email: 'luz.elena@nutriluz.mx',
-          full_name: 'Lic. Luz Elena Alcocer Muñoz',
-          role: 'NUTRIOLOGO',
-          phone: '+52 55 1234 5678',
-        },
-        {
-          id: 'user-dr-carlos',
-          organization_id: orgId,
-          email: 'dr.carlos@nutriluz.mx',
-          full_name: 'Dr. Carlos Mendoza Ruiz',
-          role: 'NUTRIOLOGO',
-          phone: '+52 55 8765 4321',
+          email: 'luzelenaalcocer14@gmail.com',
+          full_name: 'Lic. Luz Elena Alcocer',
+          role: 'ADMIN',
+          phone: '7773846122',
         },
       ];
 
@@ -171,16 +155,16 @@ export const supabaseDb = {
       if (currentUser?.id) {
         const fullName = currentUser?.firstName
           ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim()
-          : 'Dra. Valeria Gómez';
+          : 'Lic. Luz Elena Alcocer';
 
         await supabase.from('users').upsert(
           {
             id: currentUser.id,
             organization_id: orgId,
-            email: currentUser.email || 'especialista@nutriluz.com',
+            email: currentUser.email || 'luzelenaalcocer14@gmail.com',
             full_name: fullName,
             role: currentUser.role || 'NUTRIOLOGO',
-            phone: currentUser.phone || currentUser.whatsapp || '+52 55 9876 5432',
+            phone: currentUser.phone || currentUser.whatsapp || '7773846122',
             avatar_url: currentUser.avatarUrl || null,
             updated_at: new Date().toISOString(),
           },
@@ -196,7 +180,7 @@ export const supabaseDb = {
   },
 
   // --- NUTRITIONIST & USER PROFILE CRUD ---
-  async getNutritionistProfile(userId: string = 'user-dra-valeria'): Promise<UserProfile | null> {
+  async getNutritionistProfile(userId: string = 'user-lic-luz-elena'): Promise<UserProfile | null> {
     if (!supabase || !isSupabaseConfigured) return null;
     try {
       const { data, error } = await supabase
@@ -216,14 +200,14 @@ export const supabaseDb = {
     if (!supabase || !isSupabaseConfigured) return false;
     try {
       await this.ensureOrganizationAndUser(undefined, user);
-      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Nutriólogo Clínico';
+      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lic. Luz Elena Alcocer';
       const row = {
-        id: user.id || 'user-dra-valeria',
+        id: user.id || 'user-lic-luz-elena',
         organization_id: user.organizationId || 'org-nutriluz-mexico',
-        email: user.email || 'valeria.gomez@nutriluz.com',
+        email: user.email || 'luzelenaalcocer14@gmail.com',
         full_name: fullName,
         role: user.role || 'ADMIN',
-        phone: user.phone || user.whatsapp || '+52 55 9876 5432',
+        phone: user.phone || user.whatsapp || '7773846122',
         avatar_url: user.avatarUrl || null,
         updated_at: new Date().toISOString(),
       };
@@ -330,7 +314,7 @@ export const supabaseDb = {
         id: patientId,
         organizationId: 'org-nutriluz-mexico',
         branchId: 'branch-cdmx-sur',
-        specialistId: 'user-dra-valeria',
+        specialistId: 'user-lic-luz-elena',
         firstName: 'Paciente',
         lastName: 'Registrado',
         gender: 'F',
@@ -510,7 +494,7 @@ export const supabaseDb = {
         return {
           id: data.id,
           patientId: data.patient_id,
-          specialistId: data.specialist_id || 'user-dra-valeria',
+          specialistId: data.specialist_id || 'user-lic-luz-elena',
           familyHistory: data.family_history || undefined,
           pathologicalHistory: data.pathological_history || undefined,
           allergies: Array.isArray(data.allergies) ? data.allergies : [],
@@ -552,7 +536,7 @@ export const supabaseDb = {
             return {
               id: `clin-${patientId}`,
               patientId: patientId,
-              specialistId: meta.specialistId || 'user-dra-valeria',
+              specialistId: meta.specialistId || 'user-lic-luz-elena',
               pathologicalHistory: { diagnosedDiseases: pathList, surgeries: [] },
               allergies: allergiesList,
               medications: [],
@@ -582,7 +566,7 @@ export const supabaseDb = {
       const row = {
         id: rec.id,
         patient_id: rec.patientId,
-        specialist_id: rec.specialistId || 'user-dra-valeria',
+        specialist_id: rec.specialistId || 'user-lic-luz-elena',
         family_history: rec.familyHistory || {},
         pathological_history: rec.pathologicalHistory || {},
         allergies: rec.allergies || [],
@@ -696,7 +680,7 @@ export const supabaseDb = {
       if (error && error.code === '23503') {
         if (error.message?.includes('created_by_id')) {
           console.warn('[Supabase] Retrying savePlan with verified specialist user ID...');
-          row.created_by_id = 'user-dra-valeria';
+          row.created_by_id = 'user-lic-luz-elena';
           const retryResult = await supabase
             .from('nutrition_plans')
             .upsert(row, { onConflict: 'id' });
@@ -964,7 +948,7 @@ export const supabaseDb = {
       const payload = {
         id: '__nutriluz_meta_clinical_presets__',
         patient_id: 'pat-1791220451418', // anchored to default clinic patient reference
-        created_by_id: 'user-dra-valeria',
+        created_by_id: 'user-lic-luz-elena',
         title: 'NUTRILUZ_SYSTEM_CLINICAL_PRESETS',
         objective: 'SYSTEM_CONFIG_STORE',
         target_calories: 2000,
@@ -1258,7 +1242,7 @@ function mapPatientToDb(p: Patient): Record<string, any> {
     status: p.status,
     riskLevel: p.riskLevel,
     branchId: p.branchId || 'branch-cdmx-sur',
-    specialistId: p.specialistId || 'user-dra-valeria',
+    specialistId: p.specialistId || 'user-lic-luz-elena',
     whatsapp: p.whatsapp || p.phone,
     address: p.address,
     photoUrl: p.photoUrl,
@@ -1281,7 +1265,7 @@ function mapPatientToDb(p: Patient): Record<string, any> {
   return {
     id: p.id,
     organization_id: orgId,
-    assigned_specialist_id: p.specialistId || 'user-dra-valeria',
+    assigned_specialist_id: p.specialistId || 'user-lic-luz-elena',
     first_name: p.firstName || 'Paciente',
     last_name: p.lastName || '',
     email: p.email || null,
@@ -1350,7 +1334,7 @@ function mapDbToPatient(row: any): Patient {
     id: row.id,
     organizationId: row.organization_id || 'org-nutriluz-mexico',
     branchId: meta.branchId || 'branch-cdmx-sur',
-    specialistId: row.assigned_specialist_id || meta.specialistId || 'user-dra-valeria',
+    specialistId: row.assigned_specialist_id || meta.specialistId || 'user-lic-luz-elena',
     firstName: row.first_name || 'Paciente',
     lastName: row.last_name || '',
     email: row.email || '',
@@ -1432,7 +1416,7 @@ function mapPlanToDb(p: NutritionPlan): Record<string, any> {
   return {
     id: p.id,
     patient_id: p.patientId,
-    created_by_id: p.specialistId || 'user-dra-valeria',
+    created_by_id: p.specialistId || 'user-lic-luz-elena',
     title: p.title || 'Plan Nutricional Personalizado',
     objective: p.goal || 'Optimización Metabólica y Composición Corporal',
     target_calories: Number(p.targetCaloriesKcal || 1800),
@@ -1452,7 +1436,7 @@ function mapDbToPlan(row: any): NutritionPlan {
   return {
     id: row.id,
     organizationId: 'org-nutriluz-mexico',
-    specialistId: row.created_by_id || 'user-dra-valeria',
+    specialistId: row.created_by_id || 'user-lic-luz-elena',
     patientId: row.patient_id,
     title: row.title || 'Plan Nutricional',
     goal: row.objective || 'General',
@@ -1490,7 +1474,7 @@ function mapAppointmentToDb(a: Appointment): Record<string, any> {
     id: a.id,
     organization_id: a.organizationId || 'org-nutriluz-mexico',
     patient_id: a.patientId,
-    specialist_id: a.specialistId || 'user-dra-valeria',
+    specialist_id: a.specialistId || 'user-lic-luz-elena',
     date: a.startTime ? a.startTime.split('T')[0] : (a as any).date || new Date().toISOString().split('T')[0],
     time: a.startTime && a.startTime.includes('T') ? a.startTime.split('T')[1].substring(0, 5) : ((a as any).time || '10:00'),
     duration_minutes: 45,
@@ -1510,7 +1494,7 @@ function mapDbToAppointment(row: any): Appointment {
     id: row.id,
     organizationId: row.organization_id || 'org-nutriluz-mexico',
     patientId: row.patient_id,
-    specialistId: row.specialist_id || 'user-dra-valeria',
+    specialistId: row.specialist_id || 'user-lic-luz-elena',
     patientName: 'Paciente',
     appointmentType: row.type === 'ONLINE' ? 'ONLINE' : 'PRESENCIAL',
     status: row.status === 'CONFIRMADA' ? 'CONFIRMADA' : row.status === 'REALIZADA' ? 'REALIZADA' : 'PENDIENTE',
@@ -1729,7 +1713,7 @@ function mapMessageToDb(m: ChatMessage): Record<string, any> {
   return {
     id: m.id,
     organization_id: 'org-nutriluz-mexico',
-    sender_id: m.senderId || 'user-dra-valeria',
+    sender_id: m.senderId || 'user-lic-luz-elena',
     receiver_id: m.conversationId || 'pat-test-01',
     patient_id: m.conversationId || 'pat-test-01',
     content: m.content,
@@ -1742,9 +1726,9 @@ function mapMessageToDb(m: ChatMessage): Record<string, any> {
 function mapDbToMessage(row: any): ChatMessage {
   return {
     id: row.id,
-    conversationId: row.receiver_id || row.patient_id || 'conv-01',
+    conversationId: row.receiver_id || row.patient_id || '',
     senderId: row.sender_id,
-    senderName: row.sender_id?.includes('user') ? 'Dra. Valeria Gómez' : 'Paciente',
+    senderName: row.sender_id?.includes('user') ? 'Lic. Luz Elena Alcocer' : 'Paciente',
     senderRole: row.sender_id?.includes('user') ? 'NUTRIOLOGO' : 'PACIENTE',
     content: row.content,
     createdAt: row.created_at,
@@ -1753,8 +1737,8 @@ function mapDbToMessage(row: any): ChatMessage {
 }
 
 function mapDbToUser(row: any, existingUser?: UserProfile): UserProfile {
-  let firstName = 'Valeria';
-  let lastName = 'Gómez';
+  let firstName = 'Luz Elena';
+  let lastName = 'Alcocer';
   if (row.full_name) {
     const parts = row.full_name.trim().split(' ');
     if (parts.length === 1) {
@@ -1776,21 +1760,21 @@ function mapDbToUser(row: any, existingUser?: UserProfile): UserProfile {
   }
 
   return {
-    id: row.id || 'user-dra-valeria',
+    id: row.id || 'user-lic-luz-elena',
     organizationId: row.organization_id || 'org-nutriluz-mexico',
-    firstName: firstName || existingUser?.firstName || 'Valeria',
-    lastName: lastName || existingUser?.lastName || 'Gómez',
-    email: row.email || existingUser?.email || 'valeria.gomez@nutriluz.com',
-    phone: row.phone || existingUser?.phone || '+52 55 9876 5432',
-    whatsapp: row.phone || existingUser?.whatsapp || '+52 55 9876 5432',
+    firstName: firstName || existingUser?.firstName || 'Luz Elena',
+    lastName: lastName || existingUser?.lastName || 'Alcocer',
+    email: row.email || existingUser?.email || 'luzelenaalcocer14@gmail.com',
+    phone: row.phone || existingUser?.phone || '7773846122',
+    whatsapp: row.phone || existingUser?.whatsapp || '7773846122',
     role: (row.role as any) || existingUser?.role || 'ADMIN',
     avatarUrl: row.avatar_url || existingUser?.avatarUrl || 'https://images.unsplash.com/photo-1594824813686-639a0397500e?w=300&auto=format&fit=crop&q=80',
-    professionalTitle: existingUser?.professionalTitle || 'Nutrióloga Clínica',
-    licenseNumber: existingUser?.licenseNumber || '',
-    specialties: existingUser?.specialties || ['Nutrición Clínica'],
+    professionalTitle: existingUser?.professionalTitle || 'Lic. en Nutrición',
+    licenseNumber: existingUser?.licenseNumber || '15573967',
+    specialties: existingUser?.specialties || ['Nutrición Clínica', 'Recomposición Corporal', 'Salud Metabólica'],
     bio: existingUser?.bio || '',
     publicProfileEnabled: existingUser?.publicProfileEnabled ?? true,
-    publicSlug: existingUser?.publicSlug || 'nutriologo-clinico',
+    publicSlug: existingUser?.publicSlug || 'luz-elena-alcocer',
     isActive: existingUser?.isActive ?? true,
   };
 }

@@ -126,25 +126,6 @@ export const initialSpecialists: UserProfile[] = [
     publicSlug: 'luz-elena-alcocer',
     isActive: true,
   },
-  {
-    id: 'user-dr-carlos',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-gdl-prov',
-    role: 'NUTRIOLOGO',
-    email: 'dr.carlos@nutriluz.mx',
-    firstName: 'Carlos',
-    lastName: 'Mendoza Ruiz',
-    professionalTitle: 'Mtro. en Nutrición Deportiva y Alto Rendimiento',
-    licenseNumber: '12493019 / SSA 9410',
-    specialties: ['Nutrición Deportiva', 'Hipertrofia', 'Atletas de Resistencia'],
-    avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&auto=format&fit=crop&q=80',
-    phone: '+52 33 3615 2201',
-    whatsapp: '+52 33 3615 2201',
-    bio: 'Maestría en ciencias del deporte, enfocado en optimización de rendimiento atlético, pérdida de grasa acelerada manteniendo masa muscular magra.',
-    publicProfileEnabled: true,
-    publicSlug: 'carlos-mendoza',
-    isActive: true,
-  },
 ];
 
 export const initialEquivalentGroups: FoodEquivalentGroup[] = [
@@ -352,1740 +333,20 @@ export const initialRecipes: Recipe[] = [
   },
 ];
 
-export const initialPatients: Patient[] = [
-  {
-    id: 'pat-ana-sofia',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Ana Sofía',
-    lastName: 'García Rivas',
-    email: 'ana.garcia@gmail.com',
-    phone: '+52 55 9182 3344',
-    whatsapp: '+52 55 9182 3344',
-    birthDate: '1995-04-18',
-    gender: 'F',
-    occupation: 'Diseñadora UX / Home Office',
-    address: 'Col. Del Valle Sur, Benito Juárez, CDMX',
-    photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-    goal: 'Pérdida de grasa y mejora de energía diaria',
-    status: 'Activo',
-    riskLevel: 'NORMAL',
-    adherenceRate: 92.5,
-    initialWeight: 72.4,
-    currentWeight: 67.8,
-    targetWeight: 63.0,
-    height: 165,
-    lastConsultationDate: '2026-08-01',
-    nextConsultationDate: '2026-08-22',
-    notes: 'Paciente muy constante con el registro de agua y comidas. Excelente evolución antropométrica.',
-    assignedRecipeIds: ['rec-1', 'rec-2', 'rec-3'],
-    createdAt: '2026-05-10T10:00:00Z',
-    updatedAt: '2026-08-10T14:30:00Z',
-  },
-  {
-    id: 'pat-roberto-m',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Roberto',
-    lastName: 'Navarro Ruiz',
-    email: 'roberto.navarro@outlook.com',
-    phone: '+52 55 2381 9901',
-    whatsapp: '+52 55 2381 9901',
-    birthDate: '1988-11-23',
-    gender: 'M',
-    occupation: 'Gerente Comercial',
-    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-    goal: 'Recomposición corporal y control de glucosa',
-    status: 'Activo',
-    riskLevel: 'MEDIUM_RISK',
-    adherenceRate: 68.0,
-    initialWeight: 89.5,
-    currentWeight: 86.2,
-    targetWeight: 79.0,
-    height: 178,
-    lastConsultationDate: '2026-07-20',
-    nextConsultationDate: '2026-08-18',
-    notes: 'Viaja frecuentemente por trabajo; se le asignaron opciones de restaurantes y equivalencias.',
-    createdAt: '2026-04-15T09:00:00Z',
-    updatedAt: '2026-08-08T11:00:00Z',
-  },
-  {
-    id: 'pat-mariana-t',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-gdl-prov',
-    specialistId: 'user-dr-carlos',
-    firstName: 'Mariana',
-    lastName: 'Torres Vega',
-    email: 'mariana.torres@gmail.com',
-    phone: '+52 33 1120 4455',
-    whatsapp: '+52 33 1120 4455',
-    birthDate: '1998-07-09',
-    gender: 'F',
-    occupation: 'Estudiante de Posgrado',
-    photoUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80',
-    goal: 'Aumento de masa muscular (Hipertrofia)',
-    status: 'Activo',
-    riskLevel: 'NORMAL',
-    adherenceRate: 94.0,
-    initialWeight: 52.0,
-    currentWeight: 55.4,
-    targetWeight: 57.0,
-    height: 160,
-    lastConsultationDate: '2026-08-05',
-    nextConsultationDate: '2026-08-26',
-    notes: 'Entrenamiento de fuerza 5 días por semana. Excelente ganancia de masa magra.',
-    createdAt: '2026-03-01T12:00:00Z',
-    updatedAt: '2026-08-05T16:00:00Z',
-  },
-  {
-    id: 'pat-diego-s',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Diego',
-    lastName: 'Salazar Gómez',
-    email: 'diego.salazar@live.com',
-    phone: '+52 55 7712 3901',
-    whatsapp: '+52 55 7712 3901',
-    birthDate: '1982-03-14',
-    gender: 'M',
-    occupation: 'Arquitecto',
-    photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
-    goal: 'Salud cardiovascular y reducción de triglicéridos',
-    status: 'Activo',
-    riskLevel: 'HIGH_RISK',
-    adherenceRate: 45.0,
-    initialWeight: 96.0,
-    currentWeight: 94.8,
-    targetWeight: 82.0,
-    height: 175,
-    lastConsultationDate: '2026-07-02',
-    nextConsultationDate: undefined,
-    notes: '⚠️ Paciente sin registrar actividad hace 12 días y sin cita próxima agendada. Requiere contacto de reactivación.',
-    createdAt: '2026-06-01T11:00:00Z',
-    updatedAt: '2026-08-01T08:00:00Z',
-  },
-  {
-    id: 'pat-claudia-h',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-gdl-prov',
-    specialistId: 'user-dr-carlos',
-    firstName: 'Claudia',
-    lastName: 'Hernández Soto',
-    email: 'clau.hernandez@hotmail.com',
-    phone: '+52 33 2291 0041',
-    whatsapp: '+52 33 2291 0041',
-    birthDate: '1991-09-30',
-    gender: 'F',
-    occupation: 'Abogada Corporativa',
-    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
-    goal: 'Pérdida de grasa corporal y control de ansiedad',
-    status: 'Activo',
-    riskLevel: 'NORMAL',
-    adherenceRate: 88.0,
-    initialWeight: 68.0,
-    currentWeight: 64.1,
-    targetWeight: 60.0,
-    height: 168,
-    lastConsultationDate: '2026-08-08',
-    nextConsultationDate: '2026-08-29',
-    createdAt: '2026-05-18T10:00:00Z',
-    updatedAt: '2026-08-08T12:00:00Z',
-  },
-  {
-    id: 'pat-javier-o',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Javier',
-    lastName: 'Orozco Peñaloza',
-    email: 'javier.orozco@gmail.com',
-    phone: '+52 55 6601 2289',
-    whatsapp: '+52 55 6601 2289',
-    birthDate: '1975-12-05',
-    gender: 'M',
-    occupation: 'Consultor Financiero',
-    photoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80',
-    goal: 'Control de hipertensión y pérdida de peso',
-    status: 'Activo',
-    riskLevel: 'NORMAL',
-    adherenceRate: 86.5,
-    initialWeight: 102.0,
-    currentWeight: 93.5,
-    targetWeight: 85.0,
-    height: 182,
-    lastConsultationDate: '2026-07-28',
-    nextConsultationDate: '2026-08-19',
-    createdAt: '2026-02-10T09:00:00Z',
-    updatedAt: '2026-08-02T15:00:00Z',
-  },
-  {
-    id: 'pat-fernanda-p',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Fernanda',
-    lastName: 'Pérez Cantú',
-    email: 'fernanda.perez@gmail.com',
-    phone: '+52 55 8891 0022',
-    birthDate: '2000-02-14',
-    gender: 'F',
-    occupation: 'Nutrición Deportiva / Triatleta',
-    photoUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&auto=format&fit=crop&q=80',
-    goal: 'Rendimiento deportivo para Medio Maratón',
-    status: 'Activo',
-    riskLevel: 'NORMAL',
-    adherenceRate: 97.0,
-    initialWeight: 56.5,
-    currentWeight: 55.0,
-    targetWeight: 54.5,
-    height: 167,
-    lastConsultationDate: '2026-08-11',
-    nextConsultationDate: '2026-09-01',
-    createdAt: '2026-06-15T14:00:00Z',
-    updatedAt: '2026-08-11T16:00:00Z',
-  },
-  {
-    id: 'pat-gabriel-l',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-gdl-prov',
-    specialistId: 'user-dr-carlos',
-    firstName: 'Gabriel',
-    lastName: 'Lara Méndez',
-    email: 'gabriel.lara@corp.com',
-    phone: '+52 33 4401 9922',
-    birthDate: '1985-05-20',
-    gender: 'M',
-    occupation: 'Empresario',
-    photoUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&auto=format&fit=crop&q=80',
-    goal: 'Disminución de porcentaje de grasa y aumento de fuerza',
-    status: 'En pausa',
-    riskLevel: 'MEDIUM_RISK',
-    adherenceRate: 70.0,
-    initialWeight: 84.0,
-    currentWeight: 81.5,
-    targetWeight: 76.0,
-    height: 176,
-    lastConsultationDate: '2026-06-25',
-    notes: 'Puso el plan en pausa por viaje internacional de trabajo hasta septiembre.',
-    createdAt: '2026-03-20T10:00:00Z',
-    updatedAt: '2026-07-01T10:00:00Z',
-  },
-  {
-    id: 'pat-valeria-s',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Valeria',
-    lastName: 'Santos Domínguez',
-    email: 'vale.santos@gmail.com',
-    phone: '+52 55 3302 9911',
-    birthDate: '1993-10-12',
-    gender: 'F',
-    occupation: 'Chef Repostera',
-    photoUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80',
-    goal: 'Control de glucosa y hábitos saludables en cocina',
-    status: 'Activo',
-    riskLevel: 'NORMAL',
-    adherenceRate: 85.0,
-    initialWeight: 70.0,
-    currentWeight: 65.5,
-    targetWeight: 62.0,
-    height: 163,
-    lastConsultationDate: '2026-08-04',
-    nextConsultationDate: '2026-08-25',
-    createdAt: '2026-04-01T11:00:00Z',
-    updatedAt: '2026-08-04T12:00:00Z',
-  },
-  {
-    id: 'pat-pablo-c',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    firstName: 'Pablo',
-    lastName: 'Castillo Cruz',
-    email: 'pablo.castillo@gmail.com',
-    phone: '+52 55 1190 2234',
-    birthDate: '1990-08-08',
-    gender: 'M',
-    occupation: 'Ingeniero de Software',
-    photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80',
-    goal: 'Pérdida de grasa visceral y mejora de postura',
-    status: 'Alta',
-    riskLevel: 'NORMAL',
-    adherenceRate: 98.0,
-    initialWeight: 88.0,
-    currentWeight: 75.0,
-    targetWeight: 75.0,
-    height: 179,
-    lastConsultationDate: '2026-07-30',
-    notes: '🎉 ¡Paciente dado de alta por cumplimiento de meta! Mantenimiento exitoso.',
-    createdAt: '2025-11-10T10:00:00Z',
-    updatedAt: '2026-07-30T17:00:00Z',
-  },
-];
-
-export const initialAnthropometricRecords: AnthropometricRecord[] = [
-  {
-    id: 'anthro-ana-1',
-    patientId: 'pat-ana-sofia',
-    date: '2026-05-10',
-    weight: 72.4,
-    height: 165,
-    bmi: 26.59,
-    bodyFatPercentage: 31.8,
-    fatMassKg: 23.0,
-    muscleMassKg: 46.5,
-    bodyWaterPercentage: 50.2,
-    visceralFatLevel: 6,
-    basalMetabolicRateKcal: 1420,
-    waistCircumference: 84.0,
-    hipCircumference: 104.0,
-    waistHipRatio: 0.81,
-    relaxedArmCircumference: 29.5,
-    thighCircumference: 58.0,
-    measurementDevice: 'InBody 270 Clínico',
-    notes: 'Medición basal inicial. Grasa visceral moderada.',
-  },
-  {
-    id: 'anthro-ana-2',
-    patientId: 'pat-ana-sofia',
-    date: '2026-06-12',
-    weight: 70.1,
-    height: 165,
-    bmi: 25.75,
-    bodyFatPercentage: 29.2,
-    fatMassKg: 20.4,
-    muscleMassKg: 46.8,
-    bodyWaterPercentage: 52.0,
-    visceralFatLevel: 5,
-    basalMetabolicRateKcal: 1425,
-    waistCircumference: 80.5,
-    hipCircumference: 101.5,
-    waistHipRatio: 0.79,
-    relaxedArmCircumference: 28.5,
-    thighCircumference: 56.5,
-    measurementDevice: 'InBody 270 Clínico',
-    notes: 'Excelente reducción de 2.6kg de masa grasa pura manteniendo músculo.',
-  },
-  {
-    id: 'anthro-ana-3',
-    patientId: 'pat-ana-sofia',
-    date: '2026-07-10',
-    weight: 68.9,
-    height: 165,
-    bmi: 25.31,
-    bodyFatPercentage: 27.5,
-    fatMassKg: 18.9,
-    muscleMassKg: 47.0,
-    bodyWaterPercentage: 53.4,
-    visceralFatLevel: 4,
-    basalMetabolicRateKcal: 1430,
-    waistCircumference: 77.0,
-    hipCircumference: 99.0,
-    waistHipRatio: 0.78,
-    relaxedArmCircumference: 27.8,
-    thighCircumference: 55.0,
-    measurementDevice: 'InBody 270 Clínico',
-    notes: 'Circunferencia de cintura disminuyó 7cm desde el inicio.',
-  },
-  {
-    id: 'anthro-ana-4',
-    patientId: 'pat-ana-sofia',
-    date: '2026-08-01',
-    weight: 67.8,
-    height: 165,
-    bmi: 24.90,
-    bodyFatPercentage: 26.0,
-    fatMassKg: 17.6,
-    muscleMassKg: 47.2,
-    bodyWaterPercentage: 54.5,
-    visceralFatLevel: 4,
-    basalMetabolicRateKcal: 1435,
-    waistCircumference: 75.0,
-    hipCircumference: 97.5,
-    waistHipRatio: 0.77,
-    relaxedArmCircumference: 27.2,
-    thighCircumference: 54.0,
-    measurementDevice: 'InBody 270 Clínico',
-    notes: '¡Alcanzó rango de IMC normal (<25)! Músculo en incremento.',
-  },
-];
-
-export const initialClinicalRecords: ClinicalRecord[] = [
-  {
-    id: 'clin-ana-1',
-    patientId: 'pat-ana-sofia',
-    specialistId: 'user-dra-valeria',
-    familyHistory: {
-      diabetes: true,
-      hypertension: true,
-      cancer: false,
-      cardiovascular: false,
-      thyroid: false,
-      notes: 'Abuela materna con Diabetes Tipo 2; Padre con hipertensión controlada.',
-    },
-    pathologicalHistory: {
-      diagnosedDiseases: ['Resistencia a la insulina leve (diagnosticada en 2024)'],
-      previousTreatments: 'Manejo dietético previo sin adherencia sostenida.',
-      surgeries: ['Apendicectomía (2018)'],
-    },
-    allergies: ['Camarón y mariscos'],
-    medications: [],
-    lifestyleHabits: {
-      sleepHours: 7.5,
-      sleepQuality: 'Buena',
-      smoking: false,
-      alcohol: 'Ocasional (social 1 copa de vino tinto fin de semana)',
-      stressLevel: 'Moderado',
-      waterDailyLiters: 2.5,
-    },
-    physicalActivity: {
-      activityLevel: 'Moderada',
-      exerciseType: 'Entrenamiento funcional de fuerza + caminatas diarias',
-      frequencyDaysPerWeek: 4,
-      durationMinutes: 50,
-    },
-    dietaryHabits: {
-      mealsPerDay: 4,
-      preferredFoods: ['Pollo', 'Aguacate', 'Frutos rojos', 'Avena', 'Huevos', 'Espinacas'],
-      dislikedFoods: ['Hígado', 'Pescados muy grasos con espinas'],
-      eatingOutFrequency: '1 vez por semana los domingos',
-      bingeEating: false,
-    },
-    recall24h: 'Desayuno: Café con leche de almendras y 2 tostadas con huevo y aguacate. Comida: Pechuga de pollo asada con arroz integral y ensalada mixta. Colación: Manzana con 10 almendras. Cena: Omelette de claras con espinaca y 1 tortilla de maíz.',
-    clinicalGoals: 'Mantener control glucémico, optimizar composición corporal reduciendo grasa visceral y fortalecer masa magra.',
-    clinicalObservations: 'Paciente muy receptiva y disciplinada. Comprende el uso de la tabla de equivalencias para intercambiar alimentos en comidas fuera de casa.',
-    updatedAt: '2026-08-01T11:00:00Z',
-  },
-];
-
-export const initialLaboratories: LaboratoryResult[] = [
-  {
-    id: 'lab-ana-1',
-    patientId: 'pat-ana-sofia',
-    testDate: '2026-07-25',
-    laboratoryName: 'Laboratorios Médicos Chopo CDMX',
-    glucoseMgDl: 89,
-    hba1cPercentage: 5.2,
-    totalCholesterolMgDl: 178,
-    hdlCholesterolMgDl: 58,
-    ldlCholesterolMgDl: 102,
-    triglyceridesMgDl: 90,
-    uricAcidMgDl: 4.1,
-    creatinineMgDl: 0.8,
-    ureaMgDl: 28,
-    tgoAstUL: 22,
-    tgpAltUL: 20,
-    hemoglobinGDl: 14.1,
-    tshUiuMl: 1.85,
-    vitaminDNgMl: 38,
-    customParameters: [
-      { name: 'Insulina en Ayuno', value: '7.8', unit: 'uUI/ml', refRange: '2.6 - 24.9' },
-      { name: 'Índice HOMA-IR', value: '1.71', unit: 'índice', refRange: '< 2.5 (Normal)' },
-    ],
-    aiAnalysisSummary: 'Perfil metabólico dentro de rangos óptimos. Glucosa en ayuno (89 mg/dL) y HbA1c (5.2%) normales. HOMA-IR de 1.71 indica reversión de la resistencia a la insulina.',
-    specialistInterpretation: 'Resultados excelentes. Se confirma normoglucemia y perfil lipídico protector con triglicéridos en 90 mg/dL.',
-  },
-];
-
-export const initialPlans: NutritionPlan[] = [
-  {
-    id: 'plan-ana-recomp',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-ana-sofia',
-    specialistId: 'user-dra-valeria',
-    title: 'Plan de Recomposición y Balance Metabólico 1,600 kcal',
-    goal: 'Pérdida de grasa preservando masa muscular',
-    status: 'ACTIVE',
-    startDate: '2026-08-01',
-    endDate: '2026-08-22',
-    targetCaloriesKcal: 1600,
-    targetProteinG: 120,
-    targetCarbsG: 155,
-    targetFatG: 55,
-    targetWaterLiters: 2.5,
-    generalInstructions: 'Realiza tus 4 tiempos de comida en horarios regulares. Recuerda masticar despacio y priorizar alimentos enteros y frescos.',
-    hydrationInstructions: 'Meta: 2.5 Litros al día. Tomar 500ml al despertar y distribuir el resto durante el día.',
-    allowedSubstitutionsPolicy: 'Puedes utilizar la tabla de equivalentes del SMAE para cambiar pechuga de pollo por pescado blanco o queso panela en las porciones marcadas.',
-    approvedBySpecialist: true,
-    digitalSignatureApprovedAt: '2026-08-01T10:00:00Z',
-    days: [
-      {
-        id: 'day-1-lunes',
-        dayOfWeek: 1,
-        dayName: 'Lunes',
-        meals: [
-          {
-            id: 'm-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '08:00',
-            items: [
-              {
-                id: 'it-1',
-                itemType: 'RECIPE',
-                name: 'Omelette Verde con Espinacas y Queso Panela',
-                portionDescription: '1 porción completa con 2 tortillas y aguacate',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 385,
-                proteinG: 26,
-                carbsG: 32,
-                fatG: 16,
-                interchangeOptions: ['Huevos revueltos a la mexicana con frijoles', 'Chilaquiles ligeros con pechuga de pollo'],
-              },
-            ],
-          },
-          {
-            id: 'm-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-2',
-                itemType: 'FOOD',
-                name: 'Manzana verde con 10 almendras',
-                portionDescription: '1 manzana mediana (100g) + 10 almendras naturales',
-                portionQuantity: 1,
-                equivalentGroupCode: 'FRUTAS',
-                energyKcal: 130,
-                proteinG: 3.3,
-                carbsG: 17.5,
-                fatG: 6.2,
-              },
-            ],
-          },
-          {
-            id: 'm-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-3',
-                itemType: 'RECIPE',
-                name: 'Pechuga a la Plancha con Arroz al Vapor y Nopales Asados',
-                portionDescription: '130g pechuga + 1 taza arroz integral + nopales + 1/2 taza frijoles',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 490,
-                proteinG: 38,
-                carbsG: 50,
-                fatG: 14,
-                interchangeOptions: ['Filete de pescado a la veracruzana', 'Bistec magro asado con quinoa'],
-              },
-            ],
-          },
-          {
-            id: 'm-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-4',
-                itemType: 'RECIPE',
-                name: 'Tazón de Yogur Griego con Frutos Rojos y Almendras',
-                portionDescription: '170g yogur griego + 1 taza moras + canela',
-                portionQuantity: 1,
-                equivalentGroupCode: 'LECHE_DESC',
-                energyKcal: 235,
-                proteinG: 18,
-                carbsG: 22,
-                fatG: 7,
-              },
-            ],
-          },
-          {
-            id: 'm-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-5',
-                itemType: 'RECIPE',
-                name: 'Tostadas de Atún a la Mexicana con Aguacate',
-                portionDescription: '1 lata atún + 3 tostadas horneadas + pico de gallo + aguacate',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MBA',
-                energyKcal: 320,
-                proteinG: 27,
-                carbsG: 30,
-                fatG: 9,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'day-2-martes',
-        dayOfWeek: 2,
-        dayName: 'Martes',
-        meals: [
-          {
-            id: 'm-2-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '08:00',
-            items: [
-              {
-                id: 'it-2-1',
-                itemType: 'RECIPE',
-                name: 'Huevos revueltos a la mexicana con frijoles negros',
-                portionDescription: '2 huevos enteros + 1/2 taza frijoles de la olla + 2 tortillas de maíz',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 390,
-                proteinG: 25,
-                carbsG: 34,
-                fatG: 15,
-              },
-            ],
-          },
-          {
-            id: 'm-2-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-2-2',
-                itemType: 'FOOD',
-                name: 'Tazón de papaya fresca con semillas de chía',
-                portionDescription: '1 taza de papaya picada (140g) + 1 cda de semillas de chía',
-                portionQuantity: 1,
-                equivalentGroupCode: 'FRUTAS',
-                energyKcal: 115,
-                proteinG: 3,
-                carbsG: 18,
-                fatG: 3.5,
-              },
-            ],
-          },
-          {
-            id: 'm-2-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-2-3',
-                itemType: 'RECIPE',
-                name: 'Filete de pescado blanco al limón con quinoa y ensalada verde',
-                portionDescription: '140g filete de tilapia o robalo + 1/2 taza quinoa + ensalada fresca con vinagreta de oliva',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MBA',
-                energyKcal: 460,
-                proteinG: 40,
-                carbsG: 44,
-                fatG: 12,
-              },
-            ],
-          },
-          {
-            id: 'm-2-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-2-4',
-                itemType: 'FOOD',
-                name: 'Gelatina ligera con 5 mitades de nuez de castilla',
-                portionDescription: '1 tazón de gelatina sin azúcar + 5 mitades de nuez',
-                portionQuantity: 1,
-                equivalentGroupCode: 'GRASAS_SP',
-                energyKcal: 120,
-                proteinG: 4,
-                carbsG: 3,
-                fatG: 10,
-              },
-            ],
-          },
-          {
-            id: 'm-2-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-2-5',
-                itemType: 'RECIPE',
-                name: 'Quesadillas en comal de maíz con queso panela y pico de gallo',
-                portionDescription: '2 tortillas de maíz + 60g queso panela asado + pico de gallo + 1/3 aguacate',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 340,
-                proteinG: 22,
-                carbsG: 32,
-                fatG: 13,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'day-3-miercoles',
-        dayOfWeek: 3,
-        dayName: 'Miércoles',
-        meals: [
-          {
-            id: 'm-3-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '08:00',
-            items: [
-              {
-                id: 'it-3-1',
-                itemType: 'RECIPE',
-                name: 'Pancakes de avena y plátano con canela y claras',
-                portionDescription: '45g avena molida + 3 claras de huevo + 1/2 plátano + canela en polvo',
-                portionQuantity: 1,
-                equivalentGroupCode: 'CEREALES_SG',
-                energyKcal: 360,
-                proteinG: 24,
-                carbsG: 48,
-                fatG: 6,
-              },
-            ],
-          },
-          {
-            id: 'm-3-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-3-2',
-                itemType: 'FOOD',
-                name: 'Yogur griego natural sin azúcar con fresas rebanadas',
-                portionDescription: '150g yogur griego + 1 taza de fresas rebanadas',
-                portionQuantity: 1,
-                equivalentGroupCode: 'LECHE_DESC',
-                energyKcal: 140,
-                proteinG: 15,
-                carbsG: 14,
-                fatG: 2,
-              },
-            ],
-          },
-          {
-            id: 'm-3-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-3-3',
-                itemType: 'RECIPE',
-                name: 'Pechuga marinada al romero con camote al horno y espárragos',
-                portionDescription: '130g pechuga de pollo + 1/2 taza de camote horneado + 6 espárragos al vapor',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 475,
-                proteinG: 39,
-                carbsG: 46,
-                fatG: 11,
-              },
-            ],
-          },
-          {
-            id: 'm-3-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-3-4',
-                itemType: 'FOOD',
-                name: 'Jícama y pepino con limón y chilito en polvo',
-                portionDescription: '1.5 tazas con limón y una pizca de sal y chilito tajín',
-                portionQuantity: 1,
-                equivalentGroupCode: 'VERDURAS',
-                energyKcal: 65,
-                proteinG: 2,
-                carbsG: 14,
-                fatG: 0.5,
-              },
-            ],
-          },
-          {
-            id: 'm-3-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-3-5',
-                itemType: 'RECIPE',
-                name: 'Fajitas de pollo con pimientos tricolores y aguacate',
-                portionDescription: '100g fajitas de pechuga + pimientos asados + 2 tortillas de maíz + aguacate',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 350,
-                proteinG: 28,
-                carbsG: 30,
-                fatG: 12,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'day-4-jueves',
-        dayOfWeek: 4,
-        dayName: 'Jueves',
-        meals: [
-          {
-            id: 'm-4-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '08:00',
-            items: [
-              {
-                id: 'it-4-1',
-                itemType: 'RECIPE',
-                name: 'Omelette de claras con champiñones salteados y espinacas baby',
-                portionDescription: '3 claras + 1 huevo entero + 1 taza champiñones + 1 tortilla de maíz + 1/3 aguacate',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 370,
-                proteinG: 26,
-                carbsG: 25,
-                fatG: 16,
-              },
-            ],
-          },
-          {
-            id: 'm-4-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-4-2',
-                itemType: 'FOOD',
-                name: 'Frutos rojos mixtos con 10 almendras tostadas',
-                portionDescription: '1 taza de moras y frambuesas + 10 almendras naturales',
-                portionQuantity: 1,
-                equivalentGroupCode: 'FRUTAS',
-                energyKcal: 135,
-                proteinG: 3.5,
-                carbsG: 16,
-                fatG: 7,
-              },
-            ],
-          },
-          {
-            id: 'm-4-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-4-3',
-                itemType: 'RECIPE',
-                name: 'Filete de res magro con puré de papa rústico y brócoli al vapor',
-                portionDescription: '120g filete magro asado + 1/2 taza puré casero + 1 taza brócoli al vapor',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 480,
-                proteinG: 38,
-                carbsG: 42,
-                fatG: 14,
-              },
-            ],
-          },
-          {
-            id: 'm-4-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-4-4',
-                itemType: 'FOOD',
-                name: 'Licuado ligero de fresa con leche de almendras y canela',
-                portionDescription: '1 taza leche de almendras s/azúcar + 1/2 taza fresas + pizca de canela',
-                portionQuantity: 1,
-                equivalentGroupCode: 'LECHE_DESC',
-                energyKcal: 85,
-                proteinG: 2.5,
-                carbsG: 12,
-                fatG: 3,
-              },
-            ],
-          },
-          {
-            id: 'm-4-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-4-5',
-                itemType: 'RECIPE',
-                name: 'Tacos ligeros de atún sellado con aderezo de yogur y lechuga',
-                portionDescription: '1 lata atún en agua o 100g medallón + 2 tortillas maíz + ensalada de col y limón',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MBA',
-                energyKcal: 330,
-                proteinG: 30,
-                carbsG: 28,
-                fatG: 8,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'day-5-viernes',
-        dayOfWeek: 5,
-        dayName: 'Viernes',
-        meals: [
-          {
-            id: 'm-5-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '08:00',
-            items: [
-              {
-                id: 'it-5-1',
-                itemType: 'RECIPE',
-                name: 'Chilaquiles verdes ligeros con pechuga deshebrada y queso panela',
-                portionDescription: '2 tortillas horneadas en salsa verde + 80g pechuga deshebrada + 30g panela rallado',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 395,
-                proteinG: 29,
-                carbsG: 35,
-                fatG: 14,
-              },
-            ],
-          },
-          {
-            id: 'm-5-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-5-2',
-                itemType: 'FOOD',
-                name: 'Tazón de moras silvestres con semillas de girasol',
-                portionDescription: '1 taza de moras + 1 cda de semillas de girasol tostadas',
-                portionQuantity: 1,
-                equivalentGroupCode: 'FRUTAS',
-                energyKcal: 125,
-                proteinG: 3.5,
-                carbsG: 16,
-                fatG: 6,
-              },
-            ],
-          },
-          {
-            id: 'm-5-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-5-3',
-                itemType: 'RECIPE',
-                name: 'Salmón a la plancha con ensalada mediterránea y arroz al vapor',
-                portionDescription: '120g salmón fresco + 1 taza ensalada de pepino, tomate y orégano + 1/2 taza arroz integral',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MA',
-                energyKcal: 510,
-                proteinG: 36,
-                carbsG: 40,
-                fatG: 18,
-              },
-            ],
-          },
-          {
-            id: 'm-5-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-5-4',
-                itemType: 'FOOD',
-                name: 'Yogur griego con manzana verde picada y canela',
-                portionDescription: '140g yogur griego + 1/2 manzana picada + canela molida',
-                portionQuantity: 1,
-                equivalentGroupCode: 'LECHE_DESC',
-                energyKcal: 155,
-                proteinG: 14,
-                carbsG: 18,
-                fatG: 2,
-              },
-            ],
-          },
-          {
-            id: 'm-5-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-5-5',
-                itemType: 'RECIPE',
-                name: 'Ensalada tibia de pollo a la parrilla con aguacate y jitomates cherry',
-                portionDescription: '100g pechuga asada + hojas verdes variadas + 1/3 aguacate + 2 tostadas horneadas',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 340,
-                proteinG: 28,
-                carbsG: 26,
-                fatG: 12,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'day-6-sabado',
-        dayOfWeek: 6,
-        dayName: 'Sábado',
-        meals: [
-          {
-            id: 'm-6-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '08:30',
-            items: [
-              {
-                id: 'it-6-1',
-                itemType: 'RECIPE',
-                name: 'Huevos pochados sobre tostadas horneadas con aguacate',
-                portionDescription: '2 huevos pochados + 2 tostadas horneadas + 1/3 aguacate + salsa martajada',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 380,
-                proteinG: 22,
-                carbsG: 28,
-                fatG: 18,
-              },
-            ],
-          },
-          {
-            id: 'm-6-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-6-2',
-                itemType: 'FOOD',
-                name: 'Manzana verde con una cucharadita de crema de almendra',
-                portionDescription: '1 manzana mediana en rebanadas + 1 cdita de crema de almendra natural',
-                portionQuantity: 1,
-                equivalentGroupCode: 'FRUTAS',
-                energyKcal: 140,
-                proteinG: 3,
-                carbsG: 20,
-                fatG: 6,
-              },
-            ],
-          },
-          {
-            id: 'm-6-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-6-3',
-                itemType: 'RECIPE',
-                name: 'Bowl de quinoa con pechuga al chipotle suave y verduras salteadas',
-                portionDescription: '130g pechuga en cubos + 1/2 taza quinoa + calabacita y zanahoria al sartén',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 480,
-                proteinG: 38,
-                carbsG: 46,
-                fatG: 12,
-              },
-            ],
-          },
-          {
-            id: 'm-6-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-6-4',
-                itemType: 'FOOD',
-                name: 'Barra artesanal de amaranto tostado y té verde',
-                portionDescription: '1 barra de amaranto con miel de agave + taza de té verde caliente',
-                portionQuantity: 1,
-                equivalentGroupCode: 'CEREALES_SG',
-                energyKcal: 110,
-                proteinG: 3.5,
-                carbsG: 18,
-                fatG: 2.5,
-              },
-            ],
-          },
-          {
-            id: 'm-6-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-6-5',
-                itemType: 'RECIPE',
-                name: 'Tostadas horneadas de tinga de pechuga casera con lechuga',
-                portionDescription: '90g tinga de pechuga de pollo s/grasa + 2 tostadas horneadas + lechuga y salsa',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 325,
-                proteinG: 27,
-                carbsG: 28,
-                fatG: 8,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'day-7-domingo',
-        dayOfWeek: 7,
-        dayName: 'Domingo',
-        meals: [
-          {
-            id: 'm-7-1-desayuno',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '09:00',
-            items: [
-              {
-                id: 'it-7-1',
-                itemType: 'RECIPE',
-                name: 'Waffles ligeros de avena con claras y frutos del bosque',
-                portionDescription: '1 waffle de avena casero + 4 claras + 1/2 taza de frambuesas y canela',
-                portionQuantity: 1,
-                equivalentGroupCode: 'CEREALES_SG',
-                energyKcal: 370,
-                proteinG: 25,
-                carbsG: 45,
-                fatG: 7,
-              },
-            ],
-          },
-          {
-            id: 'm-7-2-colacion1',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:30',
-            items: [
-              {
-                id: 'it-7-2',
-                itemType: 'FOOD',
-                name: 'Licuado verde détox con espinaca fresca, apio y piña natural',
-                portionDescription: '1 vaso (250ml) de agua con espinaca, apio, 1 rebanada de piña y limón',
-                portionQuantity: 1,
-                equivalentGroupCode: 'VERDURAS',
-                energyKcal: 85,
-                proteinG: 2,
-                carbsG: 18,
-                fatG: 0.5,
-              },
-            ],
-          },
-          {
-            id: 'm-7-3-comida',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-7-3',
-                itemType: 'RECIPE',
-                name: 'Pechuga a las finas hierbas con verduras al vapor y frijoles de la olla',
-                portionDescription: '130g pechuga con orégano y tomillo + 1/2 taza frijoles + brócoli y zanahorias baby',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 485,
-                proteinG: 39,
-                carbsG: 48,
-                fatG: 12,
-              },
-            ],
-          },
-          {
-            id: 'm-7-4-colacion2',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '17:30',
-            items: [
-              {
-                id: 'it-7-4',
-                itemType: 'FOOD',
-                name: 'Requesón fresco campesino con 4 nueces y canela',
-                portionDescription: '60g requesón bajo en sodio + 4 mitades de nuez + canela espolvoreada',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MBA',
-                energyKcal: 130,
-                proteinG: 10,
-                carbsG: 3,
-                fatG: 8,
-              },
-            ],
-          },
-          {
-            id: 'm-7-5-cena',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-7-5',
-                itemType: 'RECIPE',
-                name: 'Crema ligera de calabacita con queso panela y pechuga deshebrada',
-                portionDescription: '1 tazón de crema de calabacita natural s/crema + 70g pechuga + 30g queso panela en cubos',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 320,
-                proteinG: 28,
-                carbsG: 18,
-                fatG: 10,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    createdAt: '2026-08-01T09:00:00Z',
-    updatedAt: '2026-08-01T10:00:00Z',
-  },
-  {
-    id: 'plan-roberto-glucosa',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-roberto-m',
-    specialistId: 'user-dra-valeria',
-    title: 'Plan de Control Glucémico y Recomposición 2,100 kcal',
-    goal: 'Recomposición corporal y control de glucosa',
-    status: 'ACTIVE',
-    startDate: '2026-08-01',
-    endDate: '2026-09-01',
-    targetCaloriesKcal: 2100,
-    targetProteinG: 155,
-    targetCarbsG: 210,
-    targetFatG: 65,
-    targetWaterLiters: 3.0,
-    generalInstructions: 'Mantener horarios consistentes para evitar picos de insulina. Priorizar cereales de grano entero y vegetales ricos en fibra soluble.',
-    hydrationInstructions: 'Meta: 3.0 Litros de agua natural al día.',
-    allowedSubstitutionsPolicy: 'Intercambios libres con la tabla de equivalentes SMAE en porciones calculadas.',
-    approvedBySpecialist: true,
-    digitalSignatureApprovedAt: '2026-08-01T10:00:00Z',
-    days: [
-      {
-        id: 'day-roberto-base',
-        dayOfWeek: 1,
-        dayName: 'Lunes a Domingo (Menú Base Clínico)',
-        meals: [
-          {
-            id: 'm-rob-1',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '07:30',
-            items: [
-              {
-                id: 'it-rob-1',
-                itemType: 'RECIPE',
-                name: 'Huevos revueltos con nopales y frijoles de la olla',
-                portionDescription: '2 huevos enteros + 1 taza de nopales al vapor + 1/2 taza frijoles + 2 tortillas de maíz',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 440,
-                proteinG: 28,
-                carbsG: 45,
-                fatG: 16,
-              },
-            ],
-          },
-          {
-            id: 'm-rob-2',
-            name: 'Colación Matutina',
-            mealOrder: 2,
-            suggestedTime: '11:00',
-            items: [
-              {
-                id: 'it-rob-2',
-                itemType: 'FOOD',
-                name: 'Tazón de requesón campesino con nueces',
-                portionDescription: '80g de requesón + 6 mitades de nuez de castilla + canela en polvo',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MBA',
-                energyKcal: 180,
-                proteinG: 14,
-                carbsG: 6,
-                fatG: 11,
-              },
-            ],
-          },
-          {
-            id: 'm-rob-3',
-            name: 'Comida',
-            mealOrder: 3,
-            suggestedTime: '14:30',
-            items: [
-              {
-                id: 'it-rob-3',
-                itemType: 'RECIPE',
-                name: 'Fajitas de Sirloin magro con pimientos y arroz integral',
-                portionDescription: '150g de sirloin asado + 3/4 taza arroz integral al vapor + 1.5 tazas ensalada verde con 1 cdta aceite de oliva',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 560,
-                proteinG: 44,
-                carbsG: 52,
-                fatG: 18,
-              },
-            ],
-          },
-          {
-            id: 'm-rob-4',
-            name: 'Colación Vespertina',
-            mealOrder: 4,
-            suggestedTime: '18:00',
-            items: [
-              {
-                id: 'it-rob-4',
-                itemType: 'FOOD',
-                name: 'Bastones de pepino y jícama con semillas de calabaza',
-                portionDescription: '1 taza de pepino y jícama con limón + 2 cdas de pepitas tostadas',
-                portionQuantity: 1,
-                equivalentGroupCode: 'VERDURAS',
-                energyKcal: 150,
-                proteinG: 7,
-                carbsG: 12,
-                fatG: 8,
-              },
-            ],
-          },
-          {
-            id: 'm-rob-5',
-            name: 'Cena',
-            mealOrder: 5,
-            suggestedTime: '21:00',
-            items: [
-              {
-                id: 'it-rob-5',
-                itemType: 'RECIPE',
-                name: 'Tacos de lechuga con pechuga de pavo y aguacate',
-                portionDescription: '120g pechuga de pavo deshebrada + 4 hojas lechuga orejona + 1/3 de aguacate Hass + salsa verde martajada',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MBA',
-                energyKcal: 380,
-                proteinG: 34,
-                carbsG: 10,
-                fatG: 14,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    createdAt: '2026-08-01T09:00:00Z',
-    updatedAt: '2026-08-01T10:00:00Z',
-  },
-  {
-    id: 'plan-mariana-rendimiento',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-mariana-t',
-    specialistId: 'user-dr-carlos',
-    title: 'Plan de Rendimiento Físico y Tonificación 1,850 kcal',
-    goal: 'Aumento de masa muscular y definición',
-    status: 'ACTIVE',
-    startDate: '2026-08-01',
-    endDate: '2026-08-30',
-    targetCaloriesKcal: 1850,
-    targetProteinG: 135,
-    targetCarbsG: 195,
-    targetFatG: 52,
-    targetWaterLiters: 2.8,
-    generalInstructions: 'Consumir el pre-entreno 45 minutos antes de la sesión de fuerza. Priorizar proteína de alta biodisponibilidad.',
-    hydrationInstructions: 'Meta: 2.8 Litros diarios.',
-    allowedSubstitutionsPolicy: 'Intercambios SMAE equivalentes permitidos.',
-    approvedBySpecialist: true,
-    digitalSignatureApprovedAt: '2026-08-01T10:00:00Z',
-    days: [
-      {
-        id: 'day-mariana-base',
-        dayOfWeek: 1,
-        dayName: 'Lunes a Domingo (Menú Base Fitness)',
-        meals: [
-          {
-            id: 'm-mar-1',
-            name: 'Desayuno',
-            mealOrder: 1,
-            suggestedTime: '07:30',
-            items: [
-              {
-                id: 'it-mar-1',
-                itemType: 'RECIPE',
-                name: 'Pancakes de avena con claras y crema de almendras',
-                portionDescription: '50g harina de avena + 4 claras de huevo + 1 cda crema de almendras + 1/2 plátano rebanado',
-                portionQuantity: 1,
-                equivalentGroupCode: 'CEREALES_SG',
-                energyKcal: 420,
-                proteinG: 28,
-                carbsG: 52,
-                fatG: 12,
-              },
-            ],
-          },
-          {
-            id: 'm-mar-2',
-            name: 'Comida',
-            mealOrder: 2,
-            suggestedTime: '13:30',
-            items: [
-              {
-                id: 'it-mar-2',
-                itemType: 'RECIPE',
-                name: 'Salmón a la plancha con quinoa y espárragos',
-                portionDescription: '140g filete de salmón + 3/4 taza quinoa cocida + espárragos y calabacitas asadas con aceite de oliva',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_MA',
-                energyKcal: 520,
-                proteinG: 38,
-                carbsG: 42,
-                fatG: 18,
-              },
-            ],
-          },
-          {
-            id: 'm-mar-3',
-            name: 'Colación Vespertina (Post-Entreno)',
-            mealOrder: 3,
-            suggestedTime: '17:00',
-            items: [
-              {
-                id: 'it-mar-3',
-                itemType: 'RECIPE',
-                name: 'Yogur griego con frutos rojos y chía',
-                portionDescription: '170g yogur griego sin azúcar + 1 taza moras frescas + 1 cdta semillas de chía',
-                portionQuantity: 1,
-                equivalentGroupCode: 'LECHE_DESC',
-                energyKcal: 210,
-                proteinG: 19,
-                carbsG: 24,
-                fatG: 4,
-              },
-            ],
-          },
-          {
-            id: 'm-mar-4',
-            name: 'Cena',
-            mealOrder: 4,
-            suggestedTime: '20:30',
-            items: [
-              {
-                id: 'it-mar-4',
-                itemType: 'RECIPE',
-                name: 'Omelette de claras con champiñones y tostadas horneadas',
-                portionDescription: '4 claras de huevo + 1 taza champiñones salteados + 30g queso panela + 2 tostadas de maíz horneadas',
-                portionQuantity: 1,
-                equivalentGroupCode: 'AOA_BA',
-                energyKcal: 320,
-                proteinG: 27,
-                carbsG: 28,
-                fatG: 9,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    createdAt: '2026-08-01T09:00:00Z',
-    updatedAt: '2026-08-01T10:00:00Z',
-  },
-];
-
-export const initialMealLogs: MealLog[] = [
-  {
-    id: 'ml-1',
-    patientId: 'pat-ana-sofia',
-    date: '2026-08-13',
-    mealType: 'Desayuno',
-    loggedAt: '2026-08-13T08:30:00Z',
-    status: 'Cumplí',
-    description: 'Omelette de espinaca con queso panela y 2 tortillas de maíz como indica el plan.',
-    photoUrl: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=300&auto=format&fit=crop&q=80',
-    aiEstimatedCalories: 380,
-    aiEstimatedMacros: { protein: 26, carbs: 32, fat: 15 },
-    patientComment: 'Me sentí muy satisfecha con buena energía durante la mañana.',
-  },
-  {
-    id: 'ml-2',
-    patientId: 'pat-ana-sofia',
-    date: '2026-08-13',
-    mealType: 'Comida',
-    loggedAt: '2026-08-13T14:45:00Z',
-    status: 'Cumplí',
-    description: 'Pechuga a la plancha con arroz integral y nopales asados con pico de gallo.',
-    photoUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80',
-    aiEstimatedCalories: 485,
-    aiEstimatedMacros: { protein: 38, carbs: 49, fat: 13 },
-  },
-  {
-    id: 'ml-3',
-    patientId: 'pat-ana-sofia',
-    date: '2026-08-12',
-    mealType: 'Cena',
-    loggedAt: '2026-08-12T21:00:00Z',
-    status: 'Cumplí',
-    description: '3 tostadas horneadas Sanissimo con atún y aguacate.',
-    aiEstimatedCalories: 315,
-  },
-];
-
-export const initialWaterLogs: WaterLog[] = [
-  { id: 'wl-1', patientId: 'pat-ana-sofia', date: '2026-08-13', amountMl: 500, loggedAt: '2026-08-13T08:00:00Z' },
-  { id: 'wl-2', patientId: 'pat-ana-sofia', date: '2026-08-13', amountMl: 500, loggedAt: '2026-08-13T11:00:00Z' },
-  { id: 'wl-3', patientId: 'pat-ana-sofia', date: '2026-08-13', amountMl: 750, loggedAt: '2026-08-13T15:00:00Z' },
-  { id: 'wl-4', patientId: 'pat-ana-sofia', date: '2026-08-13', amountMl: 500, loggedAt: '2026-08-13T18:00:00Z' },
-];
-
-export const initialSupplements: SupplementPrescription[] = [
-  {
-    id: 'sup-1',
-    patientId: 'pat-ana-sofia',
-    specialistId: 'user-dra-valeria',
-    productName: 'Omega 3 Ultra Puro (EPA/DHA 1000mg)',
-    dosage: '1 cápsula blanda',
-    timing: 'Con el desayuno junto con alimentos',
-    frequency: 'Diario',
-    durationWeeks: 12,
-    specialistInstructions: 'Para apoyo cardiovascular y optimización de sensibilidad a la insulina.',
-    isActive: true,
-  },
-  {
-    id: 'sup-2',
-    patientId: 'pat-ana-sofia',
-    specialistId: 'user-dra-valeria',
-    productName: 'Citrato de Magnesio 400mg',
-    dosage: '1 scoop o cápsula',
-    timing: '30-45 minutos antes de dormir en agua tibia',
-    frequency: 'Diario en las noches',
-    durationWeeks: 12,
-    specialistInstructions: 'Para relajación muscular y calidad de sueño profundo.',
-    isActive: true,
-  },
-];
-
-export const initialSupplementLogs: SupplementLog[] = [
-  { id: 'supl-1', patientId: 'pat-ana-sofia', date: '2026-08-13', supplementName: 'Omega 3 Ultra Puro (EPA/DHA 1000mg)', dosage: '1 cápsula', isTaken: true, takenAt: '2026-08-13T08:35:00Z' },
-  { id: 'supl-2', patientId: 'pat-ana-sofia', date: '2026-08-13', supplementName: 'Citrato de Magnesio 400mg', dosage: '400mg', isTaken: false },
-];
-
-export const initialAppointments: Appointment[] = [
-  {
-    id: 'app-1',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    patientId: 'pat-ana-sofia',
-    patientName: 'Ana Sofía García',
-    appointmentType: 'SEGUIMIENTO',
-    status: 'CONFIRMADA',
-    startTime: '2026-08-22T10:00:00Z',
-    endTime: '2026-08-22T10:45:00Z',
-    price: 850,
-    currency: 'MXN',
-    locationNotes: 'Consultorio 204 - Sucursal CDMX Sur',
-  },
-  {
-    id: 'app-2',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    patientId: 'pat-roberto-m',
-    patientName: 'Roberto Navarro',
-    appointmentType: 'ONLINE',
-    status: 'PENDIENTE',
-    startTime: '2026-08-18T16:00:00Z',
-    endTime: '2026-08-18T16:45:00Z',
-    price: 850,
-    currency: 'MXN',
-    meetingLink: 'https://meet.google.com/nutriluz-valeria-roberto',
-  },
-  {
-    id: 'app-3',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-gdl-prov',
-    specialistId: 'user-dr-carlos',
-    patientId: 'pat-mariana-t',
-    patientName: 'Mariana Torres',
-    appointmentType: 'EVALUACION',
-    status: 'CONFIRMADA',
-    startTime: '2026-08-26T11:00:00Z',
-    endTime: '2026-08-26T12:00:00Z',
-    price: 950,
-    currency: 'MXN',
-    locationNotes: 'Sucursal Providencia GDL',
-  },
-  {
-    id: 'app-4',
-    organizationId: 'org-nutriluz-mexico',
-    branchId: 'branch-cdmx-sur',
-    specialistId: 'user-dra-valeria',
-    patientId: 'pat-javier-o',
-    patientName: 'Javier Orozco',
-    appointmentType: 'SEGUIMIENTO',
-    status: 'CONFIRMADA',
-    startTime: '2026-08-19T09:00:00Z',
-    endTime: '2026-08-19T09:45:00Z',
-    price: 850,
-    currency: 'MXN',
-  },
-];
-
-export const initialPayments: PaymentRecord[] = [
-  {
-    id: 'pay-1',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-ana-sofia',
-    patientName: 'Ana Sofía García',
-    concept: 'Paquete de Seguimiento Nutricional 3 Meses',
-    amount: 2400,
-    currency: 'MXN',
-    status: 'PAGADO',
-    paymentMethod: 'Tarjeta de Crédito (Stripe)',
-    paidAt: '2026-08-01T10:30:00Z',
-    invoiceRfc: 'GARA950418XYZ',
-  },
-  {
-    id: 'pay-2',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-mariana-t',
-    patientName: 'Mariana Torres',
-    concept: 'Consulta de Evaluación Antropométrica InBody',
-    amount: 950,
-    currency: 'MXN',
-    status: 'PAGADO',
-    paymentMethod: 'Transferencia SPEI',
-    paidAt: '2026-08-05T12:15:00Z',
-  },
-  {
-    id: 'pay-3',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-roberto-m',
-    patientName: 'Roberto Navarro',
-    concept: 'Consulta Online Nutrición',
-    amount: 850,
-    currency: 'MXN',
-    status: 'PENDIENTE',
-    paymentMethod: 'Pendiente de pago (Mercado Pago)',
-    paidAt: '2026-08-15T00:00:00Z',
-  },
-  {
-    id: 'pay-4',
-    organizationId: 'org-nutriluz-mexico',
-    patientId: 'pat-claudia-h',
-    patientName: 'Claudia Hernández',
-    concept: 'Consulta de Seguimiento Quincenal',
-    amount: 850,
-    currency: 'MXN',
-    status: 'PAGADO',
-    paymentMethod: 'Terminal Clip / Tarjeta Débito',
-    paidAt: '2026-08-08T13:00:00Z',
-  },
-];
-
-export const initialMessages: ChatMessage[] = [
-  {
-    id: 'msg-1',
-    conversationId: 'conv-ana',
-    senderId: 'user-dra-valeria',
-    senderName: 'Dra. Valeria López',
-    senderRole: 'NUTRIOLOGO',
-    content: '¡Hola Ana Sofía! Vi tus registros de comida y agua de esta semana. ¡Excelente adherencia con el nuevo desayuno!',
-    isRead: true,
-    createdAt: '2026-08-12T16:00:00Z',
-  },
-  {
-    id: 'msg-2',
-    conversationId: 'conv-ana',
-    senderId: 'pat-ana-sofia',
-    senderName: 'Ana Sofía García',
-    senderRole: 'PACIENTE',
-    content: '¡Hola Dra.! Muchas gracias. La verdad me he sentido con mucha más energía por las tardes. ¿Para la cena del sábado puedo cambiar el atún por salmón a la plancha?',
-    isRead: true,
-    createdAt: '2026-08-12T17:15:00Z',
-  },
-  {
-    id: 'msg-3',
-    conversationId: 'conv-ana',
-    senderId: 'user-dra-valeria',
-    senderName: 'Dra. Valeria López',
-    senderRole: 'NUTRIOLOGO',
-    content: '¡Claro que sí! Puedes usar 120g de salmón fresco. Como aporta un poco más de grasa saludable, solo omite la porción de aguacate en esa comida.',
-    isRead: false,
-    createdAt: '2026-08-12T18:00:00Z',
-  },
-];
-
-export const initialNotifications: AppNotification[] = [
-  {
-    id: 'notif-1',
-    category: 'PACIENTE',
-    title: '⚠️ Atención requerida: Paciente en riesgo',
-    message: 'Diego Salazar lleva 12 días sin registrar comidas y no tiene cita futura agendada.',
-    actionLink: '/pacientes/pat-diego-s',
-    isRead: false,
-    createdAt: '2026-08-13T09:00:00Z',
-  },
-  {
-    id: 'notif-2',
-    category: 'AGENDA',
-    title: 'Próxima consulta hoy',
-    message: 'Tienes consulta programada con Javier Orozco en 2 horas.',
-    actionLink: '/agenda',
-    isRead: false,
-    createdAt: '2026-08-13T07:00:00Z',
-  },
-  {
-    id: 'notif-3',
-    category: 'IA',
-    title: 'NutriCopilot AI listo',
-    message: 'Se generó automáticamente el borrador de consulta para Ana Sofía García.',
-    actionLink: '/nutricopilot',
-    isRead: true,
-    createdAt: '2026-08-12T20:00:00Z',
-  },
-];
-
-export const initialExerciseRoutines: ExerciseRoutine[] = [
-  {
-    id: 'ex-ana-1',
-    patientId: 'pat-ana-sofia',
-    title: 'Rutina de Tonificación y Fuerza Funcional',
-    goal: 'Preservación de masa muscular y acondicionamiento cardiovascular',
-    frequencyPerWeek: 4,
-    isActive: true,
-    items: [
-      { id: 'ex-it-1', dayLabel: 'Día 1 - Tren Inferior', exerciseName: 'Sentadillas Goblet con Mancuerna', muscleGroup: 'Pierna / Glúteo', sets: 4, reps: '12-15', restSeconds: 60, weightTarget: '10 kg' },
-      { id: 'ex-it-2', dayLabel: 'Día 1 - Tren Inferior', exerciseName: 'Puente de Glúteo con Banda', muscleGroup: 'Glúteo', sets: 4, reps: '15-20', restSeconds: 45 },
-      { id: 'ex-it-3', dayLabel: 'Día 1 - Tren Inferior', exerciseName: 'Desplantes Estáticos', muscleGroup: 'Cuádriceps', sets: 3, reps: '12 por pierna', restSeconds: 60 },
-      { id: 'ex-it-4', dayLabel: 'Día 2 - Tren Superior & Core', exerciseName: 'Press Militar con Mancuernas', muscleGroup: 'Hombro', sets: 4, reps: '12', restSeconds: 60, weightTarget: '5 kg c/u' },
-      { id: 'ex-it-5', dayLabel: 'Día 2 - Tren Superior & Core', exerciseName: 'Remo con Mancuerna a 1 brazo', muscleGroup: 'Espalda', sets: 4, reps: '12 por lado', restSeconds: 60, weightTarget: '8 kg' },
-      { id: 'ex-it-6', dayLabel: 'Día 2 - Tren Superior & Core', exerciseName: 'Plancha Abdominal Frontal', muscleGroup: 'Core', sets: 3, reps: '45 segundos', restSeconds: 45 },
-    ],
-  },
-];
+export const initialPatients: Patient[] = [];
+export const initialAnthropometricRecords: AnthropometricRecord[] = [];
+export const initialClinicalRecords: ClinicalRecord[] = [];
+export const initialLaboratories: LaboratoryResult[] = [];
+export const initialPlans: NutritionPlan[] = [];
+export const initialMealLogs: MealLog[] = [];
+export const initialWaterLogs: WaterLog[] = [];
+export const initialSupplements: SupplementPrescription[] = [];
+export const initialSupplementLogs: SupplementLog[] = [];
+export const initialAppointments: Appointment[] = [];
+export const initialPayments: PaymentRecord[] = [];
+export const initialMessages: ChatMessage[] = [];
+export const initialNotifications: AppNotification[] = [];
+export const initialExerciseRoutines: ExerciseRoutine[] = [];
 
 // Helper to initialize and retrieve typed storage
 export const storageService = {
@@ -2113,6 +374,148 @@ export const storageService = {
       localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(initialMessages));
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(initialNotifications));
       localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+    }
+    this.purgeMockAndOrphanedData();
+  },
+
+  purgeMockAndOrphanedData(): void {
+    if (typeof window === 'undefined') return;
+
+    const TEST_PATIENT_IDS = [
+      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
+      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
+      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123'
+    ];
+
+    const currentDeleted = this.getDeletedPatientIds();
+    const combinedDeleted = Array.from(new Set([...currentDeleted, ...TEST_PATIENT_IDS]));
+    this.saveDeletedPatientIds(combinedDeleted);
+
+    // 1. Clean patients
+    const rawPatients: Patient[] = this.get(STORAGE_KEYS.PATIENTS, []);
+    const cleanPatients = rawPatients.filter(
+      (p) => !combinedDeleted.includes(p.id) && !TEST_PATIENT_IDS.includes(p.id)
+    );
+    this.set(STORAGE_KEYS.PATIENTS, cleanPatients);
+    const activePatientIds = new Set(cleanPatients.map((p) => p.id));
+
+    // 2. Clean specialists
+    const cleanSpecialists = this.getSpecialists();
+    this.set(STORAGE_KEYS.SPECIALISTS, cleanSpecialists);
+
+    // 3. Clean currentUser
+    this.getCurrentUser();
+
+    // 4. Clean payments
+    const rawPayments: PaymentRecord[] = this.get(STORAGE_KEYS.PAYMENTS, []);
+    const cleanPayments = rawPayments.filter(
+      (p) =>
+        !['pay-1', 'pay-2', 'pay-3', 'pay-4'].includes(p.id) &&
+        !combinedDeleted.includes(p.patientId) &&
+        activePatientIds.has(p.patientId)
+    );
+    this.set(STORAGE_KEYS.PAYMENTS, cleanPayments);
+
+    // 5. Clean messages
+    const rawMessages: ChatMessage[] = this.get(STORAGE_KEYS.MESSAGES, []);
+    const cleanMessages = rawMessages.filter(
+      (m) =>
+        !['msg-1', 'msg-2', 'msg-3'].includes(m.id) &&
+        m.conversationId !== 'conv-ana' &&
+        !combinedDeleted.includes(m.conversationId) &&
+        !combinedDeleted.includes(m.senderId) &&
+        !m.senderName?.toLowerCase().includes('valeria') &&
+        !m.senderName?.toLowerCase().includes('carlos') &&
+        (activePatientIds.has(m.conversationId) || activePatientIds.has(m.senderId))
+    );
+    this.set(STORAGE_KEYS.MESSAGES, cleanMessages);
+
+    // 6. Clean appointments
+    const rawAppointments: Appointment[] = this.get(STORAGE_KEYS.APPOINTMENTS, []);
+    const cleanAppointments = rawAppointments.filter(
+      (a) =>
+        !['app-1', 'app-2', 'app-3', 'app-4'].includes(a.id) &&
+        !combinedDeleted.includes(a.patientId) &&
+        activePatientIds.has(a.patientId)
+    );
+    this.set(STORAGE_KEYS.APPOINTMENTS, cleanAppointments);
+
+    // 7. Clean notifications
+    const cleanNotifications = this.getNotifications();
+    this.set(STORAGE_KEYS.NOTIFICATIONS, cleanNotifications);
+
+    // 8. Clean clinical records, anthropometry, labs, plans
+    const cleanClinical = this.get(STORAGE_KEYS.CLINICAL_RECORDS, [] as ClinicalRecord[]).filter(
+      (c) => !combinedDeleted.includes(c.patientId) && activePatientIds.has(c.patientId)
+    );
+    this.set(STORAGE_KEYS.CLINICAL_RECORDS, cleanClinical);
+
+    const cleanAnthro = this.get(STORAGE_KEYS.ANTHROPOMETRY, [] as AnthropometricRecord[]).filter(
+      (a) => !combinedDeleted.includes(a.patientId) && activePatientIds.has(a.patientId)
+    );
+    this.set(STORAGE_KEYS.ANTHROPOMETRY, cleanAnthro);
+
+    const cleanLabs = this.get(STORAGE_KEYS.LABS, [] as LaboratoryResult[]).filter(
+      (l) => !combinedDeleted.includes(l.patientId) && activePatientIds.has(l.patientId)
+    );
+    this.set(STORAGE_KEYS.LABS, cleanLabs);
+
+    const cleanPlans = this.get(STORAGE_KEYS.PLANS, [] as NutritionPlan[]).filter(
+      (p) => !combinedDeleted.includes(p.patientId) && activePatientIds.has(p.patientId)
+    );
+    this.set(STORAGE_KEYS.PLANS, cleanPlans);
+
+    const cleanMealLogs = this.get(STORAGE_KEYS.MEAL_LOGS, [] as MealLog[]).filter(
+      (m) => !combinedDeleted.includes(m.patientId) && activePatientIds.has(m.patientId)
+    );
+    this.set(STORAGE_KEYS.MEAL_LOGS, cleanMealLogs);
+
+    const cleanWaterLogs = this.get(STORAGE_KEYS.WATER_LOGS, [] as WaterLog[]).filter(
+      (w) => !combinedDeleted.includes(w.patientId) && activePatientIds.has(w.patientId)
+    );
+    this.set(STORAGE_KEYS.WATER_LOGS, cleanWaterLogs);
+
+    const cleanSupplements = this.get(STORAGE_KEYS.SUPPLEMENTS, [] as SupplementPrescription[]).filter(
+      (s) => !combinedDeleted.includes(s.patientId) && activePatientIds.has(s.patientId)
+    );
+    this.set(STORAGE_KEYS.SUPPLEMENTS, cleanSupplements);
+
+    const cleanSupplementLogs = this.get(STORAGE_KEYS.SUPPLEMENT_LOGS, [] as SupplementLog[]).filter(
+      (s) => !combinedDeleted.includes(s.patientId) && activePatientIds.has(s.patientId)
+    );
+    this.set(STORAGE_KEYS.SUPPLEMENT_LOGS, cleanSupplementLogs);
+
+    const cleanExercises = this.get(STORAGE_KEYS.EXERCISE_ROUTINES, [] as ExerciseRoutine[]).filter(
+      (e) => !combinedDeleted.includes(e.patientId) && activePatientIds.has(e.patientId)
+    );
+    this.set(STORAGE_KEYS.EXERCISE_ROUTINES, cleanExercises);
+
+    // Sync cleaned collections to backend server
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/db/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deletedPatientIds: combinedDeleted,
+          collections: {
+            PATIENTS: cleanPatients,
+            SPECIALISTS: cleanSpecialists,
+            PAYMENTS: cleanPayments,
+            MESSAGES: cleanMessages,
+            APPOINTMENTS: cleanAppointments,
+            NOTIFICATIONS: cleanNotifications,
+            CLINICAL_RECORDS: cleanClinical,
+            ANTHROPOMETRY: cleanAnthro,
+            LABS: cleanLabs,
+            PLANS: cleanPlans,
+            MEAL_LOGS: cleanMealLogs,
+            WATER_LOGS: cleanWaterLogs,
+            SUPPLEMENTS: cleanSupplements,
+            SUPPLEMENT_LOGS: cleanSupplementLogs,
+            EXERCISE_ROUTINES: cleanExercises,
+          },
+        }),
+      }).catch(() => {});
     }
   },
 
@@ -2196,7 +599,38 @@ export const storageService = {
   },
 
   getSpecialists(): UserProfile[] {
-    return this.get(STORAGE_KEYS.SPECIALISTS, initialSpecialists);
+    const raw = this.get(STORAGE_KEYS.SPECIALISTS, initialSpecialists);
+    const clean = raw
+      .filter((s) => {
+        const name = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
+        if (s.id === 'user-dr-carlos' || s.email === 'dr.carlos@nutriluz.mx') return false;
+        if (name.includes('carlos mendoza')) return false;
+        if (name.includes('valeria') && !name.includes('luz elena')) return false;
+        if (s.email?.includes('valeria') && !s.email?.includes('luzelena')) return false;
+        return true;
+      })
+      .map((s) => {
+        if (s.id === 'user-dra-valeria' || s.firstName?.toLowerCase().includes('luz')) {
+          return {
+            ...s,
+            id: 'user-lic-luz-elena',
+            firstName: 'Luz Elena',
+            lastName: 'Alcocer',
+            email: 'luzelenaalcocer14@gmail.com',
+            professionalTitle: 'Lic. en Nutrición',
+            publicSlug: 'luz-elena-alcocer',
+          };
+        }
+        return s;
+      });
+
+    if (
+      clean.length === 0 ||
+      !clean.some((s) => s.email === 'luzelenaalcocer14@gmail.com' || s.firstName?.toLowerCase().includes('luz'))
+    ) {
+      clean.unshift(initialSpecialists[0]);
+    }
+    return clean;
   },
   saveSpecialists(specialists: UserProfile[]) {
     this.set(STORAGE_KEYS.SPECIALISTS, specialists);
@@ -2208,10 +642,18 @@ export const storageService = {
 
   getCurrentUser(): UserProfile {
     const user = this.get(STORAGE_KEYS.CURRENT_USER, initialSpecialists[0]);
-    if (!user || user.email === 'dra.valeria@nutriluz.mx' || user.firstName === 'Valeria') {
+    const isValeriaOrMock =
+      !user ||
+      user.email === 'dra.valeria@nutriluz.mx' ||
+      user.email === 'valeria.gomez@nutriluz.com' ||
+      user.firstName === 'Valeria' ||
+      user.id === 'user-dra-valeria';
+
+    if (isValeriaOrMock) {
       const updated: UserProfile = {
         ...initialSpecialists[0],
         ...user,
+        id: 'user-lic-luz-elena',
         firstName: 'Luz Elena',
         lastName: 'Alcocer',
         email: 'luzelenaalcocer14@gmail.com',
@@ -2256,7 +698,6 @@ export const storageService = {
       'luzelena',
       'nutriluz',
       'luzelenaalcocer',
-      'dra.valeria',
       currentUser.email?.toLowerCase(),
     ].filter(Boolean);
 
@@ -2383,9 +824,14 @@ export const storageService = {
   },
 
   getPatients(): Patient[] {
-    const raw = this.get(STORAGE_KEYS.PATIENTS, initialPatients);
-    const deletedIds = new Set(this.getDeletedPatientIds());
-    const filtered = deletedIds.size === 0 ? raw : raw.filter((p) => !deletedIds.has(p.id));
+    const raw = this.get(STORAGE_KEYS.PATIENTS, [] as Patient[]);
+    const TEST_PATIENT_IDS = new Set([
+      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
+      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
+      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123'
+    ]);
+    const deletedIds = new Set([...this.getDeletedPatientIds(), ...TEST_PATIENT_IDS]);
+    const filtered = raw.filter((p) => !deletedIds.has(p.id) && !TEST_PATIENT_IDS.has(p.id));
     return filtered.map((p) => ({
       ...p,
       portalAccessEnabled: p.portalAccessEnabled !== undefined ? p.portalAccessEnabled : true,
@@ -2509,28 +955,85 @@ export const storageService = {
   },
 
   getAppointments(): Appointment[] {
-    return this.get(STORAGE_KEYS.APPOINTMENTS, initialAppointments);
+    const raw = this.get(STORAGE_KEYS.APPOINTMENTS, [] as Appointment[]);
+    const TEST_PATIENT_IDS = new Set([
+      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
+      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
+      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123'
+    ]);
+    const deletedIds = new Set([...this.getDeletedPatientIds(), ...TEST_PATIENT_IDS]);
+    const activePatients = this.getPatients();
+    const activeIds = new Set(activePatients.map((p) => p.id));
+
+    return raw.filter(
+      (a) =>
+        !['app-1', 'app-2', 'app-3', 'app-4'].includes(a.id) &&
+        !deletedIds.has(a.patientId) &&
+        !TEST_PATIENT_IDS.has(a.patientId) &&
+        activeIds.has(a.patientId)
+    );
   },
   saveAppointments(apps: Appointment[]) {
     this.set(STORAGE_KEYS.APPOINTMENTS, apps);
   },
 
   getPayments(): PaymentRecord[] {
-    return this.get(STORAGE_KEYS.PAYMENTS, initialPayments);
+    const raw = this.get(STORAGE_KEYS.PAYMENTS, [] as PaymentRecord[]);
+    const TEST_PATIENT_IDS = new Set([
+      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
+      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
+      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123'
+    ]);
+    const deletedIds = new Set([...this.getDeletedPatientIds(), ...TEST_PATIENT_IDS]);
+    const activePatients = this.getPatients();
+    const activeIds = new Set(activePatients.map((p) => p.id));
+
+    return raw.filter(
+      (p) =>
+        !['pay-1', 'pay-2', 'pay-3', 'pay-4'].includes(p.id) &&
+        !deletedIds.has(p.patientId) &&
+        !TEST_PATIENT_IDS.has(p.patientId) &&
+        activeIds.has(p.patientId)
+    );
   },
   savePayments(pays: PaymentRecord[]) {
     this.set(STORAGE_KEYS.PAYMENTS, pays);
   },
 
   getMessages(): ChatMessage[] {
-    return this.get(STORAGE_KEYS.MESSAGES, initialMessages);
+    const raw = this.get(STORAGE_KEYS.MESSAGES, [] as ChatMessage[]);
+    const TEST_PATIENT_IDS = new Set([
+      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
+      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
+      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123',
+      'conv-ana'
+    ]);
+    const deletedIds = new Set([...this.getDeletedPatientIds(), ...TEST_PATIENT_IDS]);
+    const activePatients = this.getPatients();
+    const activeIds = new Set(activePatients.map((p) => p.id));
+
+    return raw.filter((m) => {
+      if (['msg-1', 'msg-2', 'msg-3'].includes(m.id)) return false;
+      if (m.conversationId === 'conv-ana') return false;
+      if (deletedIds.has(m.conversationId) || deletedIds.has(m.senderId)) return false;
+      if (TEST_PATIENT_IDS.has(m.conversationId) || TEST_PATIENT_IDS.has(m.senderId)) return false;
+      if (m.senderName?.toLowerCase().includes('valeria') || m.senderName?.toLowerCase().includes('carlos')) return false;
+      if (!activeIds.has(m.conversationId) && !activeIds.has(m.senderId)) return false;
+      return true;
+    });
   },
   saveMessages(msgs: ChatMessage[]) {
     this.set(STORAGE_KEYS.MESSAGES, msgs);
   },
 
   getNotifications(): AppNotification[] {
-    return this.get(STORAGE_KEYS.NOTIFICATIONS, initialNotifications);
+    const raw = this.get(STORAGE_KEYS.NOTIFICATIONS, [] as AppNotification[]);
+    const testKeywords = ['diego salazar', 'javier orozco', 'ana sofía', 'ana sofia', 'pat-diego-s', 'pat-ana-sofia', 'nutricopilot ai listo'];
+    return raw.filter((n) => {
+      if (['notif-1', 'notif-2', 'notif-3'].includes(n.id)) return false;
+      const text = `${n.title || ''} ${n.message || ''} ${n.actionLink || ''}`.toLowerCase();
+      return !testKeywords.some((k) => text.includes(k));
+    });
   },
   saveNotifications(notifs: AppNotification[]) {
     this.set(STORAGE_KEYS.NOTIFICATIONS, notifs);
@@ -2701,6 +1204,27 @@ export const storageService = {
 
     const labsList = this.getLabs().filter((l) => l.patientId !== patientId);
     this.saveLabs(labsList);
+
+    const paymentsList = this.getPayments().filter((p) => p.patientId !== patientId);
+    this.savePayments(paymentsList);
+
+    const messagesList = this.getMessages().filter((m) => m.conversationId !== patientId && m.senderId !== patientId);
+    this.saveMessages(messagesList);
+
+    const mealLogsList = this.getMealLogs().filter((m) => m.patientId !== patientId);
+    this.saveMealLogs(mealLogsList);
+
+    const waterLogsList = this.getWaterLogs().filter((w) => w.patientId !== patientId);
+    this.saveWaterLogs(waterLogsList);
+
+    const suppList = this.getSupplements().filter((s) => s.patientId !== patientId);
+    this.saveSupplements(suppList);
+
+    const suppLogsList = this.getSupplementLogs().filter((s) => s.patientId !== patientId);
+    this.saveSupplementLogs(suppLogsList);
+
+    const exList = this.getExerciseRoutines().filter((e) => e.patientId !== patientId);
+    this.saveExerciseRoutines(exList);
 
     // 3. Sync deletion to Supabase Cloud Database
     supabaseDb.deletePatient(patientId).catch((err) => {

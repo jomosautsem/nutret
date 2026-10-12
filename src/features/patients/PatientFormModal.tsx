@@ -970,7 +970,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       id: patientId,
       organizationId: patientToEdit?.organizationId || 'org-nutriluz-mexico',
       branchId: patientToEdit?.branchId || 'branch-cdmx-sur',
-      specialistId: patientToEdit?.specialistId || 'user-dra-valeria',
+      specialistId: patientToEdit?.specialistId || 'user-lic-luz-elena',
       userId: patientToEdit?.userId,
       firstName: cleanFirstName,
       lastName: cleanLastName,
@@ -1024,7 +1024,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     const clinicalRecordData: ClinicalRecord = {
       id: `clin-${Date.now()}`,
       patientId: savedPatient.id,
-      specialistId: savedPatient.specialistId || 'user-dra-valeria',
+      specialistId: savedPatient.specialistId || 'user-lic-luz-elena',
       familyHistory: {
         diabetes: anamnesisData.familyDiabetes,
         hypertension: anamnesisData.familyHypertension,
@@ -1114,7 +1114,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       id: `plan-${Date.now()}`,
       organizationId: savedPatient.organizationId,
       patientId: savedPatient.id,
-      specialistId: savedPatient.specialistId || 'user-dra-valeria',
+      specialistId: savedPatient.specialistId || 'user-lic-luz-elena',
       title: `Plan Nutricional: ${savedPatient.goal}`,
       goal: savedPatient.goal,
       status: 'ACTIVE',
@@ -1260,7 +1260,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Ej. Ana Sofía"
+                    placeholder="Ej. María Fernanda"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>

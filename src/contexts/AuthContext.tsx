@@ -61,6 +61,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let isMounted = true;
+    try {
+      storageService.purgeMockAndOrphanedData();
+    } catch {}
     const handleAuthChange = (e: any) => {
       if (typeof e.detail?.isAuthenticated === 'boolean') {
         setTimeout(() => {
@@ -180,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Priority 1: Supabase Cloud PostgreSQL
         if (supabase && isSupabaseConfigured) {
           const [cloudProfile, cloudOrg] = await Promise.all([
-            supabaseDb.getNutritionistProfile(currentUser.id || 'user-dra-valeria'),
+            supabaseDb.getNutritionistProfile(currentUser.id || 'user-lic-luz-elena'),
             supabaseDb.getOrganization(),
           ]);
 
