@@ -82,7 +82,7 @@ export interface NutriCopilotWizardProps {
   onOpenPdfEditor?: (plan: NutritionPlan) => void;
 }
 
-export type MetabolicFormula = 'MIFFLIN' | 'HARRIS' | 'CUNNINGHAM' | 'KATCH' | 'FAO_OMS';
+export type MetabolicFormula = 'MIFFLIN' | 'HARRIS' | 'CUNNINGHAM' | 'KATCH' | 'FAO_OMS' | 'SCHOFIELD' | 'HOSP' | 'AMB';
 
 const COMMON_CONDITIONS = [
   'Diabetes Tipo 2',
@@ -302,6 +302,12 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
         } else {
           return isFemale ? Math.round(10.5 * w + 596) : Math.round(13.5 * w + 487);
         }
+      case 'SCHOFIELD':
+        return Math.round(8.4 * w + 4.5 * h + 200);
+      case 'HOSP':
+        return Math.round(w * 30);
+      case 'AMB':
+        return Math.round(w * (isFemale ? 23 : 24));
       default:
         return Math.round(10 * w + 6.25 * h - 5 * a + (isFemale ? -161 : 5));
     }
@@ -826,6 +832,15 @@ export const NutriCopilotPlanWizardModal: React.FC<NutriCopilotWizardProps> = ({
       if (activePlan.generalInstructions) {
         setGeneralRecommendations(activePlan.generalInstructions);
         setIncludeGeneralRecommendations(true);
+      }
+    }
+
+    // Synchronize Metabolic Formula (Fórmula de Gasto Energético)
+    const rawFormula = (activePlan as any)?.metabolicFormula || (clin as any)?.metabolicFormula || (pat as any)?.metabolicFormula;
+    if (rawFormula) {
+      const normalized = String(rawFormula).toUpperCase() as MetabolicFormula;
+      if (['MIFFLIN', 'HARRIS', 'CUNNINGHAM', 'KATCH', 'FAO_OMS', 'SCHOFIELD', 'HOSP', 'AMB'].includes(normalized)) {
+        setMetabolicFormula(normalized);
       }
     }
 
@@ -1862,10 +1877,13 @@ Requisitos: Sé muy riguroso, profesional y empático. Incluye hidratación con 
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold"
                   >
                     <option value="MIFFLIN">Mifflin-St Jeor (Clínica / Recomendada)</option>
-                    <option value="HARRIS">Harris-Benedict (Clásica)</option>
-                    <option value="CUNNINGHAM">Cunningham (Basada en Masa Magra)</option>
-                    <option value="KATCH">Katch-McArdle (Atletas)</option>
-                    <option value="FAO_OMS">FAO / OMS / UNU</option>
+                    <option value="HARRIS">Harris-Benedict (Clásica / Roza & Shizgal)</option>
+                    <option value="CUNNINGHAM">Cunningham (Basada en Masa Magra - LBM)</option>
+                    <option value="KATCH">Katch-McArdle (Atletas y % Grasa)</option>
+                    <option value="FAO_OMS">FAO / OMS / UNU (Por Rangos de Edad)</option>
+                    <option value="SCHOFIELD">Schofield (Ecuación Ponderada OMS)</option>
+                    <option value="HOSP">Fórmula Rápida Hospitalaria (30 kcal/kg)</option>
+                    <option value="AMB">Fórmula Rápida Ambulatoria (24/23 kcal/kg)</option>
                   </select>
                 </div>
 

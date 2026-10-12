@@ -101,6 +101,7 @@ export interface Patient {
   assignedRecipeIds?: string[]; // IDs de recetas asignadas específicamente al paciente
   selectedPresetId?: string; // ID de la plantilla de prescripción rápida vinculada
   presetId?: string;
+  metabolicFormula?: string; // Fórmula predictiva de GEB seleccionada (Mifflin, Harris, Schofield, etc.)
   createdAt: string;
   updatedAt: string;
 }
@@ -346,6 +347,7 @@ export interface NutritionPlan {
   approvedBySpecialist: boolean;
   selectedPresetId?: string;
   presetId?: string;
+  metabolicFormula?: string;
   digitalSignatureApprovedAt?: string;
   createdAt: string;
   updatedAt: string;

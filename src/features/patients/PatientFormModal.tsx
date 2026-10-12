@@ -39,6 +39,8 @@ import {
   Save,
   PieChart,
   FileUp,
+  Flame,
+  Zap,
 } from 'lucide-react';
 import {
   Patient,
@@ -54,7 +56,7 @@ import { useToast } from '../../components/common/Toast';
 import { storageService } from '../../lib/storage';
 import { optimizeImage, uploadPatientPhotoToSupabase } from '../../lib/imageOptimizer';
 import { ClinicalPreset, INITIAL_CLINICAL_PRESETS } from '../ai_copilot/prescriptionPresetsData';
-import { SMAE_CONSTANTS, SmaeConstant } from '../../services/clinicalEngineSmae';
+import { SMAE_CONSTANTS, SmaeConstant, computeClinicalEngine, getOmsBmiClassification } from '../../services/clinicalEngineSmae';
 
 const AVATAR_PRESETS = [
   { label: 'Mujer 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', gender: 'F' },
@@ -135,6 +137,16 @@ export type ModalTabType =
   | 'macros'
   | 'credenciales'
   | 'foto';
+
+export type PredictiveFormulaKey =
+  | 'mifflin'
+  | 'harris'
+  | 'cunningham'
+  | 'katch'
+  | 'fao_oms'
+  | 'schofield'
+  | 'hosp'
+  | 'amb';
 
 interface PatientFormModalProps {
   isOpen: boolean;
@@ -264,7 +276,10 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
   // Presets & Templates
   const [presets, setPresets] = useState<ClinicalPreset[]>([]);
-  const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  // Fórmulas Predictivas de GEB (Mifflin, Harris, Cunningham, Katch, FAO/OMS, Schofield, Hosp, Amb)
+  const [selectedFormulaKey, setSelectedFormulaKey] = useState<PredictiveFormulaKey>('mifflin');
+  const [showFormulaComparison, setShowFormulaComparison] = useState(true);
   const [showNewTemplateModal, setShowNewTemplateModal] = useState(false);
   const [newTemplateForm, setNewTemplateForm] = useState({
     name: '',
@@ -449,9 +464,26 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
           setSelectedPresetId(null);
         }
       }
+
+      // Restore Predictive Formula
+      const existingFormula = (patientToEdit as any).metabolicFormula || (clinRec as any)?.metabolicFormula;
+      if (existingFormula) {
+        const lower = String(existingFormula).toLowerCase();
+        if (lower.includes('harris')) setSelectedFormulaKey('harris');
+        else if (lower.includes('cunningham')) setSelectedFormulaKey('cunningham');
+        else if (lower.includes('katch')) setSelectedFormulaKey('katch');
+        else if (lower.includes('fao') || lower.includes('fao_oms')) setSelectedFormulaKey('fao_oms');
+        else if (lower.includes('schofield')) setSelectedFormulaKey('schofield');
+        else if (lower.includes('hosp')) setSelectedFormulaKey('hosp');
+        else if (lower.includes('amb')) setSelectedFormulaKey('amb');
+        else setSelectedFormulaKey('mifflin');
+      } else {
+        setSelectedFormulaKey('mifflin');
+      }
     } else {
       // Defaults for new patient
       setSelectedPresetId(null);
+      setSelectedFormulaKey('mifflin');
       setFormData({
         firstName: '',
         lastName: '',
@@ -498,21 +530,104 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   const birthYear = formData.birthDate ? new Date(formData.birthDate).getFullYear() : 1995;
   const ageYears = isNaN(birthYear) ? 29 : Math.max(1, new Date().getFullYear() - birthYear);
 
-  // Harris-Benedict & Mifflin-St Jeor Energy Expenditure
-  const computedGeb = useMemo(() => {
-    const isMale = formData.gender === 'M';
-    if (isMale) {
-      // Mifflin: 10*peso + 6.25*talla - 5*edad + 5
-      return Math.round(10 * currentWeightNum + 6.25 * Number(formData.height) - 5 * ageYears + 5);
-    } else {
-      // Mifflin: 10*peso + 6.25*talla - 5*edad - 161
-      return Math.round(10 * currentWeightNum + 6.25 * Number(formData.height) - 5 * ageYears - 161);
+  // Clinical Engine Algorithmic Calculations (8 Ecuaciones Predictivas de GEB y GET)
+  const clinicalEngineData = useMemo(() => {
+    return computeClinicalEngine({
+      nombre: `${formData.firstName} ${formData.lastName}`.trim() || 'Paciente',
+      sexo: formData.gender === 'M' ? 'Masculino' : 'Femenino',
+      edad: ageYears,
+      peso: currentWeightNum,
+      talla_cm: Number(formData.height) || 165,
+      factor_actividad: activityFactor,
+      meta_kcal: targetKcal,
+      porcentaje_grasa: formData.bodyFatPct !== '' ? Number(formData.bodyFatPct) : undefined,
+      masa_muscular_kg: formData.muscleMassKg !== '' ? Number(formData.muscleMassKg) : undefined,
+      distribucion_macros: {
+        hc_pct: (carbsPct || 50) / 100,
+        prot_pct: (proteinPct || 25) / 100,
+        lip_pct: (fatPct || 25) / 100,
+      },
+    });
+  }, [formData.firstName, formData.lastName, formData.gender, ageYears, currentWeightNum, formData.height, activityFactor, targetKcal, carbsPct, proteinPct, fatPct, formData.bodyFatPct, formData.muscleMassKg]);
+
+  const currentFormulaInfo = useMemo(() => {
+    const est = clinicalEngineData.estimaciones_gasto_energetico;
+    switch (selectedFormulaKey) {
+      case 'harris':
+        return {
+          key: 'harris' as const,
+          name: 'Harris-Benedict',
+          subtitle: 'Revisión Roza & Shizgal',
+          geb: est.harris_benedict.formula_aplicable_al_sexo.geb,
+          get: est.harris_benedict.formula_aplicable_al_sexo.get,
+        };
+      case 'cunningham':
+        return {
+          key: 'cunningham' as const,
+          name: 'Cunningham',
+          subtitle: `Basada en Masa Magra LBM (${est.cunningham.lbm_kg} kg)`,
+          geb: est.cunningham.geb,
+          get: est.cunningham.get,
+        };
+      case 'katch':
+        return {
+          key: 'katch' as const,
+          name: 'Katch-McArdle',
+          subtitle: `Atletas y Masa Magra (${est.katch_mcardle.lbm_kg} kg)`,
+          geb: est.katch_mcardle.geb,
+          get: est.katch_mcardle.get,
+        };
+      case 'fao_oms':
+        return {
+          key: 'fao_oms' as const,
+          name: 'FAO / OMS / UNU',
+          subtitle: 'Ecuaciones por rangos de edad',
+          geb: est.fao_oms.formula_aplicable_al_sexo.geb,
+          get: est.fao_oms.formula_aplicable_al_sexo.get,
+        };
+      case 'schofield':
+        return {
+          key: 'schofield' as const,
+          name: 'Schofield (OMS)',
+          subtitle: '8.4×peso + 4.5×talla + 200',
+          geb: est.schofield.geb,
+          get: est.schofield.get,
+        };
+      case 'hosp':
+        return {
+          key: 'hosp' as const,
+          name: 'Fórmula Rápida Hospitalaria',
+          subtitle: '30 kcal/kg peso',
+          geb: est.formula_rapida_hospitalaria.geb_hombre,
+          get: est.formula_rapida_hospitalaria.geb_hombre,
+        };
+      case 'amb':
+        return {
+          key: 'amb' as const,
+          name: 'Fórmula Rápida Ambulatoria',
+          subtitle: formData.gender === 'M' ? '24 kcal/kg peso' : '23 kcal/kg peso',
+          geb: est.formula_rapida_ambulatoria.geb_aplicable_al_sexo,
+          get: est.formula_rapida_ambulatoria.geb_aplicable_al_sexo,
+        };
+      case 'mifflin':
+      default:
+        return {
+          key: 'mifflin' as const,
+          name: 'Mifflin-St. Jeor',
+          subtitle: 'Recomendada (Gold Standard)',
+          geb: est.mifflin_st_jeor.formula_aplicable_al_sexo.geb,
+          get: est.mifflin_st_jeor.formula_aplicable_al_sexo.get,
+        };
     }
-  }, [formData.gender, currentWeightNum, formData.height, ageYears]);
+  }, [clinicalEngineData, selectedFormulaKey, formData.gender]);
+
+  const computedGeb = useMemo(() => {
+    return Math.round(currentFormulaInfo.geb);
+  }, [currentFormulaInfo]);
 
   const computedGet = useMemo(() => {
-    return Math.round(computedGeb * activityFactor);
-  }, [computedGeb, activityFactor]);
+    return Math.round(currentFormulaInfo.get);
+  }, [currentFormulaInfo]);
 
   // Sync target kcal initially if not manually modified
   useEffect(() => {
@@ -520,6 +635,51 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       setTargetKcal(computedGet);
     }
   }, [computedGet, isEditing]);
+
+  const handleSelectFormula = (kcal: number, formulaName: string, formulaKey: PredictiveFormulaKey) => {
+    setSelectedFormulaKey(formulaKey);
+    setTargetKcal(kcal);
+    showToast(
+      'Fórmula Aplicada',
+      `Meta calórica sincronizada con ${formulaName}: ${kcal} kcal/día (Factor FA = ${activityFactor}).`,
+      'success'
+    );
+  };
+
+  const handleFormulaChange = (newKey: PredictiveFormulaKey) => {
+    setSelectedFormulaKey(newKey);
+    const est = clinicalEngineData.estimaciones_gasto_energetico;
+    let targetKcalVal = Math.round(est.mifflin_st_jeor.formula_aplicable_al_sexo.get);
+    let formulaName = 'Mifflin-St. Jeor';
+    if (newKey === 'harris') {
+      targetKcalVal = Math.round(est.harris_benedict.formula_aplicable_al_sexo.get);
+      formulaName = 'Harris-Benedict';
+    } else if (newKey === 'cunningham') {
+      targetKcalVal = Math.round(est.cunningham.get);
+      formulaName = 'Cunningham';
+    } else if (newKey === 'katch') {
+      targetKcalVal = Math.round(est.katch_mcardle.get);
+      formulaName = 'Katch-McArdle';
+    } else if (newKey === 'fao_oms') {
+      targetKcalVal = Math.round(est.fao_oms.formula_aplicable_al_sexo.get);
+      formulaName = 'FAO / OMS / UNU';
+    } else if (newKey === 'schofield') {
+      targetKcalVal = Math.round(est.schofield.get);
+      formulaName = 'Schofield';
+    } else if (newKey === 'hosp') {
+      targetKcalVal = Math.round(est.formula_rapida_hospitalaria.geb_hombre);
+      formulaName = 'Fórmula Rápida Hospitalaria';
+    } else if (newKey === 'amb') {
+      targetKcalVal = Math.round(est.formula_rapida_ambulatoria.geb_aplicable_al_sexo);
+      formulaName = 'Fórmula Rápida Ambulatoria';
+    }
+    setTargetKcal(targetKcalVal);
+    showToast(
+      'Fórmula Seleccionada',
+      `${formulaName} activada: ${targetKcalVal} kcal/día (Factor FA = ${activityFactor}).`,
+      'success'
+    );
+  };
 
   // STRICT MACRONUTRIENT SUM VALIDATION (MUST BE EXACTLY 100%)
   const totalMacrosPct = Number((carbsPct + proteinPct + fatPct).toFixed(1));
@@ -836,6 +996,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       portalPassword: formData.portalPassword.trim() || 'Nutri2026!',
       selectedPresetId: selectedPresetId || undefined,
       presetId: selectedPresetId || undefined,
+      metabolicFormula: selectedFormulaKey,
       createdAt: patientToEdit?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -967,6 +1128,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       generalInstructions: `Distribución de macronutrientes: ${carbsPct}% Carbohidratos (${carbsGrams}g), ${proteinPct}% Proteínas (${proteinGrams}g, ${proteinGPerKg} g/kg), ${fatPct}% Grasas (${fatGrams}g).`,
       selectedPresetId: selectedPresetId || undefined,
       presetId: selectedPresetId || undefined,
+      metabolicFormula: selectedFormulaKey,
       days: [
         {
           id: `day-1`,
@@ -1977,38 +2139,696 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
               </div>
 
               {/* Fórmulas de Gasto Energético & Meta Calórica */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                <div>
-                  <span className="block text-[10px] text-slate-400 font-bold mb-0.5">GEB (Mifflin-St Jeor)</span>
-                  <span className="text-sm font-extrabold text-slate-900 dark:text-white">{computedGeb} kcal</span>
-                  <span className="text-[10px] text-slate-400 block">Gasto Basal Basado en Peso y Talla</span>
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                        Fórmula de Gasto Basal (GEB)
+                      </label>
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        ACTIVA
+                      </span>
+                    </div>
+                    <select
+                      value={selectedFormulaKey}
+                      onChange={(e) => handleFormulaChange(e.target.value as PredictiveFormulaKey)}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-emerald-300 dark:border-emerald-800 text-xs font-bold text-slate-900 dark:text-white shadow-xs focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="mifflin">Mifflin-St. Jeor (Clínica / Recomendada)</option>
+                      <option value="harris">Harris-Benedict (Clásica / Roza & Shizgal)</option>
+                      <option value="cunningham">Cunningham (Basada en Masa Magra - LBM)</option>
+                      <option value="katch">Katch-McArdle (Atletas y % Grasa)</option>
+                      <option value="fao_oms">FAO / OMS / UNU (Por Rangos de Edad)</option>
+                      <option value="schofield">Schofield (Ecuación Ponderada OMS)</option>
+                      <option value="hosp">Fórmula Rápida Hospitalaria (30 kcal/kg)</option>
+                      <option value="amb">Fórmula Rápida Ambulatoria (24/23 kcal/kg)</option>
+                    </select>
+                    <div className="flex items-baseline justify-between mt-1.5">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-extrabold text-slate-900 dark:text-white">{computedGeb} kcal</span>
+                        <span className="text-[10px] text-slate-400">GEB base</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                        GET: {computedGet} kcal
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                      {currentFormulaInfo.subtitle}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="block text-[10px] text-slate-500 font-bold">Factor de Actividad (FA)</label>
+                      <span className="text-[9px] font-mono font-bold text-slate-500">FA = {activityFactor}</span>
+                    </div>
+                    <select
+                      value={activityFactor}
+                      onChange={(e) => {
+                        const newFa = Number(e.target.value);
+                        setActivityFactor(newFa);
+                        const est = computeClinicalEngine({
+                          nombre: `${formData.firstName} ${formData.lastName}`.trim() || 'Paciente',
+                          sexo: formData.gender === 'M' ? 'Masculino' : 'Femenino',
+                          edad: ageYears,
+                          peso: currentWeightNum,
+                          talla_cm: Number(formData.height) || 165,
+                          factor_actividad: newFa,
+                          porcentaje_grasa: formData.bodyFatPct !== '' ? Number(formData.bodyFatPct) : undefined,
+                          masa_muscular_kg: formData.muscleMassKg !== '' ? Number(formData.muscleMassKg) : undefined,
+                        }).estimaciones_gasto_energetico;
+
+                        let newGet = Math.round(est.mifflin_st_jeor.formula_aplicable_al_sexo.get);
+                        if (selectedFormulaKey === 'harris') newGet = Math.round(est.harris_benedict.formula_aplicable_al_sexo.get);
+                        else if (selectedFormulaKey === 'cunningham') newGet = Math.round(est.cunningham.get);
+                        else if (selectedFormulaKey === 'katch') newGet = Math.round(est.katch_mcardle.get);
+                        else if (selectedFormulaKey === 'fao_oms') newGet = Math.round(est.fao_oms.formula_aplicable_al_sexo.get);
+                        else if (selectedFormulaKey === 'schofield') newGet = Math.round(est.schofield.get);
+                        else if (selectedFormulaKey === 'hosp') newGet = Math.round(est.formula_rapida_hospitalaria.geb_hombre);
+                        else if (selectedFormulaKey === 'amb') newGet = Math.round(est.formula_rapida_ambulatoria.geb_aplicable_al_sexo);
+
+                        setTargetKcal(newGet);
+                      }}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                    >
+                      <option value={1.2}>Sedentario (x1.2)</option>
+                      <option value={1.375}>Ligera (x1.375)</option>
+                      <option value={1.55}>Moderada (x1.55)</option>
+                      <option value={1.725}>Intensa (x1.725)</option>
+                      <option value={1.9}>Muy Intensa (x1.9)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Meta Calórica Diaria *</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="25"
+                        value={targetKcal}
+                        onChange={(e) => setTargetKcal(Number(e.target.value))}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-sm text-right pr-12 shadow-xs"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                        kcal
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Factor de Actividad</label>
-                  <select
-                    value={activityFactor}
-                    onChange={(e) => setActivityFactor(Number(e.target.value))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px]">
+                  <span className="text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-amber-500" />
+                    Comparativa de 8 Fórmulas Predictivas de Gasto Energético
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormulaComparison(!showFormulaComparison)}
+                    className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer text-[11px]"
                   >
-                    <option value={1.2}>Sedentario (x1.2)</option>
-                    <option value={1.375}>Ligera (x1.375)</option>
-                    <option value={1.55}>Moderada (x1.55)</option>
-                    <option value={1.725}>Intensa (x1.725)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Meta Calórica Diaria *</label>
-                  <input
-                    type="number"
-                    step="50"
-                    value={targetKcal}
-                    onChange={(e) => setTargetKcal(Number(e.target.value))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-xs text-right"
-                  />
+                    {showFormulaComparison ? 'Ocultar Ecuaciones ▲' : 'Ver Ecuaciones y Comparativa (8) ▼'}
+                  </button>
                 </div>
               </div>
+
+              {/* COMPARATIVA DE LAS 5 FÓRMULAS & ANTROPOMETRÍA CLÍNICA */}
+              {showFormulaComparison && (
+                <div className="space-y-3 animate-fade-in">
+                  {/* A. Antropometría e Indicadores Clínicos Deterministas */}
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 dark:border-slate-700 pb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Scale className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="font-extrabold text-[11px] text-slate-800 dark:text-white">
+                          A. Antropometría e Indicadores Clínicos Deterministas
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-medium">Ecuaciones OMS y Broca/Metropolitana</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 block font-semibold">Conversión Estatura:</span>
+                        <span className="font-extrabold text-slate-900 dark:text-white text-sm">{clinicalEngineData.paciente.talla_m} m</span>
+                        <span className="text-[10px] text-slate-400 block">({clinicalEngineData.paciente.talla_cm} cm)</span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 block font-semibold">Índice de Masa Corporal (IMC):</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-extrabold text-slate-900 dark:text-white text-sm">{clinicalEngineData.paciente.imc} kg/m²</span>
+                          <span className={`px-1.5 py-0.2 rounded-md text-[9px] font-extrabold ${
+                            clinicalEngineData.paciente.imc < 18.5 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' :
+                            clinicalEngineData.paciente.imc < 25 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' :
+                            clinicalEngineData.paciente.imc < 30 ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300' :
+                            'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                          }`}>
+                            {clinicalEngineData.paciente.clasificacion_imc}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 block font-semibold">Peso Teórico ({clinicalEngineData.paciente.sexo}):</span>
+                        <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">{clinicalEngineData.paciente.peso_teorico_kg} kg</span>
+                        <span className="text-[10px] text-slate-400 block">Fórmula: (talla_m²) × {formData.gender === 'M' ? '23.0' : '21.5'}</span>
+                      </div>
+
+                      {(() => {
+                        const diff = Number((currentWeightNum - clinicalEngineData.paciente.peso_teorico_kg).toFixed(2));
+                        return (
+                          <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700">
+                            <span className="text-[10px] text-slate-400 block font-semibold">Variación vs Peso Teórico:</span>
+                            <span className={`font-extrabold text-sm ${diff > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
+                              {diff > 0 ? `+${diff}` : diff} kg
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">
+                              {diff > 0 ? 'Por encima de peso ideal' : 'Por debajo de peso ideal'}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* B. Ecuaciones Predictivas de GEB y Gasto Energético Total (GET) */}
+                  <div className="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-100 dark:border-slate-700 pb-2">
+                      <div>
+                        <h4 className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-amber-500" />
+                          <span>B. Ecuaciones Predictivas de GEB y Gasto Energético Total (GET)</span>
+                        </h4>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          GET = GEB × factor_actividad ({activityFactor}). Haz clic en &ldquo;⚡ Aplicar al Plan&rdquo; para sincronizar la meta calórica.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
+                        Factor FA = {activityFactor}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                      {/* 1. Mifflin-St. Jeor (Gold Standard) */}
+                      {(() => {
+                        const mif = clinicalEngineData.estimaciones_gasto_energetico.mifflin_st_jeor;
+                        const isSelected = selectedFormulaKey === 'mifflin';
+                        const mifGetRounded = Math.round(mif.formula_aplicable_al_sexo.get);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(mifGetRounded, 'Mifflin-St. Jeor', 'mifflin')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">1. Mifflin-St. Jeor</h5>
+                                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Recomendada (Gold Standard)</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>GEB ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}):</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{mif.formula_aplicable_al_sexo.geb} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                                  <span>GET ({activityFactor} FA):</span>
+                                  <strong className="font-mono text-sm">{mif.formula_aplicable_al_sexo.get} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>H: {mif.get_hombre} | M: {mif.get_mujer} kcal</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(mifGetRounded, 'Mifflin-St. Jeor', 'mifflin');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({mifGetRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 2. Harris-Benedict */}
+                      {(() => {
+                        const hb = clinicalEngineData.estimaciones_gasto_energetico.harris_benedict;
+                        const isSelected = selectedFormulaKey === 'harris';
+                        const hbGetRounded = Math.round(hb.formula_aplicable_al_sexo.get);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(hbGetRounded, 'Harris-Benedict', 'harris')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">2. Harris-Benedict</h5>
+                                  <span className="text-[10px] text-slate-400">Revisión Roza & Shizgal</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>GEB ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}):</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{hb.formula_aplicable_al_sexo.geb} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                                  <span>GET ({activityFactor} FA):</span>
+                                  <strong className="font-mono text-sm">{hb.formula_aplicable_al_sexo.get} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>H: {hb.get_hombre} | M: {hb.get_mujer} kcal</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(hbGetRounded, 'Harris-Benedict', 'harris');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({hbGetRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 3. Cunningham (Masa Magra / LBM) */}
+                      {(() => {
+                        const cun = clinicalEngineData.estimaciones_gasto_energetico.cunningham;
+                        const isSelected = selectedFormulaKey === 'cunningham';
+                        const cunGetRounded = Math.round(cun.get);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(cunGetRounded, 'Cunningham', 'cunningham')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">3. Cunningham</h5>
+                                  <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Basada en Masa Magra (LBM)</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>LBM estimado:</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{cun.lbm_kg} kg</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>GEB (500 + 22×LBM):</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{cun.geb} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                                  <span>GET ({activityFactor} FA):</span>
+                                  <strong className="font-mono text-sm">{cun.get} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>Ideal recomposición corporal</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(cunGetRounded, 'Cunningham', 'cunningham');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({cunGetRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 4. Katch-McArdle (Atletas & % Grasa) */}
+                      {(() => {
+                        const kat = clinicalEngineData.estimaciones_gasto_energetico.katch_mcardle;
+                        const isSelected = selectedFormulaKey === 'katch';
+                        const katGetRounded = Math.round(kat.get);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(katGetRounded, 'Katch-McArdle', 'katch')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">4. Katch-McArdle</h5>
+                                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Atletas y Composición Corporal</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>Masa Magra (LBM):</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{kat.lbm_kg} kg</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>GEB (370 + 21.6×LBM):</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{kat.geb} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                                  <span>GET ({activityFactor} FA):</span>
+                                  <strong className="font-mono text-sm">{kat.get} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>{formData.bodyFatPct ? `% Grasa: ${formData.bodyFatPct}%` : 'Estimación somatométrica'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(katGetRounded, 'Katch-McArdle', 'katch');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({katGetRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 5. FAO / OMS / UNU */}
+                      {(() => {
+                        const fao = clinicalEngineData.estimaciones_gasto_energetico.fao_oms;
+                        const isSelected = selectedFormulaKey === 'fao_oms';
+                        const faoGetRounded = Math.round(fao.formula_aplicable_al_sexo.get);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(faoGetRounded, 'FAO / OMS / UNU', 'fao_oms')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">5. FAO / OMS / UNU</h5>
+                                  <span className="text-[10px] text-slate-400">Ponderada por grupo etario</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>GEB ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}):</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{fao.formula_aplicable_al_sexo.geb} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                                  <span>GET ({activityFactor} FA):</span>
+                                  <strong className="font-mono text-sm">{fao.formula_aplicable_al_sexo.get} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>H: {fao.get_hombre} | M: {fao.get_mujer} kcal</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(faoGetRounded, 'FAO / OMS / UNU', 'fao_oms');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({faoGetRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 6. Schofield */}
+                      {(() => {
+                        const sch = clinicalEngineData.estimaciones_gasto_energetico.schofield;
+                        const isSelected = selectedFormulaKey === 'schofield';
+                        const schGetRounded = Math.round(sch.get);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(schGetRounded, 'Schofield', 'schofield')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">6. Schofield</h5>
+                                  <span className="text-[10px] text-slate-400">8.4×peso + 4.5×talla + 200</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>GEB Base:</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{sch.geb} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                                  <span>GET ({activityFactor} FA):</span>
+                                  <strong className="font-mono text-sm">{sch.get} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>Ecuación ponderada OMS</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(schGetRounded, 'Schofield', 'schofield');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({schGetRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 7. Fórmula Rápida Hospitalaria */}
+                      {(() => {
+                        const hosp = clinicalEngineData.estimaciones_gasto_energetico.formula_rapida_hospitalaria;
+                        const isSelected = selectedFormulaKey === 'hosp';
+                        const hospRounded = Math.round(hosp.geb_hombre);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(hospRounded, 'Fórmula Rápida Hospitalaria', 'hosp')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">7. Rápida Hospitalaria</h5>
+                                  <span className="text-[10px] text-slate-400">GEB = peso × 30.0 kcal/kg</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                  <span>Cálculo Directo:</span>
+                                  <strong className="font-mono text-slate-900 dark:text-white">{hosp.geb_hombre} kcal</strong>
+                                </div>
+                                <div className="flex justify-between items-center text-teal-700 dark:text-teal-400 font-bold">
+                                  <span>Meta Estimada:</span>
+                                  <strong className="font-mono text-sm">{hosp.geb_hombre} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>Guía rápida en estancia clínica</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(hospRounded, 'Fórmula Rápida Hospitalaria', 'hosp');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({hospRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 8. Fórmula Rápida Ambulatoria */}
+                      {(() => {
+                        const amb = clinicalEngineData.estimaciones_gasto_energetico.formula_rapida_ambulatoria;
+                        const isSelected = selectedFormulaKey === 'amb';
+                        const ambRounded = Math.round(amb.geb_aplicable_al_sexo);
+                        return (
+                          <div
+                            onClick={() => handleSelectFormula(ambRounded, 'Fórmula Rápida Ambulatoria', 'amb')}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <div>
+                                  <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">8. Rápida Ambulatoria</h5>
+                                  <span className="text-[10px] text-slate-400">H: 24 kcal/kg • M: 23 kcal/kg</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                    ACTIVA
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-slate-600 dark:text-slate-300 text-[11px]">
+                                  <span>H (24×kg): <strong className="font-mono">{amb.geb_hombre}</strong></span>
+                                  <span>M (23×kg): <strong className="font-mono">{amb.geb_mujer}</strong></span>
+                                </div>
+                                <div className="flex justify-between items-center text-teal-700 dark:text-teal-400 font-bold">
+                                  <span>Aplicable ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}):</span>
+                                  <strong className="font-mono text-sm">{amb.geb_aplicable_al_sexo} kcal</strong>
+                                </div>
+                                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                                  <span>Consulta ambulatoria 1er nivel</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFormula(ambRounded, 'Fórmula Rápida Ambulatoria', 'amb');
+                              }}
+                              className={`mt-2.5 w-full py-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Flame className="w-3 h-3 text-amber-300" />
+                              <span>⚡ Aplicar ({ambRounded} kcal)</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* SECCIÓN ESTRICTA: DISTRIBUCIÓN SUGERIDA DE MACRONUTRIENTES (EXACTAMENTE 100%) */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">

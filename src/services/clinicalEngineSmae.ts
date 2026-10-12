@@ -19,6 +19,8 @@ export interface ClinicalEngineInput {
   talla_cm: number; // cm
   factor_actividad?: number; // default: 1.0
   meta_kcal?: number; // Opcional
+  porcentaje_grasa?: number; // % grasa corporal (opcional para Cunningham y Katch)
+  masa_muscular_kg?: number; // Masa muscular / magra en kg (opcional)
   distribucion_macros?: {
     hc_pct: number;
     prot_pct: number;
@@ -57,6 +59,26 @@ export interface ClinicalEngineOutput {
       };
     };
     mifflin_st_jeor: {
+      geb_hombre: number;
+      get_hombre: number;
+      geb_mujer: number;
+      get_mujer: number;
+      formula_aplicable_al_sexo: {
+        geb: number;
+        get: number;
+      };
+    };
+    cunningham: {
+      lbm_kg: number;
+      geb: number;
+      get: number;
+    };
+    katch_mcardle: {
+      lbm_kg: number;
+      geb: number;
+      get: number;
+    };
+    fao_oms: {
       geb_hombre: number;
       get_hombre: number;
       geb_mujer: number;
@@ -194,16 +216,50 @@ export function computeClinicalEngine(input: ClinicalEngineInput): ClinicalEngin
   const mif_geb_mujer = Number((10.0 * peso + 6.25 * talla_cm - 5.0 * edad - 161.0).toFixed(2));
   const mif_get_mujer = Number((mif_geb_mujer * factor_actividad).toFixed(2));
 
-  // 3. Schofield
+  // 3. Cunningham (Basada en Masa Libre de Grasa / LBM)
+  // GEB = 500 + (22.0 * LBM_kg)
+  const isFemale = sexo === 'Femenino';
+  const pctGrasa = input.porcentaje_grasa !== undefined && Number(input.porcentaje_grasa) > 0 ? Number(input.porcentaje_grasa) : undefined;
+  const masaMuscular = input.masa_muscular_kg !== undefined && Number(input.masa_muscular_kg) > 0 ? Number(input.masa_muscular_kg) : undefined;
+  const lbm = masaMuscular !== undefined
+    ? masaMuscular
+    : (pctGrasa !== undefined ? Number((peso * (1 - pctGrasa / 100)).toFixed(2)) : Number((peso * (isFemale ? 0.72 : 0.82)).toFixed(2)));
+  const cunningham_geb = Number((500.0 + 22.0 * lbm).toFixed(2));
+  const cunningham_get = Number((cunningham_geb * factor_actividad).toFixed(2));
+
+  // 4. Katch-McArdle (Atletas y Composición Corporal)
+  // GEB = 370 + (21.6 * LBM_kg)
+  const katch_geb = Number((370.0 + 21.6 * lbm).toFixed(2));
+  const katch_get = Number((katch_geb * factor_actividad).toFixed(2));
+
+  // 5. FAO / OMS / UNU (Por rangos de edad)
+  let fao_geb_h = 0;
+  let fao_geb_m = 0;
+  if (edad < 30) {
+    fao_geb_h = 15.3 * peso + 679;
+    fao_geb_m = 14.7 * peso + 496;
+  } else if (edad <= 60) {
+    fao_geb_h = 11.6 * peso + 879;
+    fao_geb_m = 8.7 * peso + 829;
+  } else {
+    fao_geb_h = 13.5 * peso + 487;
+    fao_geb_m = 10.5 * peso + 596;
+  }
+  const fao_geb_hombre = Number(fao_geb_h.toFixed(2));
+  const fao_get_hombre = Number((fao_geb_hombre * factor_actividad).toFixed(2));
+  const fao_geb_mujer = Number(fao_geb_m.toFixed(2));
+  const fao_get_mujer = Number((fao_geb_mujer * factor_actividad).toFixed(2));
+
+  // 6. Schofield
   // GEB = (8.4 * peso) + (4.5 * talla_cm) + 200.0
   const schofield_geb = Number((8.4 * peso + 4.5 * talla_cm + 200.0).toFixed(2));
   const schofield_get = Number((schofield_geb * factor_actividad).toFixed(2));
 
-  // 4. Fórmula Rápida Hospitalaria
+  // 7. Fórmula Rápida Hospitalaria
   // Hombre: GEB = peso * 30.0
   const hosp_geb_hombre = Number((peso * 30.0).toFixed(2));
 
-  // 5. Fórmula Rápida Ambulatoria
+  // 8. Fórmula Rápida Ambulatoria
   // Hombre: GEB = peso * 24.0
   // Mujer: GEB = peso * 23.0
   const amb_geb_hombre = Number((peso * 24.0).toFixed(2));
@@ -267,6 +323,26 @@ export function computeClinicalEngine(input: ClinicalEngineInput): ClinicalEngin
         formula_aplicable_al_sexo: {
           geb: sexo === 'Masculino' ? mif_geb_hombre : mif_geb_mujer,
           get: sexo === 'Masculino' ? mif_get_hombre : mif_get_mujer,
+        },
+      },
+      cunningham: {
+        lbm_kg: lbm,
+        geb: cunningham_geb,
+        get: cunningham_get,
+      },
+      katch_mcardle: {
+        lbm_kg: lbm,
+        geb: katch_geb,
+        get: katch_get,
+      },
+      fao_oms: {
+        geb_hombre: fao_geb_hombre,
+        get_hombre: fao_get_hombre,
+        geb_mujer: fao_geb_mujer,
+        get_mujer: fao_get_mujer,
+        formula_aplicable_al_sexo: {
+          geb: sexo === 'Masculino' ? fao_geb_hombre : fao_geb_mujer,
+          get: sexo === 'Masculino' ? fao_get_hombre : fao_get_mujer,
         },
       },
       schofield: {

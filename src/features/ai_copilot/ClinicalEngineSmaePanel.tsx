@@ -479,7 +479,150 @@ export const ClinicalEngineSmaePanel: React.FC<ClinicalEngineSmaePanelProps> = (
             );
           })()}
 
-          {/* 3. Schofield */}
+          {/* 3. Cunningham (Masa Magra / LBM) */}
+          {(() => {
+            const cun = estimaciones_gasto_energetico.cunningham;
+            const isMatch = Math.round(cun.get) === cuadro_dietosintetico.meta_kcal;
+            return (
+              <div className={`p-3.5 rounded-xl border transition-all ${
+                isMatch
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 ring-1 ring-emerald-400'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700'
+              }`}>
+                <div className="flex items-start justify-between gap-1 mb-2">
+                  <div>
+                    <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">3. Cunningham</h5>
+                    <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Basada en Masa Magra (LBM)</span>
+                  </div>
+                  {isMatch && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white">
+                      ACTIVA
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                    <span>LBM estimado:</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{cun.lbm_kg} kg</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                    <span>GEB (500 + 22×LBM):</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{cun.geb} kcal</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                    <span>GET ({localActivityFactor} FA):</span>
+                    <strong className="font-mono text-base">{cun.get} kcal</strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormula(Math.round(cun.get), 'Cunningham')}
+                  className="mt-3 w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all shadow-2xs"
+                >
+                  <Flame className="w-3 h-3 text-amber-300" />
+                  <span>⚡ Aplicar al Plan ({Math.round(cun.get)} kcal)</span>
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* 4. Katch-McArdle (Atletas & % Grasa) */}
+          {(() => {
+            const kat = estimaciones_gasto_energetico.katch_mcardle;
+            const isMatch = Math.round(kat.get) === cuadro_dietosintetico.meta_kcal;
+            return (
+              <div className={`p-3.5 rounded-xl border transition-all ${
+                isMatch
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 ring-1 ring-emerald-400'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700'
+              }`}>
+                <div className="flex items-start justify-between gap-1 mb-2">
+                  <div>
+                    <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">4. Katch-McArdle</h5>
+                    <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Atletas y Composición Corporal</span>
+                  </div>
+                  {isMatch && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white">
+                      ACTIVA
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                    <span>LBM estimado:</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{kat.lbm_kg} kg</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                    <span>GEB (370 + 21.6×LBM):</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{kat.geb} kcal</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                    <span>GET ({localActivityFactor} FA):</span>
+                    <strong className="font-mono text-base">{kat.get} kcal</strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormula(Math.round(kat.get), 'Katch-McArdle')}
+                  className="mt-3 w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all shadow-2xs"
+                >
+                  <Flame className="w-3 h-3 text-amber-300" />
+                  <span>⚡ Aplicar al Plan ({Math.round(kat.get)} kcal)</span>
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* 5. FAO / OMS / UNU */}
+          {(() => {
+            const fao = estimaciones_gasto_energetico.fao_oms;
+            const isMatch = Math.round(fao.formula_aplicable_al_sexo.get) === cuadro_dietosintetico.meta_kcal;
+            return (
+              <div className={`p-3.5 rounded-xl border transition-all ${
+                isMatch
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 ring-1 ring-emerald-400'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700'
+              }`}>
+                <div className="flex items-start justify-between gap-1 mb-2">
+                  <div>
+                    <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">5. FAO / OMS / UNU</h5>
+                    <span className="text-[10px] text-slate-400">Ponderada por grupo etario</span>
+                  </div>
+                  {isMatch && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white">
+                      ACTIVA
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                    <span>GEB ({paciente.sexo}):</span>
+                    <strong className="font-mono text-slate-900 dark:text-white">{fao.formula_aplicable_al_sexo.geb} kcal</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
+                    <span>GET ({localActivityFactor} FA):</span>
+                    <strong className="font-mono text-base">{fao.formula_aplicable_al_sexo.get} kcal</strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormula(Math.round(fao.formula_aplicable_al_sexo.get), 'FAO / OMS / UNU')}
+                  className="mt-3 w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all shadow-2xs"
+                >
+                  <Flame className="w-3 h-3 text-amber-300" />
+                  <span>⚡ Aplicar al Plan ({Math.round(fao.formula_aplicable_al_sexo.get)} kcal)</span>
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* 6. Schofield */}
           {(() => {
             const sch = estimaciones_gasto_energetico.schofield;
             const isMatch = Math.round(sch.get) === cuadro_dietosintetico.meta_kcal;
