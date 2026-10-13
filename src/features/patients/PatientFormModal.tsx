@@ -41,6 +41,8 @@ import {
   FileUp,
   Flame,
   Zap,
+  Unlock,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   Patient,
@@ -57,6 +59,16 @@ import { storageService } from '../../lib/storage';
 import { optimizeImage, uploadPatientPhotoToSupabase } from '../../lib/imageOptimizer';
 import { ClinicalPreset, INITIAL_CLINICAL_PRESETS } from '../ai_copilot/prescriptionPresetsData';
 import { SMAE_CONSTANTS, SmaeConstant, computeClinicalEngine, getOmsBmiClassification } from '../../services/clinicalEngineSmae';
+import {
+  calculateSmaeTotals,
+  calculateDerivedTargetGrams,
+  optimizeSingleMacro,
+  balanceAllMacros,
+  distributeSmaePortionsAcrossMeals,
+  OptimizationResult,
+  MealPortionDistribution,
+} from '../../services/smaeOptimizer';
+import { SmaeOptimizationModal } from './SmaeOptimizationModal';
 
 const AVATAR_PRESETS = [
   { label: 'Mujer 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', gender: 'F' },
@@ -255,6 +267,22 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     'Grasas c/proteína': 1,
     'Azúcares s/grasa': 0,
   });
+
+  // Independent Macronutrient Adequacy Targets (editable, por defecto 100%)
+  const [proteinTargetPct, setProteinTargetPct] = useState<number>(100);
+  const [fatTargetPct, setFatTargetPct] = useState<number>(100);
+  const [carbsTargetPct, setCarbsTargetPct] = useState<number>(100);
+
+  // Grupos SMAE bloqueados por el nutriólogo
+  const [smaeLockedGroups, setSmaeLockedGroups] = useState<Record<string, boolean>>({});
+
+  // Modal de confirmación y vista previa de optimización
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
+
+  // Modal y distribución por comidas
+  const [showMealDistributionModal, setShowMealDistributionModal] = useState(false);
+  const [mealPortionsDistribution, setMealPortionsDistribution] = useState<MealPortionDistribution | null>(null);
 
   // Macros & Comidas State
   const [activityFactor, setActivityFactor] = useState<number>(1.375); // Actividad ligera
@@ -480,10 +508,41 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       } else {
         setSelectedFormulaKey('mifflin');
       }
+
+      // Restore SMAE portions and macro targets if available
+      if ((patientToEdit as any).smaePortions) {
+        setSmaePortions({ ...(patientToEdit as any).smaePortions });
+      } else {
+        const existingPlans = storageService.getPlansByPatientId(patientToEdit.id);
+        const activePlan = existingPlans && existingPlans.length > 0 ? existingPlans[0] : null;
+        if ((activePlan as any)?.smaePortions) {
+          setSmaePortions({ ...(activePlan as any).smaePortions });
+        }
+      }
+
+      if ((patientToEdit as any).macroAdequacyTargets) {
+        setProteinTargetPct((patientToEdit as any).macroAdequacyTargets.proteinPct ?? 100);
+        setFatTargetPct((patientToEdit as any).macroAdequacyTargets.fatPct ?? 100);
+        setCarbsTargetPct((patientToEdit as any).macroAdequacyTargets.carbsPct ?? 100);
+      } else {
+        setProteinTargetPct(100);
+        setFatTargetPct(100);
+        setCarbsTargetPct(100);
+      }
+
+      if ((patientToEdit as any).smaeLockedGroups) {
+        setSmaeLockedGroups({ ...(patientToEdit as any).smaeLockedGroups });
+      } else {
+        setSmaeLockedGroups({});
+      }
     } else {
       // Defaults for new patient
       setSelectedPresetId(null);
       setSelectedFormulaKey('mifflin');
+      setProteinTargetPct(100);
+      setFatTargetPct(100);
+      setCarbsTargetPct(100);
+      setSmaeLockedGroups({});
       setFormData({
         firstName: '',
         lastName: '',
@@ -738,29 +797,109 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   const fatGrams = Math.round((targetKcal * (fatPct / 100)) / 9);
   const proteinGPerKg = (proteinGrams / currentWeightNum).toFixed(2);
 
-  // SMAE Totals Calculation
+  // SMAE Totals Calculation (Única fuente centralizada de cálculo)
   const smaeTotals = useMemo(() => {
-    let kcal = 0;
-    let prot = 0;
-    let lip = 0;
-    let hc = 0;
-
-    SMAE_CONSTANTS.forEach((c) => {
-      const portions = smaePortions[c.grupo] || 0;
-      kcal += portions * c.energia_kcal;
-      prot += portions * c.prot_g;
-      lip += portions * c.lip_g;
-      hc += portions * c.hc_g;
+    return calculateSmaeTotals(smaePortions, {
+      kcal: targetKcal,
+      proteinG: proteinGrams,
+      fatG: fatGrams,
+      carbsG: carbsGrams,
     });
+  }, [smaePortions, targetKcal, proteinGrams, fatGrams, carbsGrams]);
 
-    return {
-      kcal: Math.round(kcal),
-      prot: Math.round(prot),
-      lip: Math.round(lip),
-      hc: Math.round(hc),
-      adequacyPct: targetKcal > 0 ? Number(((kcal / targetKcal) * 100).toFixed(1)) : 100,
+  // Aportes objetivos derivados en gramos (meta prescrita * % objetivo / 100)
+  const derivedProteinGrams = calculateDerivedTargetGrams(proteinGrams, proteinTargetPct);
+  const derivedFatGrams = calculateDerivedTargetGrams(fatGrams, fatTargetPct);
+  const derivedCarbsGrams = calculateDerivedTargetGrams(carbsGrams, carbsTargetPct);
+
+  // Toggle bloqueo individual de grupo SMAE
+  const toggleGroupLock = (grupo: string) => {
+    setSmaeLockedGroups((prev) => {
+      const isLocked = !prev[grupo];
+      showToast(
+        isLocked ? 'Grupo Bloqueado' : 'Grupo Desbloqueado',
+        isLocked
+          ? `"${grupo}" se mantendrá fijo durante los ajustes automáticos.`
+          : `"${grupo}" ahora podrá ser modificado por el optimizador.`,
+        'info'
+      );
+      return { ...prev, [grupo]: isLocked };
+    });
+  };
+
+  // Ajuste individual de macronutriente (Proteínas, Lípidos o Carbohidratos)
+  const handleOptimizeSingleMacro = (macro: 'protein' | 'lipids' | 'carbs') => {
+    const macroLabels: Record<string, string> = {
+      protein: 'Proteínas',
+      lipids: 'Lípidos',
+      carbs: 'Carbohidratos',
     };
-  }, [smaePortions, targetKcal]);
+    const res = optimizeSingleMacro({
+      macro,
+      currentPortions: smaePortions,
+      prescribedTargets: {
+        kcal: targetKcal,
+        proteinG: proteinGrams,
+        fatG: fatGrams,
+        carbsG: carbsGrams,
+      },
+      adequacyTargets: {
+        proteinPct: proteinTargetPct,
+        fatPct: fatTargetPct,
+        carbsPct: carbsTargetPct,
+      },
+      lockedGroups: smaeLockedGroups,
+      stepSize: 0.5,
+    });
+    setOptimizationResult(res);
+    setIsOptimizationModalOpen(true);
+  };
+
+  // Balancear Todo (Optimizador multiobjetivo simultáneo)
+  const handleBalanceAll = () => {
+    const res = balanceAllMacros({
+      currentPortions: smaePortions,
+      prescribedTargets: {
+        kcal: targetKcal,
+        proteinG: proteinGrams,
+        fatG: fatGrams,
+        carbsG: carbsGrams,
+      },
+      adequacyTargets: {
+        proteinPct: proteinTargetPct,
+        fatPct: fatTargetPct,
+        carbsPct: carbsTargetPct,
+      },
+      lockedGroups: smaeLockedGroups,
+      stepSize: 0.5,
+    });
+    setOptimizationResult(res);
+    setIsOptimizationModalOpen(true);
+  };
+
+  // Aplicar cambios desde el modal de confirmación
+  const handleApplyOptimization = (proposedPortions: Record<string, number>) => {
+    setSmaePortions({ ...proposedPortions });
+    setIsOptimizationModalOpen(false);
+    setOptimizationResult(null);
+    showToast(
+      'Ajuste SMAE Aplicado',
+      'Las porciones equivalentes han sido actualizadas con éxito.',
+      'success'
+    );
+  };
+
+  // Auto-distribuir equivalentes diarios entre los tiempos de comida
+  const handleAutoDistributeMeals = () => {
+    const dist = distributeSmaePortionsAcrossMeals(smaePortions, mealDistribution);
+    setMealPortionsDistribution(dist);
+    setShowMealDistributionModal(true);
+    showToast(
+      'Distribución de Comidas Calculada',
+      'Equivalentes repartidos entre los tiempos de comida garantizando suma exacta.',
+      'success'
+    );
+  };
 
   // Apply Quick Prescription Preset
   const handleSelectPreset = (preset: ClinicalPreset) => {
@@ -997,6 +1136,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       selectedPresetId: selectedPresetId || undefined,
       presetId: selectedPresetId || undefined,
       metabolicFormula: selectedFormulaKey,
+      smaePortions,
+      macroAdequacyTargets: {
+        proteinPct: proteinTargetPct,
+        fatPct: fatTargetPct,
+        carbsPct: carbsTargetPct,
+      },
+      smaeLockedGroups,
       createdAt: patientToEdit?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1129,6 +1275,14 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       selectedPresetId: selectedPresetId || undefined,
       presetId: selectedPresetId || undefined,
       metabolicFormula: selectedFormulaKey,
+      smaePortions,
+      macroAdequacyTargets: {
+        proteinPct: proteinTargetPct,
+        fatPct: fatTargetPct,
+        carbsPct: carbsTargetPct,
+      },
+      smaeLockedGroups,
+      smaeMealDistribution: (mealPortionsDistribution || distributeSmaePortionsAcrossMeals(smaePortions, mealDistribution)) as any,
       days: [
         {
           id: `day-1`,
@@ -2862,9 +3016,10 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
           {/* TAB 6: EVALUADOR SMAE */}
           {activeTab === 'smae' && (
             <div className="space-y-4 animate-fade-in text-xs">
-              <div className="flex items-center justify-between">
+              {/* Header and Action Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm flex items-center gap-1.5">
                     <Apple className="w-4 h-4 text-emerald-600" />
                     <span>Evaluador Sistema Mexicano de Alimentos Equivalentes (SMAE)</span>
                   </h4>
@@ -2873,66 +3028,274 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Deterministic SMAE portion distribution reaching EXACT 100% adequacy
-                    const baseKcal = targetKcal || 1800;
-                    const factor = baseKcal / 1800;
-                    const portions: Record<string, number> = {
-                      'Verduras': Math.max(2, Math.round(4 * factor)),
-                      'Frutas': Math.max(2, Math.round(3 * factor)),
-                      'Cereales s/g': Math.max(3, Math.round(5 * factor)),
-                      'Cereales c/g': Math.max(0, Math.round(1 * factor)),
-                      'Leguminosas': 1.5,
-                      'AOA Muy bajo aporte': Math.max(1, Math.round(2 * factor)),
-                      'AOA Bajo aporte': Math.max(2, Math.round(3 * factor)),
-                      'AOA Moderado aporte': Math.max(0, Math.round(1 * factor)),
-                      'AOA Alto aporte': 0,
-                      'Leche descremada': 1,
-                      'Leche semidescremada': 0,
-                      'Leche entera': 0,
-                      'Leche c/azúcar': 0,
-                      'Grasas s/proteína': Math.max(2, Math.round(3 * factor)),
-                      'Grasas c/proteína': 1,
-                      'Azúcares s/grasa': 0,
-                    };
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleBalanceAll}
+                    className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[11px] font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                    title="Optimiza simultáneamente los tres macronutrientes minimizando desviaciones"
+                  >
+                    <Scale className="w-3.5 h-3.5" />
+                    <span>Balancear todo</span>
+                  </button>
 
-                    const calcCurrentKcal = () => {
-                      let k = 0;
-                      SMAE_CONSTANTS.forEach((c) => {
-                        k += (portions[c.grupo] || 0) * c.energia_kcal;
-                      });
-                      return k;
-                    };
+                  <button
+                    type="button"
+                    onClick={handleAutoDistributeMeals}
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-slate-700 dark:text-slate-300 hover:text-emerald-700 text-[11px] font-bold rounded-xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Reparte los equivalentes diarios calculados entre las comidas asegurando suma exacta"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Auto-distribuir</span>
+                  </button>
 
-                    // 1. Adjust whole Cereales s/g (70 kcal)
-                    while (baseKcal - calcCurrentKcal() >= 70) portions['Cereales s/g']++;
-                    while (baseKcal - calcCurrentKcal() <= -70 && portions['Cereales s/g'] > 2) portions['Cereales s/g']--;
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!mealPortionsDistribution) {
+                        const dist = distributeSmaePortionsAcrossMeals(smaePortions, mealDistribution);
+                        setMealPortionsDistribution(dist);
+                      }
+                      setShowMealDistributionModal(true);
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded-xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Ver distribución por tiempos de comida"
+                  >
+                    <Utensils className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Distribución por comidas</span>
+                  </button>
+                </div>
+              </div>
 
-                    // 2. Adjust Grasas s/p (45 kcal)
-                    while (baseKcal - calcCurrentKcal() >= 45) portions['Grasas s/proteína']++;
-                    while (baseKcal - calcCurrentKcal() <= -45 && portions['Grasas s/proteína'] > 1) portions['Grasas s/proteína']--;
+              {/* Sección: Objetivos de adecuación de macronutrientes */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Objetivos de adecuación de macronutrientes</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Ajuste independiente con meta configurable (predeterminado 100%)
+                  </span>
+                </div>
 
-                    // 3. Adjust Verduras (25 kcal)
-                    while (baseKcal - calcCurrentKcal() >= 25) portions['Verduras']++;
-                    while (baseKcal - calcCurrentKcal() <= -25 && portions['Verduras'] > 2) portions['Verduras']--;
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  {/* Tarjeta 1: Proteínas */}
+                  <div className="p-3 rounded-2xl border border-teal-200/90 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-teal-900 dark:text-teal-200 text-xs flex items-center gap-1">
+                        <Apple className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Proteínas</span>
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${
+                        smaeTotals.protAdequacyPct >= 95 && smaeTotals.protAdequacyPct <= 105
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                          : smaeTotals.protAdequacyPct < 95
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                      }`}>
+                        {smaeTotals.protAdequacyPct}% real
+                      </span>
+                    </div>
 
-                    // 4. Fine-tune with exact Verduras adjustment to ensure Math.round(kcal) === baseKcal (100% adequacy)
-                    const diff = baseKcal - calcCurrentKcal();
-                    if (Math.abs(diff) > 0.01) {
-                      const vStep = Number((diff / 25).toFixed(2));
-                      portions['Verduras'] = Number((portions['Verduras'] + vStep).toFixed(2));
-                    }
+                    <div className="flex items-baseline justify-between text-xs">
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                        <span>Aporte actual: </span>
+                        <strong className="text-teal-700 dark:text-teal-300 font-extrabold">{smaeTotals.prot}g</strong>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Meta: {proteinGrams > 0 ? `${proteinGrams}g` : 'No definida'}
+                      </div>
+                    </div>
 
-                    setSmaePortions(portions);
-                    showToast('Adecuación SMAE al 100%', `Porciones auto-distribuidas exitosamente para alcanzar exactamente el 100% de adecuación calórica (${baseKcal} kcal).`, 'success');
-                  }}
-                  className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-slate-700 dark:text-slate-300 hover:text-emerald-700 text-[11px] font-bold rounded-xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Auto-distribuir</span>
-                </button>
+                    {/* Objetivo editable */}
+                    <div className="flex items-center justify-between text-[11px] bg-white/70 dark:bg-slate-900/70 p-1.5 rounded-xl border border-teal-100 dark:border-teal-900/40">
+                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Objetivo deseado:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="50"
+                          max="200"
+                          step="1"
+                          value={proteinTargetPct}
+                          onChange={(e) => setProteinTargetPct(Math.max(1, Number(e.target.value) || 0))}
+                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-800 border border-teal-300 dark:border-teal-700 rounded-md text-center font-bold text-teal-800 dark:text-teal-200 text-xs"
+                        />
+                        <span className="text-[10px] font-bold text-slate-500">%</span>
+                        <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300">({derivedProteinGrams}g)</span>
+                      </div>
+                    </div>
+
+                    {/* Barra de progreso */}
+                    <div className="space-y-1">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            smaeTotals.protAdequacyPct >= 95 && smaeTotals.protAdequacyPct <= 105
+                              ? 'bg-teal-500'
+                              : smaeTotals.protAdequacyPct < 95
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          }`}
+                          style={{ width: `${Math.min(100, smaeTotals.protAdequacyPct)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOptimizeSingleMacro('protein')}
+                      className="w-full py-1.5 px-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Ajustar proteínas</span>
+                    </button>
+                  </div>
+
+                  {/* Tarjeta 2: Lípidos */}
+                  <div className="p-3 rounded-2xl border border-amber-200/90 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-900 dark:text-amber-200 text-xs flex items-center gap-1">
+                        <Flame className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Lípidos</span>
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${
+                        smaeTotals.lipAdequacyPct >= 95 && smaeTotals.lipAdequacyPct <= 105
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                          : smaeTotals.lipAdequacyPct < 95
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                      }`}>
+                        {smaeTotals.lipAdequacyPct}% real
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between text-xs">
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                        <span>Aporte actual: </span>
+                        <strong className="text-amber-700 dark:text-amber-300 font-extrabold">{smaeTotals.lip}g</strong>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Meta: {fatGrams > 0 ? `${fatGrams}g` : 'No definida'}
+                      </div>
+                    </div>
+
+                    {/* Objetivo editable */}
+                    <div className="flex items-center justify-between text-[11px] bg-white/70 dark:bg-slate-900/70 p-1.5 rounded-xl border border-amber-100 dark:border-amber-900/40">
+                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Objetivo deseado:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="50"
+                          max="200"
+                          step="1"
+                          value={fatTargetPct}
+                          onChange={(e) => setFatTargetPct(Math.max(1, Number(e.target.value) || 0))}
+                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md text-center font-bold text-amber-800 dark:text-amber-200 text-xs"
+                        />
+                        <span className="text-[10px] font-bold text-slate-500">%</span>
+                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">({derivedFatGrams}g)</span>
+                      </div>
+                    </div>
+
+                    {/* Barra de progreso */}
+                    <div className="space-y-1">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            smaeTotals.lipAdequacyPct >= 95 && smaeTotals.lipAdequacyPct <= 105
+                              ? 'bg-amber-500'
+                              : smaeTotals.lipAdequacyPct < 95
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          }`}
+                          style={{ width: `${Math.min(100, smaeTotals.lipAdequacyPct)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOptimizeSingleMacro('lipids')}
+                      className="w-full py-1.5 px-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Ajustar lípidos</span>
+                    </button>
+                  </div>
+
+                  {/* Tarjeta 3: Carbohidratos */}
+                  <div className="p-3 rounded-2xl border border-blue-200/90 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-blue-900 dark:text-blue-200 text-xs flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Carbohidratos</span>
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${
+                        smaeTotals.hcAdequacyPct >= 95 && smaeTotals.hcAdequacyPct <= 105
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                          : smaeTotals.hcAdequacyPct < 95
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                      }`}>
+                        {smaeTotals.hcAdequacyPct}% real
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between text-xs">
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                        <span>Aporte actual: </span>
+                        <strong className="text-blue-700 dark:text-blue-300 font-extrabold">{smaeTotals.hc}g</strong>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Meta: {carbsGrams > 0 ? `${carbsGrams}g` : 'No definida'}
+                      </div>
+                    </div>
+
+                    {/* Objetivo editable */}
+                    <div className="flex items-center justify-between text-[11px] bg-white/70 dark:bg-slate-900/70 p-1.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Objetivo deseado:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="50"
+                          max="200"
+                          step="1"
+                          value={carbsTargetPct}
+                          onChange={(e) => setCarbsTargetPct(Math.max(1, Number(e.target.value) || 0))}
+                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-700 rounded-md text-center font-bold text-blue-800 dark:text-blue-200 text-xs"
+                        />
+                        <span className="text-[10px] font-bold text-slate-500">%</span>
+                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300">({derivedCarbsGrams}g)</span>
+                      </div>
+                    </div>
+
+                    {/* Barra de progreso */}
+                    <div className="space-y-1">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            smaeTotals.hcAdequacyPct >= 95 && smaeTotals.hcAdequacyPct <= 105
+                              ? 'bg-blue-500'
+                              : smaeTotals.hcAdequacyPct < 95
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          }`}
+                          style={{ width: `${Math.min(100, smaeTotals.hcAdequacyPct)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOptimizeSingleMacro('carbs')}
+                      className="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Ajustar carbohidratos</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Real-time SMAE Totals Summary Banner */}
@@ -2960,13 +3323,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 <div className="col-span-2 sm:col-span-1 flex flex-col justify-center">
                   <span className="text-[10px] text-slate-400 block">% Adecuación</span>
                   <span className={`text-base font-extrabold ${
-                    smaeTotals.adequacyPct >= 95 && smaeTotals.adequacyPct <= 105
+                    smaeTotals.kcalAdequacyPct >= 95 && smaeTotals.kcalAdequacyPct <= 105
                       ? 'text-emerald-400'
-                      : smaeTotals.adequacyPct < 95
+                      : smaeTotals.kcalAdequacyPct < 95
                       ? 'text-amber-400'
                       : 'text-rose-400'
                   }`}>
-                    {smaeTotals.adequacyPct}%
+                    {smaeTotals.kcalAdequacyPct}%
                   </span>
                 </div>
               </div>
@@ -2975,18 +3338,41 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
                 {SMAE_CONSTANTS.map((c) => {
                   const val = smaePortions[c.grupo] || 0;
+                  const isLocked = Boolean(smaeLockedGroups[c.grupo]);
                   return (
                     <div
                       key={c.grupo}
-                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2"
+                      className={`p-2 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+                        isLocked
+                          ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 shadow-2xs'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80'
+                      }`}
                     >
-                      <div className="min-w-0">
-                        <span className="font-bold text-slate-800 dark:text-slate-200 block truncate text-[11px]">
-                          {c.grupo}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {c.energia_kcal} kcal • P:{c.prot_g} L:{c.lip_g} C:{c.hc_g}
-                        </span>
+                      <div className="min-w-0 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleGroupLock(c.grupo)}
+                          className={`p-1 rounded-md cursor-pointer transition-colors ${
+                            isLocked
+                              ? 'text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/60'
+                              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                          title={isLocked ? 'Grupo bloqueado: el optimizador no lo modificará' : 'Hacer clic para bloquear grupo'}
+                        >
+                          {isLocked ? (
+                            <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          ) : (
+                            <Unlock className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                        </button>
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 block truncate text-[11px]">
+                            {c.grupo}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {c.energia_kcal} kcal • P:{c.prot_g} L:{c.lip_g} C:{c.hc_g}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -3026,6 +3412,121 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   );
                 })}
               </div>
+
+              {/* Modal de confirmación y vista previa de optimización SMAE */}
+              <SmaeOptimizationModal
+                isOpen={isOptimizationModalOpen}
+                onClose={() => setIsOptimizationModalOpen(false)}
+                onApply={handleApplyOptimization}
+                result={optimizationResult}
+                prescribedTargets={{
+                  kcal: targetKcal,
+                  proteinG: proteinGrams,
+                  fatG: fatGrams,
+                  carbsG: carbsGrams,
+                }}
+                adequacyTargets={{
+                  proteinPct: proteinTargetPct,
+                  fatPct: fatTargetPct,
+                  carbsPct: carbsTargetPct,
+                }}
+              />
+
+              {/* Modal de visualización de distribución de equivalentes por tiempos de comida */}
+              {showMealDistributionModal && mealPortionsDistribution && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+                  <div className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                    <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                          <Utensils className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+                            Distribución de Equivalentes SMAE por Tiempos de Comida
+                          </h3>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Reparto matemático exacto de porciones diarias entre las 5 tomas programadas
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowMealDistributionModal(false)}
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="p-4 sm:p-5 overflow-y-auto space-y-3 text-xs">
+                      <div className="p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2 text-emerald-800 dark:text-emerald-300 text-[11px]">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>
+                          <strong>Suma diaria garantizada:</strong> Cada fila suma exactamente los equivalentes diarios calculados en el Evaluador SMAE.
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <table className="w-full text-left text-[11px] text-slate-700 dark:text-slate-300">
+                          <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                              <th className="py-2 px-3">Grupo SMAE</th>
+                              <th className="py-2 px-2 text-center text-slate-900 dark:text-white font-extrabold">Total Día</th>
+                              <th className="py-2 px-2 text-center">Desayuno ({mealDistribution.desayuno}%)</th>
+                              <th className="py-2 px-2 text-center">Colación 1 ({mealDistribution.colacion1}%)</th>
+                              <th className="py-2 px-2 text-center">Comida ({mealDistribution.comida}%)</th>
+                              <th className="py-2 px-2 text-center">Colación 2 ({mealDistribution.colacion2}%)</th>
+                              <th className="py-2 px-2 text-center">Cena ({mealDistribution.cena}%)</th>
+                              <th className="py-2 px-2 text-center font-bold text-emerald-600">Suma Comidas</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {SMAE_CONSTANTS.map((c) => {
+                              const totalDay = smaePortions[c.grupo] || 0;
+                              const des = mealPortionsDistribution.desayuno[c.grupo] || 0;
+                              const c1 = mealPortionsDistribution.colacion1[c.grupo] || 0;
+                              const com = mealPortionsDistribution.comida[c.grupo] || 0;
+                              const c2 = mealPortionsDistribution.colacion2[c.grupo] || 0;
+                              const cen = mealPortionsDistribution.cena[c.grupo] || 0;
+                              const sumMeals = Number((des + c1 + com + c2 + cen).toFixed(2));
+                              if (totalDay === 0 && sumMeals === 0) return null;
+                              return (
+                                <tr key={c.grupo} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                                  <td className="py-1.5 px-3 font-semibold text-slate-900 dark:text-white">
+                                    {c.grupo}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-center font-extrabold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/30">
+                                    {totalDay}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-center text-slate-600 dark:text-slate-400">{des || '-'}</td>
+                                  <td className="py-1.5 px-2 text-center text-slate-600 dark:text-slate-400">{c1 || '-'}</td>
+                                  <td className="py-1.5 px-2 text-center text-slate-600 dark:text-slate-400">{com || '-'}</td>
+                                  <td className="py-1.5 px-2 text-center text-slate-600 dark:text-slate-400">{c2 || '-'}</td>
+                                  <td className="py-1.5 px-2 text-center text-slate-600 dark:text-slate-400">{cen || '-'}</td>
+                                  <td className="py-1.5 px-2 text-center font-bold text-emerald-600 dark:text-emerald-400">
+                                    {sumMeals}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-slate-800/30">
+                      <button
+                        type="button"
+                        onClick={() => setShowMealDistributionModal(false)}
+                        className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        Aceptar y cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

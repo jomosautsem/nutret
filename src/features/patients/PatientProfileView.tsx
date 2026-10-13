@@ -47,6 +47,7 @@ import {
   NutritionPlan,
   AnthropometricRecord,
   Appointment,
+  AppointmentType,
   ClinicalRecord,
   LaboratoryResult,
   ExerciseRoutine,
@@ -246,6 +247,11 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         setPlans(fetched);
       }
     }).catch(() => {});
+    storageService.fetchPatientAppointments(patientId).then((fetched) => {
+      if (fetched && fetched.length > 0) {
+        setAppointments(fetched);
+      }
+    }).catch(() => {});
 
     const handleUpdate = (e: any) => {
       const detail = e.detail;
@@ -277,12 +283,14 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     window.addEventListener('nutriluz_plan_updated', handleUpdate);
     window.addEventListener('nutriluz:db_updated', handleUpdate);
     window.addEventListener('nutriluz:cloud_synced', handleUpdate);
+    window.addEventListener('nutriluz_appointment_updated', handleUpdate);
     window.addEventListener('storage', refreshData);
 
     return () => {
       window.removeEventListener('nutriluz_plan_updated', handleUpdate);
       window.removeEventListener('nutriluz:db_updated', handleUpdate);
       window.removeEventListener('nutriluz:cloud_synced', handleUpdate);
+      window.removeEventListener('nutriluz_appointment_updated', handleUpdate);
       window.removeEventListener('storage', refreshData);
     };
   }, [patientId]);
@@ -310,6 +318,51 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
   const [isEditingClinical, setIsEditingClinical] = useState(false);
   const isEditingClinicalRef = useRef(false);
   const [showConfirmClinical, setShowConfirmClinical] = useState(false);
+
+  // New Appointment modal in patient profile
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleFormData, setScheduleFormData] = useState({
+    appointmentType: 'SEGUIMIENTO' as AppointmentType,
+    date: new Date().toISOString().slice(0, 10),
+    time: '10:00',
+    durationMinutes: 45,
+    price: 650,
+    clinicalNotes: 'Evaluación de adherencia al plan y revisión antropométrica',
+  });
+
+  const handleCreateAppointmentForPatient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patient) return;
+    const startTime = `${scheduleFormData.date}T${scheduleFormData.time}:00`;
+    const startObj = new Date(startTime);
+    const endObj = new Date(startObj.getTime() + scheduleFormData.durationMinutes * 60000);
+
+    const newApp: Appointment = {
+      id: `app-${Date.now()}`,
+      organizationId: organization?.id || 'org-nutriluz-mexico',
+      branchId: 'branch-1',
+      patientId: patient.id,
+      patientName: `${patient.firstName} ${patient.lastName}`.trim(),
+      specialistId: currentUser?.id || 'user-lic-luz-elena',
+      appointmentType: scheduleFormData.appointmentType,
+      startTime: startTime,
+      endTime: endObj.toISOString(),
+      status: 'CONFIRMADA',
+      price: scheduleFormData.price,
+      currency: 'MXN',
+      locationNotes:
+        scheduleFormData.appointmentType === 'ONLINE'
+          ? 'Videoconsulta Online (Google Meet / Zoom)'
+          : 'Sucursal Polanco (Consultorio 302)',
+      consultationSummary: scheduleFormData.clinicalNotes,
+    };
+
+    const updated = [newApp, ...appointments];
+    setAppointments(updated);
+    storageService.saveAppointment(newApp);
+    setIsScheduleModalOpen(false);
+    showToast('Consulta Agendada', `Cita para ${newApp.patientName} registrada y sincronizada con éxito.`, 'success');
+  };
 
   useEffect(() => {
     isEditingClinicalRef.current = isEditingClinical;
@@ -1369,33 +1422,73 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                   <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Próxima Consulta</span>
                   <Calendar className="w-4 h-4 text-slate-400" />
                 </div>
-                {appointments && appointments.length > 0 ? (
-                  <div>
-                    <h4 className="text-lg font-bold">{appointments[0].appointmentType}</h4>
-                    <p className="text-xs text-slate-300 mt-1">
-                      {new Date(appointments[0].startTime).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })} a las{' '}
-                      {new Date(appointments[0].startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hrs
-                    </p>
-                    <div className="mt-4 flex items-center gap-2">
+                {(() => {
+                  const sortedAppts = [...(appointments || [])].sort(
+                    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+                  );
+                  const nextAppt =
+                    sortedAppts.find((a) => new Date(a.startTime).getTime() >= Date.now() - 3600000) ||
+                    sortedAppts[0];
+
+                  if (nextAppt) {
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-lg font-bold">{nextAppt.appointmentType.replace('_', ' ')}</h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            {nextAppt.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-1">
+                          {new Date(nextAppt.startTime).toLocaleDateString('es-MX', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                          })}{' '}
+                          a las{' '}
+                          {new Date(nextAppt.startTime).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}{' '}
+                          hrs
+                        </p>
+                        {nextAppt.locationNotes && (
+                          <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{nextAppt.locationNotes}</p>
+                        )}
+                        <div className="mt-4 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('consultas')}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                          >
+                            Ver Consultas
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsScheduleModalOpen(true)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                          >
+                            + Nueva Cita
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      <p className="text-xs text-slate-400">No hay consulta agendada para este paciente.</p>
                       <button
-                        onClick={() => onNavigate ? onNavigate('agenda') : setActiveTab('consultas')}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        type="button"
+                        onClick={() => setIsScheduleModalOpen(true)}
+                        className="mt-3 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                       >
-                        Ver en Agenda
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Agendar Cita</span>
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-xs text-slate-400">No hay consulta agendada.</p>
-                    <button
-                      onClick={() => onNavigate ? onNavigate('agenda') : setActiveTab('consultas')}
-                      className="mt-3 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                    >
-                      Agendar Cita
-                    </button>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Tarjeta de Recetario Clínico Asignado (Opción B) */}
@@ -2224,14 +2317,28 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         {/* TAB 6: CONSULTAS */}
         {activeTab === 'consultas' && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">Historial de Consultas & Citas</h3>
-              <button
-                onClick={() => onNavigate ? onNavigate('agenda') : showToast('Agenda', 'Navegando a la agenda', 'info')}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer"
-              >
-                Agendar Consulta
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Historial de Consultas & Citas</h3>
+                <p className="text-xs text-slate-500">Citas presenciales y online sincronizadas en tiempo real con el paciente.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onNavigate ? onNavigate('agenda') : showToast('Agenda', 'Navegando a la agenda', 'info')}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer transition-colors"
+                >
+                  Ver Agenda General
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsScheduleModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Agendar Consulta</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -2844,6 +2951,147 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Modal para Agendar Consulta */}
+      {isScheduleModalOpen && (
+        <Modal
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          title="Agendar Nueva Consulta"
+          subtitle={`Programar cita presencial u online para ${patient.firstName} ${patient.lastName}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleCreateAppointmentForPatient} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Tipo de Consulta
+              </label>
+              <select
+                value={scheduleFormData.appointmentType}
+                onChange={(e) =>
+                  setScheduleFormData({
+                    ...scheduleFormData,
+                    appointmentType: e.target.value as AppointmentType,
+                  })
+                }
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold text-xs"
+              >
+                <option value="SEGUIMIENTO">Seguimiento Nutricional (Presencial)</option>
+                <option value="PRIMERA_VEZ">Primera Vez / Valoración Inicial</option>
+                <option value="ONLINE">Videoconsulta Online (Google Meet / Zoom)</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Fecha de Consulta
+                </label>
+                <input
+                  type="date"
+                  value={scheduleFormData.date}
+                  onChange={(e) =>
+                    setScheduleFormData({ ...scheduleFormData, date: e.target.value })
+                  }
+                  required
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Horario (Hora)
+                </label>
+                <input
+                  type="time"
+                  value={scheduleFormData.time}
+                  onChange={(e) =>
+                    setScheduleFormData({ ...scheduleFormData, time: e.target.value })
+                  }
+                  required
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Duración (Minutos)
+                </label>
+                <select
+                  value={scheduleFormData.durationMinutes}
+                  onChange={(e) =>
+                    setScheduleFormData({
+                      ...scheduleFormData,
+                      durationMinutes: Number(e.target.value),
+                    })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value={30}>30 minutos</option>
+                  <option value={45}>45 minutos</option>
+                  <option value={60}>60 minutos (1 hora)</option>
+                  <option value={90}>90 minutos (1.5 horas)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Costo de Consulta (MXN)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  value={scheduleFormData.price}
+                  onChange={(e) =>
+                    setScheduleFormData({
+                      ...scheduleFormData,
+                      price: Number(e.target.value),
+                    })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Objetivo Clínico / Notas de Consulta
+              </label>
+              <textarea
+                rows={2}
+                value={scheduleFormData.clinicalNotes}
+                onChange={(e) =>
+                  setScheduleFormData({
+                    ...scheduleFormData,
+                    clinicalNotes: e.target.value,
+                  })
+                }
+                placeholder="Ej. Revisión antropométrica, evaluación de metas SMAE y entrega de nuevo menú..."
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsScheduleModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md cursor-pointer transition-all active:scale-95"
+              >
+                Confirmar y Agendar
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

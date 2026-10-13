@@ -436,7 +436,7 @@ export const storageService = {
       (a) =>
         !['app-1', 'app-2', 'app-3', 'app-4'].includes(a.id) &&
         !combinedDeleted.includes(a.patientId) &&
-        activePatientIds.has(a.patientId)
+        (activePatientIds.size === 0 || activePatientIds.has(a.patientId))
     );
     this.set(STORAGE_KEYS.APPOINTMENTS, cleanAppointments);
 
@@ -956,22 +956,22 @@ export const storageService = {
 
   getAppointments(): Appointment[] {
     const raw = this.get(STORAGE_KEYS.APPOINTMENTS, [] as Appointment[]);
-    const TEST_PATIENT_IDS = new Set([
-      'pat-ana-sofia', 'pat-mariana-t', 'pat-roberto-m', 'pat-diego-s',
-      'pat-claudia-h', 'pat-javier-o', 'pat-gabriel-l', 'pat-valeria-s',
-      'pat-pablo-c', 'pat-fernanda-p', 'pat-demo', 'test-dummy-delete-123'
-    ]);
-    const deletedIds = new Set([...this.getDeletedPatientIds(), ...TEST_PATIENT_IDS]);
+    const deletedIds = new Set(this.getDeletedPatientIds());
     const activePatients = this.getPatients();
     const activeIds = new Set(activePatients.map((p) => p.id));
+    const activePortalId = this.getActivePortalPatientId();
+    const activeClinicalId = this.getActiveClinicalPatientId();
 
-    return raw.filter(
-      (a) =>
-        !['app-1', 'app-2', 'app-3', 'app-4'].includes(a.id) &&
-        !deletedIds.has(a.patientId) &&
-        !TEST_PATIENT_IDS.has(a.patientId) &&
-        activeIds.has(a.patientId)
-    );
+    return raw.filter((a) => {
+      if (!a) return false;
+      if (['app-1', 'app-2', 'app-3', 'app-4'].includes(a.id)) return false;
+      if (deletedIds.has(a.patientId)) return false;
+      if (activePatients.length === 0) return true;
+      if (activeIds.has(a.patientId)) return true;
+      if (activePortalId && a.patientId === activePortalId) return true;
+      if (activeClinicalId && a.patientId === activeClinicalId) return true;
+      return false;
+    });
   },
   saveAppointments(apps: Appointment[]) {
     this.set(STORAGE_KEYS.APPOINTMENTS, apps);
@@ -1358,10 +1358,16 @@ export const storageService = {
   },
 
   getAppointmentsByPatientId(patientId: string): Appointment[] {
-    const all = this.getAppointments();
+    if (!patientId) return [];
+    const raw = this.get(STORAGE_KEYS.APPOINTMENTS, [] as Appointment[]);
     const patient = this.getPatients().find((p) => p.id === patientId);
     const fullName = patient ? `${patient.firstName} ${patient.lastName}`.trim().toLowerCase() : '';
-    return all.filter((a) => {
+    const deletedIds = new Set(this.getDeletedPatientIds());
+
+    return raw.filter((a) => {
+      if (!a) return false;
+      if (['app-1', 'app-2', 'app-3', 'app-4'].includes(a.id)) return false;
+      if (deletedIds.has(a.patientId)) return false;
       if (a.patientId === patientId) return true;
       if (fullName && a.patientName) {
         const aName = a.patientName.trim().toLowerCase();
@@ -1370,6 +1376,31 @@ export const storageService = {
       return false;
     });
   },
+
+  async fetchPatientAppointments(patientId: string): Promise<Appointment[]> {
+    let patientAppts = this.getAppointmentsByPatientId(patientId);
+    if (!patientId) return patientAppts;
+    try {
+      const cloudAppts = await supabaseDb.getAppointmentsByPatientId(patientId);
+      if (cloudAppts && cloudAppts.length > 0) {
+        const allLocal = this.get(STORAGE_KEYS.APPOINTMENTS, [] as Appointment[]);
+        const map = new Map<string, Appointment>();
+        allLocal.forEach((a) => map.set(a.id, a));
+        cloudAppts.forEach((a) => {
+          map.set(a.id, a);
+        });
+        const merged = Array.from(map.values());
+        this.saveAppointments(merged);
+        patientAppts = this.getAppointmentsByPatientId(patientId);
+        safeDispatchEvent('nutriluz:db_updated', { type: 'appointments_synced', patientId });
+        safeDispatchEvent('nutriluz_appointment_updated', { patientId, appointments: patientAppts });
+      }
+    } catch (e) {
+      console.warn('[Storage] Error in fetchPatientAppointments:', e);
+    }
+    return patientAppts;
+  },
+
   saveAppointment(app: Appointment) {
     const list = this.getAppointments();
     const idx = list.findIndex((a) => a.id === app.id);
@@ -1383,7 +1414,7 @@ export const storageService = {
       safeDispatchEvent('nutriluz:cloud_synced', { type: 'appointment', id: app.id, success });
     }).catch((err) => console.error('[Storage] Error syncing appointment to Supabase:', err));
     safeDispatchEvent('nutriluz:db_updated', { type: 'appointment', id: app.id, patientId: app.patientId });
-    safeDispatchEvent('nutriluz_appointment_updated', { appointment: app });
+    safeDispatchEvent('nutriluz_appointment_updated', { appointment: app, patientId: app.patientId });
   },
 
   getClinicalRecordByPatientId(patientId: string): ClinicalRecord | undefined {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   Plus,
@@ -24,9 +24,28 @@ export const AgendaView: React.FC = () => {
   const { showToast } = useToast();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
+  useEffect(() => {
+    const handleSync = () => {
+      setAppointments(storageService.getAppointments());
+    };
+    window.addEventListener('nutriluz_appointment_updated', handleSync);
+    window.addEventListener('nutriluz:db_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('nutriluz_appointment_updated', handleSync);
+      window.removeEventListener('nutriluz:db_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
+  const activeClinicalId = storageService.getActiveClinicalPatientId();
+  const initialPatientId = (activeClinicalId && patients.some((p) => p.id === activeClinicalId))
+    ? activeClinicalId
+    : (patients[0]?.id || '');
+
   // New Appointment Form
   const [formData, setFormData] = useState({
-    patientId: patients[0]?.id || '',
+    patientId: initialPatientId,
     appointmentType: 'SEGUIMIENTO' as AppointmentType,
     date: new Date().toISOString().slice(0, 10),
     time: '10:00',
@@ -42,20 +61,25 @@ export const AgendaView: React.FC = () => {
     const startObj = new Date(startTime);
     const endObj = new Date(startObj.getTime() + formData.durationMinutes * 60000);
 
+    const org = storageService.getOrganization();
+    const currUser = storageService.getCurrentUser();
     const newApp: Appointment = {
       id: `app-${Date.now()}`,
-      organizationId: 'org-demo-1',
+      organizationId: org?.id || 'org-nutriluz-mexico',
       branchId: 'branch-1',
       patientId: patient?.id || 'pat-demo',
-      patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Paciente General',
-      specialistId: 'user-lic-luz-elena',
+      patientName: patient ? `${patient.firstName} ${patient.lastName}`.trim() : 'Paciente General',
+      specialistId: currUser?.id || 'user-lic-luz-elena',
       appointmentType: formData.appointmentType,
       startTime: startTime,
       endTime: endObj.toISOString(),
       status: 'CONFIRMADA',
       price: formData.price,
       currency: 'MXN',
-      locationNotes: 'Sucursal Polanco (Consultorio 302)',
+      locationNotes:
+        formData.appointmentType === 'ONLINE'
+          ? 'Videoconsulta Online (Google Meet / Zoom)'
+          : 'Sucursal Polanco (Consultorio 302)',
       consultationSummary: formData.clinicalNotes,
     };
 

@@ -722,6 +722,26 @@ export const supabaseDb = {
     }
   },
 
+  async getAppointmentsByPatientId(patientId: string): Promise<Appointment[] | null> {
+    if (!supabase || !isSupabaseConfigured || !patientId) return null;
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('date', { ascending: true });
+      if (error) {
+        console.warn('[Supabase] getAppointmentsByPatientId query fallback:', error.message);
+        const all = await this.getAppointments();
+        return all ? all.filter((a) => a.patientId === patientId) : null;
+      }
+      return (data as any[])?.map(mapDbToAppointment) || [];
+    } catch (e) {
+      console.warn('[Supabase] Exception in getAppointmentsByPatientId:', e);
+      return null;
+    }
+  },
+
   async saveAppointment(appointment: Appointment): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured) return false;
     try {
@@ -1489,15 +1509,26 @@ function mapAppointmentToDb(a: Appointment): Record<string, any> {
 function mapDbToAppointment(row: any): Appointment {
   const startIso = `${row.date}T${row.time || '10:00'}:00.000Z`;
   const endIso = `${row.date}T11:00:00.000Z`;
+  let resolvedPatientName = row.patient_name || '';
+  if (!resolvedPatientName && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const raw = localStorage.getItem('nutriluz_patients');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const match = list.find((p: any) => p.id === row.patient_id);
+        if (match) resolvedPatientName = `${match.firstName} ${match.lastName}`.trim();
+      }
+    } catch {}
+  }
 
   return {
     id: row.id,
     organizationId: row.organization_id || 'org-nutriluz-mexico',
     patientId: row.patient_id,
     specialistId: row.specialist_id || 'user-lic-luz-elena',
-    patientName: 'Paciente',
+    patientName: resolvedPatientName || 'Paciente',
     appointmentType: row.type === 'ONLINE' ? 'ONLINE' : 'PRESENCIAL',
-    status: row.status === 'CONFIRMADA' ? 'CONFIRMADA' : row.status === 'REALIZADA' ? 'REALIZADA' : 'PENDIENTE',
+    status: row.status === 'CONFIRMADA' ? 'CONFIRMADA' : row.status === 'REALIZADA' ? 'REALIZADA' : row.status === 'CANCELADA' ? 'CANCELADA' : 'PENDIENTE',
     startTime: startIso,
     endTime: endIso,
     price: 850,

@@ -1,5 +1,5 @@
 {
-  "lastSync": "2026-10-12T19:08:37.317Z",
+  "lastSync": "2026-10-13T02:56:57.809Z",
   "collections": {
     "ORGANIZATION": {
       "id": "org-nutriluz-mexico",
@@ -42,14 +42,14 @@
     ],
     "SPECIALISTS": [
       {
-        "id": "user-dra-valeria",
+        "id": "user-lic-luz-elena",
         "organizationId": "org-nutriluz-mexico",
         "branchId": "branch-cdmx-sur",
         "role": "ADMIN",
         "email": "luzelenaalcocer14@gmail.com",
-        "firstName": "Luz",
-        "lastName": "Elena Alcocer",
-        "professionalTitle": "Nutrióloga Clínica",
+        "firstName": "Luz Elena",
+        "lastName": "Alcocer",
+        "professionalTitle": "Lic. en Nutrición",
         "licenseNumber": "15573967",
         "specialties": [
           "Nutrición Clínica"
@@ -61,46 +61,25 @@
         "publicProfileEnabled": true,
         "publicSlug": "luz-elena-alcocer",
         "isActive": true
-      },
-      {
-        "id": "user-dr-carlos",
-        "organizationId": "org-nutriluz-mexico",
-        "branchId": "branch-gdl-prov",
-        "role": "NUTRIOLOGO",
-        "email": "dr.carlos@nutriluz.mx",
-        "firstName": "Carlos",
-        "lastName": "Mendoza Ruiz",
-        "professionalTitle": "Mtro. en Nutrición Deportiva y Alto Rendimiento",
-        "licenseNumber": "12493019 / SSA 9410",
-        "specialties": [
-          "Nutrición Deportiva",
-          "Hipertrofia",
-          "Atletas de Resistencia"
-        ],
-        "avatarUrl": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&auto=format&fit=crop&q=80",
-        "phone": "+52 33 3615 2201",
-        "whatsapp": "+52 33 3615 2201",
-        "bio": "Maestría en ciencias del deporte, enfocado en optimización de rendimiento atlético, pérdida de grasa acelerada manteniendo masa muscular magra.",
-        "publicProfileEnabled": true,
-        "publicSlug": "carlos-mendoza",
-        "isActive": true
       }
     ],
     "CURRENT_USER": {
-      "id": "user-dra-valeria",
+      "id": "user-lic-luz-elena",
       "organizationId": "org-nutriluz-mexico",
       "branchId": "branch-cdmx-sur",
       "role": "ADMIN",
-      "email": "luzelenaalcocer14@gmail.com",
+      "email": "luz.elena@nutriluz.mx",
       "firstName": "Luz",
-      "lastName": "Elena Alcocer",
-      "professionalTitle": "Nutrióloga Clínica",
+      "lastName": "Elena Alcocer Muñoz",
+      "professionalTitle": "Lic. en Nutrición",
       "licenseNumber": "15573967",
       "specialties": [
-        "Nutrición Clínica"
+        "Nutrición Clínica",
+        "Recomposición Corporal",
+        "Salud Metabólica"
       ],
       "avatarUrl": "https://images.unsplash.com/photo-1594824813686-639a0397500e?w=300&auto=format&fit=crop&q=80",
-      "phone": "+52 55 9876 5432",
+      "phone": "+52 55 1234 5678",
       "whatsapp": "+52 55 9876 5432",
       "bio": "Especialista en nutrición personalizada basada en evidencia científica, recomposición corporal y control de resistencia a la insulina con más de 8 años de experiencia clínica.",
       "publicProfileEnabled": true,
@@ -174,7 +153,8 @@
       "pat-1791647847175",
       "pat-1791657060261",
       "pat-1791652993560",
-      "pat-1791739385863"
+      "pat-1791739385863",
+      "pat-demo"
     ],
     "CLINICAL_RECORDS": [
       {
@@ -225,187 +205,6 @@
         "presetId": "preset-1791830194313",
         "isCustomized": true,
         "updatedAt": "2026-10-12T18:38:00.713Z"
-      },
-      {
-        "id": "clin-1791739386943",
-        "patientId": "pat-1791739385863",
-        "specialistId": "user-dra-valeria",
-        "familyHistory": {
-          "diabetes": false,
-          "hypertension": false,
-          "cancer": false,
-          "cardiovascular": true,
-          "thyroid": false,
-          "notes": ""
-        },
-        "pathologicalHistory": {
-          "diagnosedDiseases": [
-            "Dislipidemia"
-          ],
-          "surgeries": []
-        },
-        "allergies": [
-          "Huevo"
-        ],
-        "medications": [],
-        "lifestyleHabits": {
-          "sleepHours": 7,
-          "sleepQuality": "Buena",
-          "smoking": false,
-          "alcohol": "Ocasional",
-          "stressLevel": "Medio",
-          "waterDailyLiters": 2.5
-        },
-        "physicalActivity": {
-          "activityLevel": "LIGHT",
-          "exerciseType": "Acondicionamiento físico",
-          "frequencyDaysPerWeek": 3,
-          "durationMinutes": 45
-        },
-        "dietaryHabits": {
-          "mealsPerDay": 5,
-          "preferredFoods": [],
-          "dislikedFoods": [],
-          "eatingOutFrequency": "1-2 veces por semana",
-          "bingeEating": false,
-          "preferredDiet": "Vegana Estricta / Plant-Based"
-        },
-        "clinicalGoals": "Nutrición Deportiva y Rendimiento",
-        "clinicalObservations": "tragar saludable",
-        "selectedPresetId": "vegan_balanced",
-        "presetId": "vegan_balanced",
-        "isCustomized": true,
-        "updatedAt": "2026-10-11T17:23:06.943Z"
-      },
-      {
-        "id": "clin-1791654348948",
-        "patientId": "pat-1791654348947",
-        "specialistId": "user-dra-valeria",
-        "familyHistory": {
-          "diabetes": false,
-          "hypertension": false,
-          "cancer": false,
-          "cardiovascular": false,
-          "thyroid": false,
-          "notes": "Sin antecedentes graves reportados."
-        },
-        "pathologicalHistory": {
-          "diagnosedDiseases": [],
-          "surgeries": []
-        },
-        "allergies": [],
-        "medications": [],
-        "lifestyleHabits": {
-          "sleepHours": 7,
-          "sleepQuality": "Buena",
-          "smoking": false,
-          "alcohol": "Ocasional",
-          "stressLevel": "Moderado",
-          "waterDailyLiters": 2
-        },
-        "physicalActivity": {
-          "activityLevel": "Moderada",
-          "exerciseType": "Fuerza y acondicionamiento",
-          "frequencyDaysPerWeek": 3,
-          "durationMinutes": 45
-        },
-        "dietaryHabits": {
-          "mealsPerDay": 3,
-          "preferredFoods": [],
-          "dislikedFoods": [],
-          "eatingOutFrequency": "Fines de semana",
-          "bingeEating": false
-        },
-        "clinicalGoals": "Pérdida de Grasa y Recomposición",
-        "clinicalObservations": "Expediente clínico registrado.",
-        "updatedAt": "2026-10-10T17:45:48.948Z"
-      },
-      {
-        "id": "clin-1791654296154",
-        "patientId": "pat-1791654296153",
-        "specialistId": "user-dra-valeria",
-        "familyHistory": {
-          "diabetes": false,
-          "hypertension": false,
-          "cancer": false,
-          "cardiovascular": false,
-          "thyroid": false,
-          "notes": "Sin antecedentes graves reportados."
-        },
-        "pathologicalHistory": {
-          "diagnosedDiseases": [],
-          "surgeries": []
-        },
-        "allergies": [],
-        "medications": [],
-        "lifestyleHabits": {
-          "sleepHours": 7,
-          "sleepQuality": "Buena",
-          "smoking": false,
-          "alcohol": "Ocasional",
-          "stressLevel": "Moderado",
-          "waterDailyLiters": 2
-        },
-        "physicalActivity": {
-          "activityLevel": "Moderada",
-          "exerciseType": "Fuerza y acondicionamiento",
-          "frequencyDaysPerWeek": 3,
-          "durationMinutes": 45
-        },
-        "dietaryHabits": {
-          "mealsPerDay": 3,
-          "preferredFoods": [],
-          "dislikedFoods": [],
-          "eatingOutFrequency": "Fines de semana",
-          "bingeEating": false
-        },
-        "clinicalGoals": "Pérdida de Grasa y Recomposición Corporal",
-        "clinicalObservations": "Expediente clínico registrado.",
-        "updatedAt": "2026-10-10T17:44:56.154Z"
-      },
-      {
-        "id": "clin-1791653414097",
-        "patientId": "pat-1791652993560",
-        "specialistId": "user-dra-valeria",
-        "familyHistory": {
-          "diabetes": false,
-          "hypertension": false,
-          "cancer": false,
-          "cardiovascular": false,
-          "thyroid": false,
-          "notes": "Sin antecedentes graves reportados."
-        },
-        "pathologicalHistory": {
-          "diagnosedDiseases": [],
-          "surgeries": []
-        },
-        "allergies": [],
-        "medications": [],
-        "lifestyleHabits": {
-          "sleepHours": 7,
-          "sleepQuality": "Buena",
-          "smoking": false,
-          "alcohol": "Ocasional",
-          "stressLevel": "Moderado",
-          "waterDailyLiters": 2
-        },
-        "physicalActivity": {
-          "activityLevel": "Moderada",
-          "exerciseType": "Acondicionamiento y fuerza",
-          "frequencyDaysPerWeek": 3,
-          "durationMinutes": 45
-        },
-        "dietaryHabits": {
-          "mealsPerDay": 3,
-          "preferredFoods": [],
-          "dislikedFoods": [],
-          "eatingOutFrequency": "Fines de semana",
-          "bingeEating": false
-        },
-        "recall24h": "Desayuno habitual: Café con leche y pan tostado con huevo o aguacate. Comida: Proteína magra con guarnición de verduras y arroz o tortilla. Cena: Porción ligera con infusión o té.",
-        "clinicalGoals": "Pérdida de Grasa y Recomposición",
-        "clinicalObservations": "1 tza de cafe con leche y un pan\n3 enchiladas rellenas de jamon y queso acompañadas con agua natural\n1 plato pequeño de sopa azteca, con queso, un vaso de agua de tamarindo\n2 tostadas de surimi",
-        "updatedAt": "2026-10-10T17:41:05.902Z"
       }
     ],
     "ANTHROPOMETRY": [
@@ -427,22 +226,7 @@
         "notes": "Evaluación somatométrica basal de ingreso."
       }
     ],
-    "LABS": [
-      {
-        "id": "lab-1791739386943",
-        "patientId": "pat-1791739385863",
-        "testDate": "2026-10-11",
-        "laboratoryName": "Panel Clínico de Ingreso Nutriluz",
-        "glucoseMgDl": 90,
-        "ureaMgDl": 25,
-        "uricAcidMgDl": 4.5,
-        "creatinineMgDl": 0.9,
-        "triglyceridesMgDl": 120,
-        "totalCholesterolMgDl": 175,
-        "customParameters": [],
-        "specialistInterpretation": "Evaluación basal: Glucosa 90, Urea 25, Ác. Úrico 4.5, Creatinina 0.9, Triglicéridos 120, Colesterol 175."
-      }
-    ],
+    "LABS": [],
     "EQUIVALENT_GROUPS": [
       {
         "id": "eq-verduras",
@@ -1348,308 +1132,15 @@
         "updatedAt": "2026-10-12T18:38:00.714+00:00"
       }
     ],
-    "MEAL_LOGS": [
-      {
-        "id": "ml-1",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "mealType": "Desayuno",
-        "loggedAt": "2026-08-13T08:30:00Z",
-        "status": "Cumplí",
-        "description": "Omelette de espinaca con queso panela y 2 tortillas de maíz como indica el plan.",
-        "photoUrl": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=300&auto=format&fit=crop&q=80",
-        "aiEstimatedCalories": 380,
-        "aiEstimatedMacros": {
-          "protein": 26,
-          "carbs": 32,
-          "fat": 15
-        },
-        "patientComment": "Me sentí muy satisfecha con buena energía durante la mañana."
-      },
-      {
-        "id": "ml-2",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "mealType": "Comida",
-        "loggedAt": "2026-08-13T14:45:00Z",
-        "status": "Cumplí",
-        "description": "Pechuga a la plancha con arroz integral y nopales asados con pico de gallo.",
-        "photoUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80",
-        "aiEstimatedCalories": 485,
-        "aiEstimatedMacros": {
-          "protein": 38,
-          "carbs": 49,
-          "fat": 13
-        }
-      },
-      {
-        "id": "ml-3",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-12",
-        "mealType": "Cena",
-        "loggedAt": "2026-08-12T21:00:00Z",
-        "status": "Cumplí",
-        "description": "3 tostadas horneadas Sanissimo con atún y aguacate.",
-        "aiEstimatedCalories": 315
-      }
-    ],
-    "WATER_LOGS": [
-      {
-        "id": "wl-1",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "amountMl": 500,
-        "loggedAt": "2026-08-13T08:00:00Z"
-      },
-      {
-        "id": "wl-2",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "amountMl": 500,
-        "loggedAt": "2026-08-13T11:00:00Z"
-      },
-      {
-        "id": "wl-3",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "amountMl": 750,
-        "loggedAt": "2026-08-13T15:00:00Z"
-      },
-      {
-        "id": "wl-4",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "amountMl": 500,
-        "loggedAt": "2026-08-13T18:00:00Z"
-      }
-    ],
-    "SUPPLEMENTS": [
-      {
-        "id": "sup-1",
-        "patientId": "pat-ana-sofia",
-        "specialistId": "user-dra-valeria",
-        "productName": "Omega 3 Ultra Puro (EPA/DHA 1000mg)",
-        "dosage": "1 cápsula blanda",
-        "timing": "Con el desayuno junto con alimentos",
-        "frequency": "Diario",
-        "durationWeeks": 12,
-        "specialistInstructions": "Para apoyo cardiovascular y optimización de sensibilidad a la insulina.",
-        "isActive": true
-      },
-      {
-        "id": "sup-2",
-        "patientId": "pat-ana-sofia",
-        "specialistId": "user-dra-valeria",
-        "productName": "Citrato de Magnesio 400mg",
-        "dosage": "1 scoop o cápsula",
-        "timing": "30-45 minutos antes de dormir en agua tibia",
-        "frequency": "Diario en las noches",
-        "durationWeeks": 12,
-        "specialistInstructions": "Para relajación muscular y calidad de sueño profundo.",
-        "isActive": true
-      }
-    ],
-    "SUPPLEMENT_LOGS": [
-      {
-        "id": "supl-1",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "supplementName": "Omega 3 Ultra Puro (EPA/DHA 1000mg)",
-        "dosage": "1 cápsula",
-        "isTaken": true,
-        "takenAt": "2026-08-13T08:35:00Z"
-      },
-      {
-        "id": "supl-2",
-        "patientId": "pat-ana-sofia",
-        "date": "2026-08-13",
-        "supplementName": "Citrato de Magnesio 400mg",
-        "dosage": "400mg",
-        "isTaken": false
-      }
-    ],
-    "EXERCISE_ROUTINES": [
-      {
-        "id": "ex-ana-1",
-        "patientId": "pat-ana-sofia",
-        "title": "Rutina de Tonificación y Fuerza Funcional",
-        "goal": "Preservación de masa muscular y acondicionamiento cardiovascular",
-        "frequencyPerWeek": 4,
-        "isActive": true,
-        "items": [
-          {
-            "id": "ex-it-1",
-            "dayLabel": "Día 1 - Tren Inferior",
-            "exerciseName": "Sentadillas Goblet con Mancuerna",
-            "muscleGroup": "Pierna / Glúteo",
-            "sets": 4,
-            "reps": "12-15",
-            "restSeconds": 60,
-            "weightTarget": "10 kg"
-          },
-          {
-            "id": "ex-it-2",
-            "dayLabel": "Día 1 - Tren Inferior",
-            "exerciseName": "Puente de Glúteo con Banda",
-            "muscleGroup": "Glúteo",
-            "sets": 4,
-            "reps": "15-20",
-            "restSeconds": 45
-          },
-          {
-            "id": "ex-it-3",
-            "dayLabel": "Día 1 - Tren Inferior",
-            "exerciseName": "Desplantes Estáticos",
-            "muscleGroup": "Cuádriceps",
-            "sets": 3,
-            "reps": "12 por pierna",
-            "restSeconds": 60
-          },
-          {
-            "id": "ex-it-4",
-            "dayLabel": "Día 2 - Tren Superior & Core",
-            "exerciseName": "Press Militar con Mancuernas",
-            "muscleGroup": "Hombro",
-            "sets": 4,
-            "reps": "12",
-            "restSeconds": 60,
-            "weightTarget": "5 kg c/u"
-          },
-          {
-            "id": "ex-it-5",
-            "dayLabel": "Día 2 - Tren Superior & Core",
-            "exerciseName": "Remo con Mancuerna a 1 brazo",
-            "muscleGroup": "Espalda",
-            "sets": 4,
-            "reps": "12 por lado",
-            "restSeconds": 60,
-            "weightTarget": "8 kg"
-          },
-          {
-            "id": "ex-it-6",
-            "dayLabel": "Día 2 - Tren Superior & Core",
-            "exerciseName": "Plancha Abdominal Frontal",
-            "muscleGroup": "Core",
-            "sets": 3,
-            "reps": "45 segundos",
-            "restSeconds": 45
-          }
-        ]
-      }
-    ],
+    "MEAL_LOGS": [],
+    "WATER_LOGS": [],
+    "SUPPLEMENTS": [],
+    "SUPPLEMENT_LOGS": [],
+    "EXERCISE_ROUTINES": [],
     "APPOINTMENTS": [],
-    "PAYMENTS": [
-      {
-        "id": "pay-1",
-        "organizationId": "org-nutriluz-mexico",
-        "patientId": "pat-ana-sofia",
-        "patientName": "Ana Sofía García",
-        "concept": "Paquete de Seguimiento Nutricional 3 Meses",
-        "amount": 2400,
-        "currency": "MXN",
-        "status": "PAGADO",
-        "paymentMethod": "Tarjeta de Crédito (Stripe)",
-        "paidAt": "2026-08-01T10:30:00Z",
-        "invoiceRfc": "GARA950418XYZ"
-      },
-      {
-        "id": "pay-2",
-        "organizationId": "org-nutriluz-mexico",
-        "patientId": "pat-mariana-t",
-        "patientName": "Mariana Torres",
-        "concept": "Consulta de Evaluación Antropométrica InBody",
-        "amount": 950,
-        "currency": "MXN",
-        "status": "PAGADO",
-        "paymentMethod": "Transferencia SPEI",
-        "paidAt": "2026-08-05T12:15:00Z"
-      },
-      {
-        "id": "pay-3",
-        "organizationId": "org-nutriluz-mexico",
-        "patientId": "pat-roberto-m",
-        "patientName": "Roberto Navarro",
-        "concept": "Consulta Online Nutrición",
-        "amount": 850,
-        "currency": "MXN",
-        "status": "PENDIENTE",
-        "paymentMethod": "Pendiente de pago (Mercado Pago)",
-        "paidAt": "2026-08-15T00:00:00Z"
-      },
-      {
-        "id": "pay-4",
-        "organizationId": "org-nutriluz-mexico",
-        "patientId": "pat-claudia-h",
-        "patientName": "Claudia Hernández",
-        "concept": "Consulta de Seguimiento Quincenal",
-        "amount": 850,
-        "currency": "MXN",
-        "status": "PAGADO",
-        "paymentMethod": "Terminal Clip / Tarjeta Débito",
-        "paidAt": "2026-08-08T13:00:00Z"
-      }
-    ],
-    "MESSAGES": [
-      {
-        "id": "msg-1",
-        "conversationId": "conv-ana",
-        "senderId": "user-dra-valeria",
-        "senderName": "Dra. Valeria López",
-        "senderRole": "NUTRIOLOGO",
-        "content": "¡Hola Ana Sofía! Vi tus registros de comida y agua de esta semana. ¡Excelente adherencia con el nuevo desayuno!",
-        "isRead": true,
-        "createdAt": "2026-08-12T16:00:00Z"
-      },
-      {
-        "id": "msg-2",
-        "conversationId": "conv-ana",
-        "senderId": "pat-ana-sofia",
-        "senderName": "Ana Sofía García",
-        "senderRole": "PACIENTE",
-        "content": "¡Hola Dra.! Muchas gracias. La verdad me he sentido con mucha más energía por las tardes. ¿Para la cena del sábado puedo cambiar el atún por salmón a la plancha?",
-        "isRead": true,
-        "createdAt": "2026-08-12T17:15:00Z"
-      },
-      {
-        "id": "msg-3",
-        "conversationId": "conv-ana",
-        "senderId": "user-dra-valeria",
-        "senderName": "Dra. Valeria López",
-        "senderRole": "NUTRIOLOGO",
-        "content": "¡Claro que sí! Puedes usar 120g de salmón fresco. Como aporta un poco más de grasa saludable, solo omite la porción de aguacate en esa comida.",
-        "isRead": false,
-        "createdAt": "2026-08-12T18:00:00Z"
-      }
-    ],
-    "NOTIFICATIONS": [
-      {
-        "id": "notif-1",
-        "category": "PACIENTE",
-        "title": "⚠️ Atención requerida: Paciente en riesgo",
-        "message": "Diego Salazar lleva 12 días sin registrar comidas y no tiene cita futura agendada.",
-        "actionLink": "/pacientes/pat-diego-s",
-        "isRead": true,
-        "createdAt": "2026-08-13T09:00:00Z"
-      },
-      {
-        "id": "notif-2",
-        "category": "AGENDA",
-        "title": "Próxima consulta hoy",
-        "message": "Tienes consulta programada con Javier Orozco en 2 horas.",
-        "actionLink": "/agenda",
-        "isRead": true,
-        "createdAt": "2026-08-13T07:00:00Z"
-      },
-      {
-        "id": "notif-3",
-        "category": "IA",
-        "title": "NutriCopilot AI listo",
-        "message": "Se generó automáticamente el borrador de consulta para Ana Sofía García.",
-        "actionLink": "/nutricopilot",
-        "isRead": true,
-        "createdAt": "2026-08-12T20:00:00Z"
-      }
-    ],
+    "PAYMENTS": [],
+    "MESSAGES": [],
+    "NOTIFICATIONS": [],
     "PRESCRIPTION_PRESETS": [
       {
         "id": "preset_1791556560293_5ludlf",
@@ -1868,6 +1359,7 @@
     "pat-1791647847175",
     "pat-1791657060261",
     "pat-1791652993560",
-    "pat-1791739385863"
+    "pat-1791739385863",
+    "pat-demo"
   ]
 }

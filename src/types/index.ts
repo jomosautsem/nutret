@@ -102,6 +102,13 @@ export interface Patient {
   selectedPresetId?: string; // ID de la plantilla de prescripción rápida vinculada
   presetId?: string;
   metabolicFormula?: string; // Fórmula predictiva de GEB seleccionada (Mifflin, Harris, Schofield, etc.)
+  smaePortions?: Record<string, number>;
+  macroAdequacyTargets?: {
+    proteinPct: number;
+    fatPct: number;
+    carbsPct: number;
+  };
+  smaeLockedGroups?: Record<string, boolean>;
   createdAt: string;
   updatedAt: string;
 }
@@ -312,6 +319,8 @@ export interface NutritionPlanMeal {
   suggestedTime?: string;
   items: NutritionPlanItem[];
   notes?: string;
+  photoUrl?: string;
+  imageUrl?: string;
 }
 
 export interface NutritionPlanDay {
@@ -349,6 +358,15 @@ export interface NutritionPlan {
   presetId?: string;
   metabolicFormula?: string;
   digitalSignatureApprovedAt?: string;
+  smaePortions?: Record<string, number>;
+  smaeMealDistribution?: Record<string, Record<string, number>>;
+  macroAdequacyTargets?: {
+    proteinPct: number;
+    fatPct: number;
+    carbsPct: number;
+  };
+  smaeLockedGroups?: Record<string, boolean>;
+  customPhotos?: Record<string, string>; // Maps `${dayIdx}_${mealIdx}` to custom photo data URL
   createdAt: string;
   updatedAt: string;
 }

@@ -538,6 +538,19 @@ export const ExecutivePdfExportModal: React.FC<ExecutivePdfExportModalProps> = (
       const updated: Record<string, string> = { ...customPhotos, [key]: dataUrl };
       setCustomPhotos(updated);
       saveMealPhotos(plan?.id || '', updated);
+      
+      const updatedPlan: NutritionPlan = {
+        ...currentPlan,
+        customPhotos: updated,
+      };
+      if (updatedPlan.days?.[dayIdx]?.meals?.[mealIdx]) {
+        updatedPlan.days[dayIdx].meals[mealIdx].photoUrl = dataUrl;
+      }
+      setCurrentPlan(updatedPlan);
+      storageService.saveNutritionPlan(updatedPlan);
+      onPlanUpdate?.(updatedPlan);
+      window.dispatchEvent(new CustomEvent('nutriluz_meal_photos_updated', { detail: { planId: plan?.id, photos: updated } }));
+
       showToast(
         'Foto Asignada',
         `Se vinculó la fotografía para ${DAYS_CONFIG[dayIdx].name} (${file.name})`,
@@ -563,6 +576,19 @@ export const ExecutivePdfExportModal: React.FC<ExecutivePdfExportModalProps> = (
     const updated = { ...customPhotos, [key]: trimmed };
     setCustomPhotos(updated);
     saveMealPhotos(plan?.id || '', updated);
+
+    const updatedPlan: NutritionPlan = {
+      ...currentPlan,
+      customPhotos: updated,
+    };
+    if (updatedPlan.days?.[dayIdx]?.meals?.[mealIdx]) {
+      updatedPlan.days[dayIdx].meals[mealIdx].photoUrl = trimmed;
+    }
+    setCurrentPlan(updatedPlan);
+    storageService.saveNutritionPlan(updatedPlan);
+    onPlanUpdate?.(updatedPlan);
+    window.dispatchEvent(new CustomEvent('nutriluz_meal_photos_updated', { detail: { planId: plan?.id, photos: updated } }));
+
     setEditingUrlKey(null);
     setInputUrl('');
     showToast(
@@ -579,12 +605,42 @@ export const ExecutivePdfExportModal: React.FC<ExecutivePdfExportModalProps> = (
     delete updated[key];
     setCustomPhotos(updated);
     saveMealPhotos(plan?.id || '', updated);
+
+    const updatedPlan: NutritionPlan = {
+      ...currentPlan,
+      customPhotos: updated,
+    };
+    if (updatedPlan.days?.[dayIdx]?.meals?.[mealIdx]) {
+      delete updatedPlan.days[dayIdx].meals[mealIdx].photoUrl;
+    }
+    setCurrentPlan(updatedPlan);
+    storageService.saveNutritionPlan(updatedPlan);
+    onPlanUpdate?.(updatedPlan);
+    window.dispatchEvent(new CustomEvent('nutriluz_meal_photos_updated', { detail: { planId: plan?.id, photos: updated } }));
+
     showToast('Foto Restablecida', `Se restauró la ilustración automática para ${DAYS_CONFIG[dayIdx].name}`, 'info');
   };
 
   const handleResetAllPhotos = () => {
     setCustomPhotos({});
     saveMealPhotos(plan?.id || '', {});
+
+    const updatedPlan: NutritionPlan = {
+      ...currentPlan,
+      customPhotos: {},
+    };
+    if (updatedPlan.days) {
+      updatedPlan.days.forEach((d) => {
+        d.meals?.forEach((m) => {
+          delete m.photoUrl;
+        });
+      });
+    }
+    setCurrentPlan(updatedPlan);
+    storageService.saveNutritionPlan(updatedPlan);
+    onPlanUpdate?.(updatedPlan);
+    window.dispatchEvent(new CustomEvent('nutriluz_meal_photos_updated', { detail: { planId: plan?.id, photos: {} } }));
+
     showToast('Fotos Restablecidas', 'Todos los platillos usarán sus ilustraciones automáticas', 'info');
   };
 

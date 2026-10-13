@@ -38,10 +38,19 @@ import {
   Phone,
   ChefHat,
   Search,
+  X,
+  Maximize2,
+  RefreshCw,
+  Image as ImageIcon,
 } from 'lucide-react';
-import { Patient, NutritionPlan, MealLog, Appointment, Recipe, UserProfile } from '../../types';
+import { Patient, NutritionPlan, NutritionPlanMeal, MealLog, Appointment, AppointmentType, Recipe, UserProfile } from '../../types';
 import { storageService } from '../../lib/storage';
-import { pdfService, formatCleanItemDescription } from '../../lib/pdf';
+import {
+  pdfService,
+  formatCleanItemDescription,
+  getSavedMealPhotos,
+  generateDishCanvasThumbnail,
+} from '../../lib/pdf';
 import { isMobileOrAndroid } from '../../lib/pdfDelivery';
 
 /**
@@ -104,10 +113,17 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
 
   const [patients, setPatients] = useState<Patient[]>(() => storageService.getPatients());
   const [activePatientId, setActivePatientId] = useState<string | null>(() => {
-    return storageService.getActivePortalPatientId();
+    const portalId = storageService.getActivePortalPatientId();
+    if (portalId) return portalId;
+    const clinicalId = storageService.getActiveClinicalPatientId();
+    if (clinicalId) {
+      storageService.setActivePortalPatientId(clinicalId);
+      return clinicalId;
+    }
+    return null;
   });
   const [isLoggedOut, setIsLoggedOut] = useState<boolean>(() => {
-    return !storageService.getActivePortalPatientId();
+    return !storageService.getActivePortalPatientId() && !storageService.getActiveClinicalPatientId();
   });
 
   // Login form state
@@ -155,17 +171,123 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
   });
   const activePlan = plans.find((p) => p.status === 'ACTIVE') || plans[0];
 
+  // Saved photos from PDF / Customizer
+  const [customMealPhotos, setCustomMealPhotos] = useState<Record<string, string>>(() => {
+    return getSavedMealPhotos(activePlan?.id || '');
+  });
+  const [zoomedPhoto, setZoomedPhoto] = useState<{
+    url: string;
+    title: string;
+    mealName: string;
+    time?: string;
+    bullets?: string[];
+    isCustom?: boolean;
+  } | null>(null);
+
+  // Appointments sync state
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const pId = storageService.getActivePortalPatientId();
     if (!pId) return [];
     const list = storageService.getAppointmentsByPatientId(pId);
     return list.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   });
+  const [isSyncingAppointments, setIsSyncingAppointments] = useState(false);
+  const [isRequestApptModalOpen, setIsRequestApptModalOpen] = useState(false);
+  const [requestApptData, setRequestApptData] = useState({
+    appointmentType: 'SEGUIMIENTO' as AppointmentType,
+    date: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    time: '10:00',
+    notes: 'Revisión y seguimiento mensual de mi plan de alimentación',
+  });
+
+  // Re-fetch meal photos when plan changes or event dispatches
+  useEffect(() => {
+    const handlePhotosUpdate = (e: any) => {
+      const photos = e.detail?.photos || getSavedMealPhotos(activePlan?.id || '');
+      setCustomMealPhotos(photos);
+    };
+    window.addEventListener('nutriluz_meal_photos_updated', handlePhotosUpdate);
+    window.addEventListener('storage', () => {
+      setCustomMealPhotos(getSavedMealPhotos(activePlan?.id || ''));
+    });
+    return () => {
+      window.removeEventListener('nutriluz_meal_photos_updated', handlePhotosUpdate);
+    };
+  }, [activePlan?.id]);
+
+  // Method to get display photo for any meal (Custom uploaded photo > plan photo > recipe photo > canvas thumbnail)
+  const getMealDisplayPhoto = (dayIdx: number, mealIdx: number, meal: NutritionPlanMeal): { url: string; isCustom: boolean } => {
+    const key = `${dayIdx}_${mealIdx}`;
+    if (meal.photoUrl) {
+      return { url: meal.photoUrl, isCustom: true };
+    }
+    if (activePlan?.customPhotos?.[key]) {
+      return { url: activePlan.customPhotos[key], isCustom: true };
+    }
+    if (customMealPhotos[key]) {
+      return { url: customMealPhotos[key], isCustom: true };
+    }
+    const mainItemName = meal.items?.[0]?.name || meal.name;
+    const matchingRecipe = recipes.find(
+      (r) => r.name.toLowerCase().trim() === mainItemName.toLowerCase().trim()
+    );
+    if (matchingRecipe?.photoUrl) {
+      return { url: matchingRecipe.photoUrl, isCustom: true };
+    }
+    const fallbackCanvas = generateDishCanvasThumbnail(mainItemName, meal.name);
+    return { url: fallbackCanvas, isCustom: false };
+  };
+
+  const syncAppointmentsFromCloud = async (patientId: string) => {
+    if (!patientId) return;
+    setIsSyncingAppointments(true);
+    try {
+      const fetched = await storageService.fetchPatientAppointments(patientId);
+      if (fetched && fetched.length > 0) {
+        setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+      }
+    } catch (e) {
+      console.warn('Could not sync appointments from cloud:', e);
+    } finally {
+      setIsSyncingAppointments(false);
+    }
+  };
+
+  const handleRequestAppointmentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPatient) return;
+    const startTime = `${requestApptData.date}T${requestApptData.time}:00`;
+    const startObj = new Date(startTime);
+    const endObj = new Date(startObj.getTime() + 45 * 60000);
+    const newApp: Appointment = {
+      id: `app-${Date.now()}`,
+      organizationId: organization?.id || 'org-nutriluz-mexico',
+      branchId: 'branch-1',
+      patientId: currentPatient.id,
+      patientName: `${currentPatient.firstName} ${currentPatient.lastName}`.trim(),
+      specialistId: currentPatient.specialistId || 'user-lic-luz-elena',
+      appointmentType: requestApptData.appointmentType,
+      status: 'PENDIENTE',
+      startTime: startTime,
+      endTime: endObj.toISOString(),
+      price: 650,
+      currency: 'MXN',
+      locationNotes:
+        requestApptData.appointmentType === 'ONLINE'
+          ? 'Videoconsulta Online (Google Meet / Zoom)'
+          : 'Sucursal Polanco (Consultorio 302)',
+      consultationSummary: requestApptData.notes,
+    };
+    storageService.saveAppointment(newApp);
+    const updated = [newApp, ...appointments];
+    setAppointments(updated);
+    setIsRequestApptModalOpen(false);
+    showToast('Cita Solicitada', 'Tu cita quedó registrada y tu especialista la revisará en breve.', 'success');
+  };
 
   useEffect(() => {
     let isMounted = true;
     const handleUpdate = () => {
-      // Defer state update to next macrotask to prevent updating component while rendering
       setTimeout(() => {
         if (!isMounted) return;
         const list = storageService.getPatients();
@@ -177,6 +299,11 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
           setPlans(storageService.getPlansByPatientId(activeId));
           const appts = storageService.getAppointmentsByPatientId(activeId);
           setAppointments(appts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+          storageService.fetchPatientAppointments(activeId).then((fetched) => {
+            if (fetched && fetched.length > 0) {
+              setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+            }
+          }).catch(() => {});
         } else {
           setActivePatientId(null);
           setIsLoggedOut(true);
@@ -206,15 +333,23 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
       setPlans(storageService.getPlansByPatientId(currentPatient.id));
       const appts = storageService.getAppointmentsByPatientId(currentPatient.id);
       setAppointments(appts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+      setCustomMealPhotos(getSavedMealPhotos(activePlan?.id || ''));
+      
       storageService.fetchPatientPlans(currentPatient.id).then((fetched) => {
         if (fetched && fetched.length > 0) {
           setPlans(fetched);
         }
       }).catch(() => {});
+
+      storageService.fetchPatientAppointments(currentPatient.id).then((fetched) => {
+        if (fetched && fetched.length > 0) {
+          setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+        }
+      }).catch(() => {});
     } else {
       setAppointments([]);
     }
-  }, [currentPatient?.id]);
+  }, [currentPatient?.id, activePlan?.id]);
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,10 +365,17 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
       setIsLoggedOut(false);
       setLoginError(null);
       setPlans(storageService.getPlansByPatientId(authenticated.id));
-      setAppointments(storageService.getAppointmentsByPatientId(authenticated.id));
+      const appts = storageService.getAppointmentsByPatientId(authenticated.id);
+      setAppointments(appts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+      setCustomMealPhotos(getSavedMealPhotos(activePlan?.id || ''));
       storageService.fetchPatientPlans(authenticated.id).then((fetched) => {
         if (fetched && fetched.length > 0) {
           setPlans(fetched);
+        }
+      }).catch(() => {});
+      storageService.fetchPatientAppointments(authenticated.id).then((fetched) => {
+        if (fetched && fetched.length > 0) {
+          setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
         }
       }).catch(() => {});
       showToast('¡Bienvenido(a)!', `Sesión iniciada como ${authenticated.firstName} ${authenticated.lastName}.`, 'success');
@@ -972,62 +1114,192 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
               </div>
             )}
 
-            {currentDayMeals.map((meal) => {
+            {currentDayMeals.map((meal, mealIdx) => {
               const isChecked = !!mealStatus[meal.id];
+              const dayIdx = Math.max(0, Math.min(6, selectedDayOfWeek - 1));
+              const photoInfo = getMealDisplayPhoto(dayIdx, mealIdx, meal);
+              const mainDishTitle = meal.items?.[0]?.name || meal.name;
+              const totalKcal = meal.items.reduce((s, it) => s + (it.energyKcal || 0), 0);
+              const totalProt = meal.items.reduce((s, it) => s + (it.proteinG || 0), 0).toFixed(0);
+              const totalCarbs = meal.items.reduce((s, it) => s + (it.carbsG || 0), 0).toFixed(0);
+              const totalFat = meal.items.reduce((s, it) => s + (it.fatG || 0), 0).toFixed(0);
+              const bulletsList = meal.items.map((it) => `${formatPatientPortionOnly(it)} • ${it.name}`);
+              const matchingRecipe = recipes.find(
+                (r) => r.name.toLowerCase().trim() === mainDishTitle.toLowerCase().trim()
+              );
+
+              const mealBadgeColor = meal.name.toLowerCase().includes('desayun')
+                ? 'bg-rose-500 text-white'
+                : meal.name.toLowerCase().includes('comida')
+                ? 'bg-emerald-600 text-white'
+                : meal.name.toLowerCase().includes('cena')
+                ? 'bg-sky-600 text-white'
+                : 'bg-purple-600 text-white';
+
               return (
                 <div
                   key={meal.id}
                   id={`patient-meal-${meal.id}`}
-                  className={`p-4 rounded-3xl border transition-all ${
+                  className={`rounded-3xl border transition-all overflow-hidden ${
                     isChecked
-                      ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs'
+                      ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        onClick={() => toggleMeal(meal.id)}
-                        className="text-emerald-600 dark:text-emerald-400 hover:scale-110 transition-transform cursor-pointer"
-                        title={isChecked ? 'Marcar como pendiente' : 'Marcar como completada'}
-                      >
-                        {isChecked ? (
-                          <CheckCircle2 className="w-5 h-5 fill-emerald-600 text-white dark:fill-emerald-500 dark:text-slate-900" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-slate-300 dark:text-slate-600" />
-                        )}
-                      </button>
-                      <h4 className={`font-black text-sm sm:text-base ${isChecked ? 'text-emerald-900 dark:text-emerald-200 line-through opacity-80' : 'text-slate-900 dark:text-white'}`}>
+                  {/* Photo Banner with Badges */}
+                  <div className="relative aspect-[16/9] sm:aspect-[21/9] w-full overflow-hidden bg-slate-100 dark:bg-slate-800 group">
+                    <img
+                      src={photoInfo.url}
+                      alt={mainDishTitle}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+                      onClick={() =>
+                        setZoomedPhoto({
+                          url: photoInfo.url,
+                          title: mainDishTitle,
+                          mealName: meal.name,
+                          time: meal.suggestedTime,
+                          bullets: bulletsList,
+                          isCustom: photoInfo.isCustom,
+                        })
+                      }
+                    />
+
+                    {/* Gradient overlay for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-black/35 pointer-events-none" />
+
+                    {/* Upper Left: Meal Type Pill */}
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className={`px-2.5 py-1 rounded-xl text-[11px] font-black uppercase tracking-wider backdrop-blur-md shadow-sm ${mealBadgeColor}`}>
                         {meal.name}
-                      </h4>
+                      </span>
+                      {photoInfo.isCustom && (
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-400 text-amber-950 shadow-sm flex items-center gap-1">
+                          <Camera className="w-3 h-3" />
+                          <span>Foto del plan</span>
+                        </span>
+                      )}
                     </div>
 
-                    <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                      {meal.suggestedTime || 'Horario flexible'}
-                    </span>
+                    {/* Upper Right: Time & Zoom Button */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-black/60 backdrop-blur-md text-white shadow-sm flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-emerald-400" />
+                        <span>{meal.suggestedTime || 'Horario flexible'}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomedPhoto({
+                            url: photoInfo.url,
+                            title: mainDishTitle,
+                            mealName: meal.name,
+                            time: meal.suggestedTime,
+                            bullets: bulletsList,
+                            isCustom: photoInfo.isCustom,
+                          })
+                        }
+                        className="w-7 h-7 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+                        title="Ver fotografía ampliada"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Bottom overlay: Dish title & Kcal on the photo */}
+                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none">
+                      <div className="text-white drop-shadow-md">
+                        <h4 className="font-black text-base sm:text-lg leading-tight line-clamp-1">
+                          {mainDishTitle}
+                        </h4>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500/90 text-white backdrop-blur-md shrink-0 shadow-sm">
+                        {totalKcal} kcal
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="pl-7 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                    {meal.items.map((item) => (
-                      <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1 border-b border-slate-100 dark:border-slate-800 last:border-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-900 dark:text-white">• {item.name}</span>
-                          <span className="font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md text-xs border border-emerald-200/60 dark:border-emerald-800/60">
-                            {formatPatientPortionOnly(item)}
-                          </span>
-                        </div>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold shrink-0">
-                          {item.energyKcal} kcal
+                  {/* Body: Action Buttons, Macros, Porciones & Instructions */}
+                  <div className="p-4 sm:p-5 space-y-3.5">
+                    {/* Header bar: Checkbox & Quick Macros */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => toggleMeal(meal.id)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer w-fit ${
+                          isChecked
+                            ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {isChecked ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 fill-emerald-600 text-white dark:fill-emerald-500" />
+                            <span>¡Comida completada!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Circle className="w-4 h-4 text-slate-400" />
+                            <span>Marcar como consumida</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Macros Chips */}
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60">
+                          P: {totalProt}g
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60">
+                          C: {totalCarbs}g
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/60">
+                          G: {totalFat}g
                         </span>
                       </div>
-                    ))}
-                    {meal.notes && (
-                      <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-1.5">
-                        <ChefHat className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <span className="font-medium leading-relaxed">{meal.notes}</span>
+                    </div>
+
+                    {/* Porciones e Ingredientes Limpios */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Ingredientes & Porciones:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {meal.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 text-xs"
+                          >
+                            <span className="font-bold text-slate-900 dark:text-white truncate mr-2">
+                              • {item.name}
+                            </span>
+                            <span className="font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md text-[11px] border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
+                              {formatPatientPortionOnly(item)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Notas culinarias y Receta */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                      {meal.notes ? (
+                        <div className="flex items-start gap-1.5 text-xs text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 flex-1">
+                          <ChefHat className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                          <span className="font-medium leading-relaxed">{meal.notes}</span>
+                        </div>
+                      ) : <div />}
+
+                      {matchingRecipe && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRecipeForModal(matchingRecipe)}
+                          className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 text-teal-700 dark:text-teal-300 text-xs font-bold border border-teal-200 dark:border-teal-800 flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Ver receta paso a paso</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -1138,83 +1410,147 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
                     </div>
 
                     <div className="divide-y divide-slate-100 dark:divide-slate-800 p-5 space-y-5 bg-white dark:bg-slate-900">
-                      {(day.meals || []).map((meal) => (
-                        <div key={meal.id} className="pt-4 first:pt-0">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                              {meal.name}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              {meal.suggestedTime ? `Horario: ${meal.suggestedTime} hrs` : 'Horario flexible'}
-                            </span>
-                          </div>
+                      {(day.meals || []).map((meal, mealIdx) => {
+                        const photoInfo = getMealDisplayPhoto(dIdx, mealIdx, meal);
+                        const mainDishTitle = meal.items?.[0]?.name || meal.name;
+                        const bulletsList = meal.items.map((it) => `${formatPatientPortionOnly(it)} • ${it.name}`);
+                        const totalMealKcal = meal.items.reduce((s, it) => s + (it.energyKcal || 0), 0);
 
-                          <div className="space-y-2.5">
-                            {(meal.items || []).map((item) => {
-                              const matchingRecipe = recipes.find(
-                                (r) => r.name.toLowerCase().trim() === item.name.toLowerCase().trim()
-                              );
-
-                              return (
-                                <div
-                                  key={item.id}
-                                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 gap-2.5"
+                        return (
+                          <div key={meal.id} className="pt-5 first:pt-0">
+                            <div className="flex flex-col md:flex-row gap-4 items-start pb-4 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                              {/* Thumbnail with zoom */}
+                              <div className="w-full md:w-44 h-32 md:h-28 rounded-2xl overflow-hidden relative shrink-0 bg-slate-100 dark:bg-slate-800 shadow-2xs group">
+                                <img
+                                  src={photoInfo.url}
+                                  alt={mainDishTitle}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                  onClick={() =>
+                                    setZoomedPhoto({
+                                      url: photoInfo.url,
+                                      title: mainDishTitle,
+                                      mealName: meal.name,
+                                      time: meal.suggestedTime,
+                                      bullets: bulletsList,
+                                      isCustom: photoInfo.isCustom,
+                                    })
+                                  }
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setZoomedPhoto({
+                                      url: photoInfo.url,
+                                      title: mainDishTitle,
+                                      mealName: meal.name,
+                                      time: meal.suggestedTime,
+                                      bullets: bulletsList,
+                                      isCustom: photoInfo.isCustom,
+                                    })
+                                  }
+                                  className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-lg bg-black/60 text-white flex items-center justify-center backdrop-blur-xs cursor-pointer hover:bg-black/80"
+                                  title="Ver foto"
                                 >
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
-                                        {item.name}
-                                      </span>
-                                      <span className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/70 px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
-                                        {formatPatientPortionOnly(item)}
-                                      </span>
-                                      {matchingRecipe && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedRecipeForModal(matchingRecipe)}
-                                          className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800/60"
-                                        >
-                                          <ChefHat className="w-3 h-3" />
-                                          <span>Ver receta</span>
-                                        </button>
-                                      )}
-                                    </div>
-                                    {item.preparationTip && (
-                                      <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                                        Nota: {item.preparationTip}
-                                      </p>
-                                    )}
-                                  </div>
+                                  <Maximize2 className="w-3 h-3" />
+                                </button>
+                                {photoInfo.isCustom && (
+                                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-amber-950 flex items-center gap-0.5 shadow-2xs">
+                                    <Camera className="w-2.5 h-2.5" />
+                                    <span>Plan</span>
+                                  </span>
+                                )}
+                              </div>
 
-                                  <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-semibold shrink-0">
-                                    <span>P: {item.proteinG || 0}g</span>
-                                    <span>C: {item.carbsG || 0}g</span>
-                                    <span>G: {item.fatG || 0}g</span>
-                                    <span className="font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/70 px-2.5 py-1 rounded-lg border border-emerald-200/60">
-                                      {item.energyKcal || 0} kcal
+                              {/* Details */}
+                              <div className="flex-1 w-full space-y-2.5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                      {meal.name}
+                                    </span>
+                                    <span className="font-extrabold text-xs text-slate-700 dark:text-slate-300">
+                                      • {mainDishTitle}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                      {meal.suggestedTime ? `${meal.suggestedTime} hrs` : 'Horario flexible'}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60">
+                                      {totalMealKcal} kcal
                                     </span>
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
 
-                          {/* Preparación y Modo de Elaboración detallado si existe */}
-                          {meal.notes && (
-                            <div className="mt-3 p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 text-xs sm:text-sm">
-                              <div className="font-extrabold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 mb-1 text-xs uppercase tracking-wider">
-                                <ChefHat className="w-4 h-4 text-amber-600 shrink-0" />
-                                <span>Modo de Preparación / Recomendaciones de la Comida:</span>
+                                <div className="space-y-2">
+                                  {(meal.items || []).map((item) => {
+                                    const matchingRecipe = recipes.find(
+                                      (r) => r.name.toLowerCase().trim() === item.name.toLowerCase().trim()
+                                    );
+
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 gap-2"
+                                      >
+                                        <div className="space-y-0.5">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                                              {item.name}
+                                            </span>
+                                            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
+                                              {formatPatientPortionOnly(item)}
+                                            </span>
+                                            {matchingRecipe && (
+                                              <button
+                                                type="button"
+                                                onClick={() => setSelectedRecipeForModal(matchingRecipe)}
+                                                className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800/60"
+                                              >
+                                                <ChefHat className="w-3 h-3" />
+                                                <span>Ver receta</span>
+                                              </button>
+                                            )}
+                                          </div>
+                                          {item.preparationTip && (
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                                              Nota: {item.preparationTip}
+                                            </p>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-semibold shrink-0">
+                                          <span>P: {item.proteinG || 0}g</span>
+                                          <span>C: {item.carbsG || 0}g</span>
+                                          <span>G: {item.fatG || 0}g</span>
+                                          <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                                            {item.energyKcal || 0} kcal
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {meal.notes && (
+                                  <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 text-xs">
+                                    <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 mb-1 text-[11px] uppercase tracking-wider">
+                                      <ChefHat className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                      <span>Preparación:</span>
+                                    </div>
+                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                                      {meal.notes}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-                              <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line font-medium">
-                                {meal.notes}
-                              </p>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -1531,12 +1867,31 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
                 Consultas agendadas en tiempo real por tu especialista con fecha, horario y sede.
               </p>
             </div>
-
-            {appointments.length > 0 && (
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 self-start sm:self-auto">
-                {appointments.length} {appointments.length === 1 ? 'cita programada' : 'citas programadas'}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => syncAppointmentsFromCloud(currentPatient.id)}
+                disabled={isSyncingAppointments}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+                title="Sincronizar citas con la base de datos de tu nutriólogo"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAppointments ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
+                <span>{isSyncingAppointments ? 'Sincronizando...' : 'Sincronizar'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRequestApptModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Solicitar Cita</span>
+              </button>
+              {appointments.length > 0 && (
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50">
+                  {appointments.length} {appointments.length === 1 ? 'cita programada' : 'citas programadas'}
+                </span>
+              )}
+            </div>
           </div>
 
           {appointments.length > 0 ? (
@@ -1708,19 +2063,29 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
                   Tu nutrióloga registrará tus citas de seguimiento y evaluación antropométrica. También puedes solicitar una consulta directamente.
                 </p>
               </div>
-              {organization?.phone && (
-                <a
-                  href={`https://wa.me/${organization.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                    `¡Hola! Soy ${currentPatient.firstName} ${currentPatient.lastName}. Quisiera agendar una consulta de nutrición.`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRequestApptModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>Solicitar Cita con mi Nutrióloga</span>
-                </a>
-              )}
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Agendar Consulta en la App</span>
+                </button>
+                {organization?.phone && (
+                  <a
+                    href={`https://wa.me/${organization.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                      `¡Hola! Soy ${currentPatient.firstName} ${currentPatient.lastName}. Quisiera agendar una consulta de nutrición.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Solicitar por WhatsApp</span>
+                  </a>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1979,6 +2344,179 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
           </div>
         </Modal>
       )}
+
+      {/* Zoomed Dish Photo Modal */}
+      {zoomedPhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in"
+          onClick={() => setZoomedPhoto(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+              <img
+                src={zoomedPhoto.url}
+                alt={zoomedPhoto.title}
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setZoomedPhoto(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white flex items-center justify-center transition-colors cursor-pointer shadow-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                <Utensils className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{zoomedPhoto.mealName}</span>
+                {zoomedPhoto.time && <span>• {zoomedPhoto.time}</span>}
+              </div>
+            </div>
+            <div className="p-5 pt-0 space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
+                  {zoomedPhoto.title}
+                </h3>
+                {zoomedPhoto.isCustom && (
+                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-400 text-amber-950 shrink-0">
+                    Foto Personalizada
+                  </span>
+                )}
+              </div>
+
+              {zoomedPhoto.bullets && zoomedPhoto.bullets.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Ingredientes & Porciones del Platillo:
+                  </span>
+                  <div className="space-y-1 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs">
+                    {zoomedPhoto.bullets.map((b, bIdx) => (
+                      <div key={bIdx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setZoomedPhoto(null)}
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Cerrar Fotografía
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Appointment Modal */}
+      <Modal
+        id="request-appointment-modal"
+        isOpen={isRequestApptModalOpen}
+        onClose={() => setIsRequestApptModalOpen(false)}
+        title="Agendar / Solicitar Consulta Nutricional"
+        subtitle="Registra tu fecha y horario preferido. Quedará sincronizado en tiempo real con tu especialista."
+        maxWidth="md"
+      >
+        <form onSubmit={handleRequestAppointmentSubmit} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+              Tipo de Consulta
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setRequestApptData((prev) => ({ ...prev, appointmentType: 'SEGUIMIENTO' }))}
+                className={`p-3 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                  requestApptData.appointmentType === 'SEGUIMIENTO'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-400/30'
+                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <div className="text-xs font-black">Seguimiento Clínico</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Revisión de plan y peso</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestApptData((prev) => ({ ...prev, appointmentType: 'ONLINE' }))}
+                className={`p-3 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                  requestApptData.appointmentType === 'ONLINE'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-2 ring-blue-400/30'
+                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <div className="text-xs font-black flex items-center gap-1">
+                  <Video className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Videoconsulta Online</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Vía Meet o Zoom</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                Fecha Sugerida
+              </label>
+              <input
+                type="date"
+                required
+                min={new Date().toISOString().slice(0, 10)}
+                value={requestApptData.date}
+                onChange={(e) => setRequestApptData((prev) => ({ ...prev, date: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                Horario Preferido
+              </label>
+              <input
+                type="time"
+                required
+                value={requestApptData.time}
+                onChange={(e) => setRequestApptData((prev) => ({ ...prev, time: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+              Motivo o Notas para el Nutriólogo
+            </label>
+            <textarea
+              rows={3}
+              value={requestApptData.notes}
+              onChange={(e) => setRequestApptData((prev) => ({ ...prev, notes: e.target.value }))}
+              placeholder="¿Qué te gustaría revisar en esta consulta?"
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs leading-relaxed"
+            />
+          </div>
+
+          <div className="pt-2 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsRequestApptModalOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-extrabold text-xs shadow-md cursor-pointer transition-all active:scale-95"
+            >
+              Confirmar Solicitud de Cita
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
