@@ -9,10 +9,8 @@ import {
   Salad,
   Sparkles,
   AlertCircle,
-  Stethoscope,
   HeartHandshake,
   CheckCircle2,
-  Info,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/common/Toast';
@@ -33,14 +31,6 @@ export const UnifiedLoginView: React.FC<UnifiedLoginViewProps> = ({ onSuccess })
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showQuickCredentials, setShowQuickCredentials] = useState(false);
-
-  // Quick autofill helper
-  const handleQuickFill = (userVal: string, passVal: string) => {
-    setIdentifier(userVal);
-    setPassword(passVal);
-    setErrorMessage(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,7 +211,7 @@ export const UnifiedLoginView: React.FC<UnifiedLoginViewProps> = ({ onSuccess })
             </div>
 
             {/* Remember session checkbox */}
-            <div className="flex items-center justify-between text-xs pt-0.5">
+            <div className="flex items-center text-xs pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -231,14 +221,6 @@ export const UnifiedLoginView: React.FC<UnifiedLoginViewProps> = ({ onSuccess })
                 />
                 <span className="text-slate-400 text-[11px]">Recordar sesión activa</span>
               </label>
-
-              <button
-                type="button"
-                onClick={() => setShowQuickCredentials(!showQuickCredentials)}
-                className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
-              >
-                {showQuickCredentials ? 'Ocultar ayuda' : 'Ver accesos rápidos'}
-              </button>
             </div>
 
             {/* Submit Button */}
@@ -261,57 +243,6 @@ export const UnifiedLoginView: React.FC<UnifiedLoginViewProps> = ({ onSuccess })
               )}
             </button>
           </form>
-
-          {/* Quick Credential Test Helper Drawer */}
-          {showQuickCredentials && (
-            <div className="pt-3 border-t border-slate-800/80 space-y-2 animate-fade-in text-xs">
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span className="font-bold flex items-center gap-1 text-slate-300">
-                  <Info className="w-3.5 h-3.5 text-emerald-400" />
-                  Accesos del Sistema
-                </span>
-                <span>Haz clic para autollenar</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('luzelenaalcocer14@gmail.com', 'nutriluz128')}
-                  className="p-2.5 rounded-xl bg-slate-950/60 border border-emerald-500/30 hover:border-emerald-500/60 text-left transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
-                    <Stethoscope className="w-3 h-3" />
-                    <span>Nutrióloga</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate mt-0.5">luzelenaalcocer14@gmail.com</div>
-                  <div className="text-[9px] text-slate-500 font-mono mt-0.5">Clave: nutriluz128</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const patients = storageService.getPatients();
-                    const demoPatient = patients[0];
-                    const username = demoPatient?.portalUsername || demoPatient?.email || 'ana.morales';
-                    const pass = demoPatient?.portalPassword || 'Nutri2026!';
-                    handleQuickFill(username, pass);
-                  }}
-                  className="p-2.5 rounded-xl bg-slate-950/60 border border-teal-500/30 hover:border-teal-500/60 text-left transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-1.5 text-teal-300 font-bold text-[11px]">
-                    <HeartHandshake className="w-3 h-3" />
-                    <span>Paciente Demo</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                    {storageService.getPatients()[0]?.portalUsername || 'ana.morales'}
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-mono mt-0.5">
-                    Clave: {storageService.getPatients()[0]?.portalPassword || 'Nutri2026!'}
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Security & Regulatory Badges */}
