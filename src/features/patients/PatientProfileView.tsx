@@ -40,6 +40,11 @@ import {
   CheckSquare,
   Square,
   Info,
+  Building2,
+  Link as LinkIcon,
+  UploadCloud,
+  X,
+  ZoomIn,
 } from 'lucide-react';
 import { PatientCredentialsModal } from './PatientCredentialsModal';
 import {
@@ -48,6 +53,7 @@ import {
   AnthropometricRecord,
   Appointment,
   AppointmentType,
+  ProgressPhoto,
   ClinicalRecord,
   LaboratoryResult,
   ExerciseRoutine,
@@ -334,16 +340,58 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
   const isEditingClinicalRef = useRef(false);
   const [showConfirmClinical, setShowConfirmClinical] = useState(false);
 
-  // New Appointment modal in patient profile
+  const branches = storageService.getBranches();
+  const defaultBranchId = patient?.branchId || branches[0]?.id || 'branch-cdmx-sur';
+
+  // Appointment modal & state in patient profile
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [scheduleFormData, setScheduleFormData] = useState({
     appointmentType: 'SEGUIMIENTO' as AppointmentType,
+    branchId: defaultBranchId,
+    customLocation: '',
     date: new Date().toISOString().slice(0, 10),
     time: '10:00',
     durationMinutes: 45,
     price: 650,
     clinicalNotes: 'Evaluación de adherencia al plan y revisión antropométrica',
   });
+
+  const handleOpenScheduleModal = (existingApp?: Appointment) => {
+    if (existingApp) {
+      setEditingAppointmentId(existingApp.id);
+      const datePart = existingApp.startTime ? existingApp.startTime.slice(0, 10) : new Date().toISOString().slice(0, 10);
+      const timePart = existingApp.startTime && existingApp.startTime.length >= 16 ? existingApp.startTime.slice(11, 16) : '10:00';
+      let duration = 45;
+      if (existingApp.startTime && existingApp.endTime) {
+        const diffMs = new Date(existingApp.endTime).getTime() - new Date(existingApp.startTime).getTime();
+        if (diffMs > 0) duration = Math.round(diffMs / 60000);
+      }
+      setScheduleFormData({
+        appointmentType: existingApp.appointmentType || 'SEGUIMIENTO',
+        branchId: existingApp.branchId || defaultBranchId,
+        customLocation: existingApp.locationNotes || '',
+        date: datePart,
+        time: timePart,
+        durationMinutes: duration,
+        price: existingApp.price || 650,
+        clinicalNotes: existingApp.consultationSummary || '',
+      });
+    } else {
+      setEditingAppointmentId(null);
+      setScheduleFormData({
+        appointmentType: 'SEGUIMIENTO',
+        branchId: defaultBranchId,
+        customLocation: '',
+        date: new Date().toISOString().slice(0, 10),
+        time: '10:00',
+        durationMinutes: 45,
+        price: 650,
+        clinicalNotes: 'Evaluación de adherencia al plan y revisión antropométrica',
+      });
+    }
+    setIsScheduleModalOpen(true);
+  };
 
   const handleCreateAppointmentForPatient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,10 +400,49 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     const startObj = new Date(startTime);
     const endObj = new Date(startObj.getTime() + scheduleFormData.durationMinutes * 60000);
 
+    const selectedBranch = branches.find((b) => b.id === scheduleFormData.branchId);
+    let resolvedLocation = selectedBranch ? selectedBranch.name : 'Sucursal Principal';
+    if (scheduleFormData.appointmentType === 'ONLINE' || scheduleFormData.branchId === 'online') {
+      resolvedLocation = 'Videoconsulta Online (Google Meet / Zoom)';
+    } else if (scheduleFormData.branchId === 'custom' && scheduleFormData.customLocation.trim()) {
+      resolvedLocation = scheduleFormData.customLocation.trim();
+    } else if (scheduleFormData.customLocation.trim()) {
+      resolvedLocation = scheduleFormData.customLocation.trim();
+    }
+
+    if (editingAppointmentId) {
+      const existing = appointments.find((a) => a.id === editingAppointmentId);
+      const updatedApp: Appointment = {
+        ...(existing || {}),
+        id: editingAppointmentId,
+        organizationId: organization?.id || existing?.organizationId || 'org-nutriluz-mexico',
+        branchId: scheduleFormData.branchId,
+        patientId: patient.id,
+        patientName: `${patient.firstName} ${patient.lastName}`.trim(),
+        specialistId: currentUser?.id || existing?.specialistId || 'user-lic-luz-elena',
+        appointmentType: scheduleFormData.appointmentType,
+        startTime: startTime,
+        endTime: endObj.toISOString(),
+        status: existing?.status || 'CONFIRMADA',
+        price: scheduleFormData.price,
+        currency: 'MXN',
+        locationNotes: resolvedLocation,
+        consultationSummary: scheduleFormData.clinicalNotes,
+      };
+
+      const updated = appointments.map((a) => (a.id === editingAppointmentId ? updatedApp : a));
+      setAppointments(updated);
+      storageService.saveAppointment(updatedApp);
+      setIsScheduleModalOpen(false);
+      setEditingAppointmentId(null);
+      showToast('Consulta Actualizada', `Cita y sucursal de ${updatedApp.patientName} modificadas con éxito.`, 'success');
+      return;
+    }
+
     const newApp: Appointment = {
       id: `app-${Date.now()}`,
       organizationId: organization?.id || 'org-nutriluz-mexico',
-      branchId: 'branch-1',
+      branchId: scheduleFormData.branchId,
       patientId: patient.id,
       patientName: `${patient.firstName} ${patient.lastName}`.trim(),
       specialistId: currentUser?.id || 'user-lic-luz-elena',
@@ -365,10 +452,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
       status: 'CONFIRMADA',
       price: scheduleFormData.price,
       currency: 'MXN',
-      locationNotes:
-        scheduleFormData.appointmentType === 'ONLINE'
-          ? 'Videoconsulta Online (Google Meet / Zoom)'
-          : 'Sucursal Polanco (Consultorio 302)',
+      locationNotes: resolvedLocation,
       consultationSummary: scheduleFormData.clinicalNotes,
     };
 
@@ -376,7 +460,86 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     setAppointments(updated);
     storageService.saveAppointment(newApp);
     setIsScheduleModalOpen(false);
-    showToast('Consulta Agendada', `Cita para ${newApp.patientName} registrada y sincronizada con éxito.`, 'success');
+    showToast('Consulta Agendada', `Cita en ${resolvedLocation} registrada y sincronizada con éxito.`, 'success');
+  };
+
+  // State & Handlers for Progress & Food Photos (Tab 7 - Seguimiento & Fotos)
+  const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>(() =>
+    patient ? storageService.getProgressPhotos(patient.id) : []
+  );
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [photoUploadTab, setPhotoUploadTab] = useState<'upload' | 'url'>('upload');
+  const [photoInputUrl, setPhotoInputUrl] = useState('');
+  const [photoSelectedFileUrl, setPhotoSelectedFileUrl] = useState('');
+  const [photoCategory, setPhotoCategory] = useState<'AVANCE' | 'COMIDA' | 'GENERAL'>('AVANCE');
+  const [photoPoseType, setPhotoPoseType] = useState<'FRONT' | 'SIDE' | 'BACK'>('FRONT');
+  const [photoDate, setPhotoDate] = useState(new Date().toISOString().slice(0, 10));
+  const [photoNotes, setPhotoNotes] = useState('');
+  const [photoWeight, setPhotoWeight] = useState<string>(patient?.currentWeight ? String(patient.currentWeight) : '');
+  const [activeZoomPhoto, setActiveZoomPhoto] = useState<ProgressPhoto | null>(null);
+
+  useEffect(() => {
+    if (!patient?.id) return;
+    setProgressPhotos(storageService.getProgressPhotos(patient.id));
+    const handlePhotosSync = () => {
+      setProgressPhotos(storageService.getProgressPhotos(patient.id));
+    };
+    window.addEventListener('nutriluz:photos_updated', handlePhotosSync);
+    window.addEventListener('storage', handlePhotosSync);
+    return () => {
+      window.removeEventListener('nutriluz:photos_updated', handlePhotosSync);
+      window.removeEventListener('storage', handlePhotosSync);
+    };
+  }, [patient?.id]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Formato no soportado', 'Por favor selecciona un archivo de imagen (JPG, PNG, WebP).', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setPhotoSelectedFileUrl(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePhoto = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patient) return;
+    const finalUrl = (photoUploadTab === 'upload' ? photoSelectedFileUrl : photoInputUrl).trim();
+    if (!finalUrl) {
+      showToast('Imagen requerida', 'Por favor selecciona un archivo o ingresa un enlace de imagen válido.', 'error');
+      return;
+    }
+    const newPhoto: ProgressPhoto = {
+      id: `photo-${Date.now()}`,
+      patientId: patient.id,
+      date: photoDate,
+      poseType: photoPoseType,
+      photoUrl: finalUrl,
+      weightAtPhoto: photoWeight ? Number(photoWeight) : undefined,
+      notes: `${photoCategory === 'COMIDA' ? '[Platillo] ' : ''}${photoNotes}`.trim() || undefined,
+    };
+    storageService.saveProgressPhoto(newPhoto);
+    setProgressPhotos(storageService.getProgressPhotos(patient.id));
+    setIsPhotoModalOpen(false);
+    setPhotoInputUrl('');
+    setPhotoSelectedFileUrl('');
+    setPhotoNotes('');
+    showToast('Foto Guardada', 'La imagen ha sido registrada en el expediente del paciente.', 'success');
+  };
+
+  const handleDeletePhoto = (photoId: string) => {
+    storageService.deleteProgressPhoto(photoId);
+    if (patient) {
+      setProgressPhotos(storageService.getProgressPhotos(patient.id));
+    }
+    showToast('Foto Eliminada', 'La imagen fue eliminada con éxito.', 'info');
   };
 
   useEffect(() => {
@@ -1467,20 +1630,30 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                           })}{' '}
                           hrs
                         </p>
-                        {nextAppt.locationNotes && (
-                          <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{nextAppt.locationNotes}</p>
-                        )}
+                        <p className="text-[11px] text-emerald-300 mt-1 line-clamp-1 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                          <span>{nextAppt.locationNotes || branches.find((b) => b.id === nextAppt.branchId)?.name || 'Sucursal Principal'}</span>
+                        </p>
                         <div className="mt-4 flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setActiveTab('consultas')}
-                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                            onClick={() => handleOpenScheduleModal(nextAppt)}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                            title="Editar fecha, horario o sucursal"
                           >
-                            Ver Consultas
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Editar</span>
                           </button>
                           <button
                             type="button"
-                            onClick={() => setIsScheduleModalOpen(true)}
+                            onClick={() => setActiveTab('consultas')}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                          >
+                            Historial
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenScheduleModal()}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
                           >
                             + Nueva Cita
@@ -1495,7 +1668,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                       <p className="text-xs text-slate-400">No hay consulta agendada para este paciente.</p>
                       <button
                         type="button"
-                        onClick={() => setIsScheduleModalOpen(true)}
+                        onClick={() => handleOpenScheduleModal()}
                         className="mt-3 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -2347,7 +2520,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsScheduleModalOpen(true)}
+                  onClick={() => handleOpenScheduleModal()}
                   className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all active:scale-95"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -2359,17 +2532,36 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
             <div className="space-y-3">
               {appointments.length > 0 ? (
                 appointments.map((app) => (
-                  <div key={app.id} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-sm text-slate-900 dark:text-white">{app.appointmentType}</span>
+                  <div key={app.id} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">{app.appointmentType.replace('_', ' ')}</span>
                       <div className="text-xs text-slate-400 mt-1">
                         {new Date(app.startTime).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las {new Date(app.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
-                      {app.locationNotes && <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">{app.locationNotes}</p>}
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 mt-1.5 font-medium">
+                        <Building2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{app.locationNotes || branches.find((b) => b.id === app.branchId)?.name || 'Sucursal Principal'}</span>
+                      </div>
+                      {app.consultationSummary && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 italic">
+                          "{app.consultationSummary}"
+                        </p>
+                      )}
                     </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      {app.status}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenScheduleModal(app)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Editar sucursal o fecha"
+                      >
+                        <Edit3 className="w-3 h-3 text-slate-400" />
+                        <span>Editar</span>
+                      </button>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        {app.status}
+                      </span>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -2384,22 +2576,133 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         {/* TAB 7: SEGUIMIENTO & FOTOS */}
         {activeTab === 'seguimiento' && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-6">
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Seguimiento Visual & Registro de Comidas</h3>
-            <p className="text-xs text-slate-400">Fotos de avance compartidas por el paciente y registro fotográfico de platillos</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Foto de Avance Inicial</span>
-                <img src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400" alt="" className="w-full h-48 object-cover rounded-xl" />
-                <span className="text-[10px] text-slate-400 block">Fecha: Evaluación inicial de ingreso</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Seguimiento Visual & Registro de Comidas</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Fotos de avance corporal y registro fotográfico de platillos del paciente (sube archivos o ingresa enlaces directos).
+                </p>
               </div>
-
-              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Foto de Registro de Platillo</span>
-                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400" alt="" className="w-full h-48 object-cover rounded-xl" />
-                <span className="text-[10px] text-slate-400 block">Fecha: Registro diario</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoUploadTab('upload');
+                  setPhotoInputUrl('');
+                  setPhotoSelectedFileUrl('');
+                  setPhotoNotes('');
+                  setIsPhotoModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar Foto / Enlace</span>
+              </button>
             </div>
+
+            {progressPhotos && progressPhotos.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {progressPhotos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className="group bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden p-3 space-y-2 hover:shadow-md transition-shadow relative"
+                  >
+                    <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-900/10 dark:bg-black/20">
+                      <img
+                        src={photo.photoUrl}
+                        alt="Foto de seguimiento"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setActiveZoomPhoto(photo)}
+                        className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                        title="Ver en tamaño completo"
+                      >
+                        <ZoomIn className="w-6 h-6 drop-shadow-md" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePhoto(photo.id)}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-700 text-white transition-colors cursor-pointer opacity-90 hover:opacity-100 shadow-xs"
+                        title="Eliminar foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white uppercase tracking-wider">
+                        {photo.notes?.startsWith('[Platillo]') ? 'Platillo' : photo.poseType || 'Avance'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{new Date(photo.date).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                        {photo.weightAtPhoto && (
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            {photo.weightAtPhoto} kg
+                          </span>
+                        )}
+                      </div>
+                      {photo.notes && (
+                        <p className="text-[11px] text-slate-700 dark:text-slate-300 line-clamp-2">
+                          {photo.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 px-4 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <Camera className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                    No hay fotos registradas para este paciente
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                    Puedes subir imágenes de seguimiento (frente, perfil, espalda) o fotos de platillos diarios subidas desde tu equipo o mediante un enlace URL.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhotoUploadTab('upload');
+                      setPhotoInputUrl('');
+                      setPhotoSelectedFileUrl('');
+                      setPhotoNotes('');
+                      setIsPhotoModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4" />
+                    <span>Subir Imagen</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhotoUploadTab('url');
+                      setPhotoInputUrl('');
+                      setPhotoSelectedFileUrl('');
+                      setPhotoNotes('');
+                      setIsPhotoModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <LinkIcon className="w-4 h-4" />
+                    <span>Pegar Enlace (URL)</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2969,35 +3272,91 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         </Modal>
       )}
 
-      {/* Modal para Agendar Consulta */}
+      {/* Modal para Agendar o Editar Consulta con Selección de Sucursal */}
       {isScheduleModalOpen && (
         <Modal
           isOpen={isScheduleModalOpen}
-          onClose={() => setIsScheduleModalOpen(false)}
-          title="Agendar Nueva Consulta"
-          subtitle={`Programar cita presencial u online para ${patient.firstName} ${patient.lastName}`}
+          onClose={() => {
+            setIsScheduleModalOpen(false);
+            setEditingAppointmentId(null);
+          }}
+          title={editingAppointmentId ? 'Editar Consulta / Sucursal' : 'Agendar Nueva Consulta'}
+          subtitle={
+            editingAppointmentId
+              ? `Modificar sucursal, fecha u horario de la cita de ${patient.firstName} ${patient.lastName}`
+              : `Programar cita presencial u online para ${patient.firstName} ${patient.lastName}`
+          }
           maxWidth="md"
         >
           <form onSubmit={handleCreateAppointmentForPatient} className="space-y-4 text-xs">
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Tipo de Consulta
-              </label>
-              <select
-                value={scheduleFormData.appointmentType}
-                onChange={(e) =>
-                  setScheduleFormData({
-                    ...scheduleFormData,
-                    appointmentType: e.target.value as AppointmentType,
-                  })
-                }
-                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold text-xs"
-              >
-                <option value="SEGUIMIENTO">Seguimiento Nutricional (Presencial)</option>
-                <option value="PRIMERA_VEZ">Primera Vez / Valoración Inicial</option>
-                <option value="ONLINE">Videoconsulta Online (Google Meet / Zoom)</option>
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tipo de Consulta
+                </label>
+                <select
+                  value={scheduleFormData.appointmentType}
+                  onChange={(e) => {
+                    const newType = e.target.value as AppointmentType;
+                    setScheduleFormData({
+                      ...scheduleFormData,
+                      appointmentType: newType,
+                      branchId: newType === 'ONLINE' ? 'online' : scheduleFormData.branchId,
+                    });
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold text-xs"
+                >
+                  <option value="SEGUIMIENTO">Seguimiento Nutricional (Presencial)</option>
+                  <option value="PRIMERA_VEZ">Primera Vez / Valoración Inicial</option>
+                  <option value="ONLINE">Videoconsulta Online (Google Meet / Zoom)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Sucursal / Sede *</span>
+                </label>
+                <select
+                  value={scheduleFormData.branchId}
+                  onChange={(e) => {
+                    const bId = e.target.value;
+                    const b = branches.find((br) => br.id === bId);
+                    setScheduleFormData({
+                      ...scheduleFormData,
+                      branchId: bId,
+                      customLocation: b ? b.name : (bId === 'online' ? 'Videoconsulta Online (Google Meet / Zoom)' : scheduleFormData.customLocation),
+                    });
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold text-xs"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                  <option value="online">🌐 Videoconsulta Online (Google Meet / Zoom)</option>
+                  <option value="custom">📍 Otra Sede o Consultorio Personalizado...</option>
+                </select>
+              </div>
             </div>
+
+            {scheduleFormData.branchId === 'custom' && (
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Nombre o Dirección de la Sucursal Personalizada
+                </label>
+                <input
+                  type="text"
+                  placeholder="ej. Consultorio Ángeles Lomas, Piso 3"
+                  value={scheduleFormData.customLocation}
+                  onChange={(e) =>
+                    setScheduleFormData({ ...scheduleFormData, customLocation: e.target.value })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -3094,7 +3453,10 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setIsScheduleModalOpen(false)}
+                onClick={() => {
+                  setIsScheduleModalOpen(false);
+                  setEditingAppointmentId(null);
+                }}
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
               >
                 Cancelar
@@ -3103,10 +3465,265 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
                 type="submit"
                 className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md cursor-pointer transition-all active:scale-95"
               >
-                Confirmar y Agendar
+                {editingAppointmentId ? 'Guardar Cambios' : 'Confirmar y Agendar'}
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Modal para Agregar Foto (Subir Archivo o Poner Enlace) */}
+      {isPhotoModalOpen && (
+        <Modal
+          isOpen={isPhotoModalOpen}
+          onClose={() => {
+            setIsPhotoModalOpen(false);
+            setPhotoInputUrl('');
+            setPhotoSelectedFileUrl('');
+          }}
+          title="Agregar Foto de Seguimiento o Platillo"
+          subtitle={`Registrar imagen corporal o platillo diario para ${patient.firstName} ${patient.lastName}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleSavePhoto} className="space-y-4 text-xs">
+            {/* Tabs: Subir Archivo vs Pegar Enlace */}
+            <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+              <button
+                type="button"
+                onClick={() => setPhotoUploadTab('upload')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  photoUploadTab === 'upload'
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Subir Imagen</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoUploadTab('url')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  photoUploadTab === 'url'
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>Poner Enlace / URL</span>
+              </button>
+            </div>
+
+            {/* Input según el modo */}
+            {photoUploadTab === 'upload' ? (
+              <div className="space-y-2">
+                <label className="block font-bold text-slate-700 dark:text-slate-300">
+                  Selecciona una imagen desde tu dispositivo:
+                </label>
+                <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-5 text-center hover:border-emerald-500 transition-colors bg-slate-50/50 dark:bg-slate-800/30">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {photoSelectedFileUrl ? (
+                    <div className="space-y-2">
+                      <img
+                        src={photoSelectedFileUrl}
+                        alt="Vista previa"
+                        className="max-h-48 mx-auto rounded-xl object-contain shadow-xs"
+                      />
+                      <p className="text-[11px] text-emerald-600 font-semibold">
+                        ✓ Imagen cargada correctamente. Haz clic si deseas reemplazarla.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 pointer-events-none">
+                      <UploadCloud className="w-8 h-8 text-slate-400 mx-auto" />
+                      <p className="font-semibold text-slate-700 dark:text-slate-300">
+                        Haz clic o arrastra tu foto aquí
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Formatos soportados: JPG, PNG, WebP
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="block font-bold text-slate-700 dark:text-slate-300">
+                  Enlace directo a la imagen (URL):
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://ejemplo.com/fotos/avance-marzo.jpg"
+                  value={photoInputUrl}
+                  onChange={(e) => setPhotoInputUrl(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono"
+                />
+                {photoInputUrl && (
+                  <div className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-1">Vista Previa:</span>
+                    <img
+                      src={photoInputUrl}
+                      alt="Vista previa URL"
+                      className="max-h-40 mx-auto rounded-lg object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).alt = 'No se pudo cargar la imagen desde la URL';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Categoría y Tipo */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Categoría
+                </label>
+                <select
+                  value={photoCategory}
+                  onChange={(e) => setPhotoCategory(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value="AVANCE">Avance Corporal</option>
+                  <option value="COMIDA">Platillo / Comida</option>
+                  <option value="GENERAL">Registro General</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Vista / Pose
+                </label>
+                <select
+                  value={photoPoseType}
+                  onChange={(e) => setPhotoPoseType(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value="FRONT">Frente</option>
+                  <option value="SIDE">Perfil / Lateral</option>
+                  <option value="BACK">Espalda</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Fecha y Peso */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Fecha de la Foto
+                </label>
+                <input
+                  type="date"
+                  value={photoDate}
+                  onChange={(e) => setPhotoDate(e.target.value)}
+                  required
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Peso al Momento (kg, opcional)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="ej. 68.5"
+                  value={photoWeight}
+                  onChange={(e) => setPhotoWeight(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Notas / Descripción
+              </label>
+              <textarea
+                rows={2}
+                value={photoNotes}
+                onChange={(e) => setPhotoNotes(e.target.value)}
+                placeholder="ej. Desayuno con 2 equivalentes de proteína, o avance semana 6..."
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPhotoModalOpen(false);
+                  setPhotoInputUrl('');
+                  setPhotoSelectedFileUrl('');
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md cursor-pointer transition-all active:scale-95"
+              >
+                Guardar Foto en Expediente
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal Zoom Foto */}
+      {activeZoomPhoto && (
+        <Modal
+          isOpen={!!activeZoomPhoto}
+          onClose={() => setActiveZoomPhoto(null)}
+          title="Detalle de Imagen de Seguimiento"
+          subtitle={`${patient.firstName} ${patient.lastName} • ${new Date(activeZoomPhoto.date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+          maxWidth="lg"
+        >
+          <div className="space-y-4">
+            <div className="max-h-[65vh] overflow-hidden rounded-2xl bg-black/90 flex items-center justify-center p-2">
+              <img
+                src={activeZoomPhoto.photoUrl}
+                alt="Detalle foto"
+                className="max-h-[60vh] max-w-full object-contain rounded-xl"
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
+                  {activeZoomPhoto.notes?.startsWith('[Platillo]') ? 'Platillo / Comida' : activeZoomPhoto.poseType}
+                </span>
+                {activeZoomPhoto.weightAtPhoto && (
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    Peso: {activeZoomPhoto.weightAtPhoto} kg
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeletePhoto(activeZoomPhoto.id);
+                  setActiveZoomPhoto(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Eliminar Foto</span>
+              </button>
+            </div>
+            {activeZoomPhoto.notes && (
+              <p className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
+                {activeZoomPhoto.notes}
+              </p>
+            )}
+          </div>
         </Modal>
       )}
     </div>

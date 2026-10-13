@@ -1407,6 +1407,33 @@ export const storageService = {
     safeDispatchEvent('nutriluz_appointment_updated', { appointment: app, patientId: app.patientId });
   },
 
+  getProgressPhotos(patientId?: string): ProgressPhoto[] {
+    const all = this.get(STORAGE_KEYS.PROGRESS_PHOTOS, [] as ProgressPhoto[]);
+    if (patientId) {
+      return all.filter((p) => p.patientId === patientId);
+    }
+    return all;
+  },
+
+  saveProgressPhoto(photo: ProgressPhoto) {
+    const list = this.get(STORAGE_KEYS.PROGRESS_PHOTOS, [] as ProgressPhoto[]);
+    const idx = list.findIndex((p) => p.id === photo.id);
+    if (idx >= 0) {
+      list[idx] = photo;
+    } else {
+      list.unshift(photo);
+    }
+    this.set(STORAGE_KEYS.PROGRESS_PHOTOS, list);
+    safeDispatchEvent('nutriluz:photos_updated', { patientId: photo.patientId, photo });
+  },
+
+  deleteProgressPhoto(photoId: string) {
+    const list = this.get(STORAGE_KEYS.PROGRESS_PHOTOS, [] as ProgressPhoto[]);
+    const filtered = list.filter((p) => p.id !== photoId);
+    this.set(STORAGE_KEYS.PROGRESS_PHOTOS, filtered);
+    safeDispatchEvent('nutriluz:photos_updated', { photoId });
+  },
+
   getClinicalRecordByPatientId(patientId: string): ClinicalRecord | undefined {
     const rec = this.getClinicalRecords().find((c) => c.patientId === patientId);
     if (!rec) return undefined;

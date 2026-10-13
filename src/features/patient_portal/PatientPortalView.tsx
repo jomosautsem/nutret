@@ -42,8 +42,13 @@ import {
   Maximize2,
   RefreshCw,
   Image as ImageIcon,
+  Link as LinkIcon,
+  Trash2,
+  ZoomIn,
+  Building2,
+  UploadCloud,
 } from 'lucide-react';
-import { Patient, NutritionPlan, NutritionPlanMeal, MealLog, Appointment, AppointmentType, Recipe, UserProfile } from '../../types';
+import { Patient, NutritionPlan, NutritionPlanMeal, MealLog, Appointment, AppointmentType, Recipe, UserProfile, ProgressPhoto } from '../../types';
 import { storageService } from '../../lib/storage';
 import {
   pdfService,
@@ -593,9 +598,82 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
   // Exercise checklist
   const [exerciseDone, setExerciseDone] = useState(false);
 
-  // Photo upload modal
+  // Progress & Food Photos state for patient portal
+  const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>(() =>
+    currentPatient ? storageService.getProgressPhotos(currentPatient.id) : []
+  );
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [photoUploadTab, setPhotoUploadTab] = useState<'upload' | 'url'>('upload');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [photoSelectedFileUrl, setPhotoSelectedFileUrl] = useState('');
+  const [photoCategory, setPhotoCategory] = useState<'AVANCE' | 'COMIDA'>('AVANCE');
+  const [photoPoseType, setPhotoPoseType] = useState<'FRONT' | 'SIDE' | 'BACK'>('FRONT');
+  const [photoDate, setPhotoDate] = useState(new Date().toISOString().slice(0, 10));
+  const [photoNotes, setPhotoNotes] = useState('');
+  const [activeZoomPhoto, setActiveZoomPhoto] = useState<ProgressPhoto | null>(null);
+
+  useEffect(() => {
+    if (!currentPatient?.id) return;
+    setProgressPhotos(storageService.getProgressPhotos(currentPatient.id));
+    const handlePhotosSync = () => {
+      setProgressPhotos(storageService.getProgressPhotos(currentPatient.id));
+    };
+    window.addEventListener('nutriluz:photos_updated', handlePhotosSync);
+    window.addEventListener('storage', handlePhotosSync);
+    return () => {
+      window.removeEventListener('nutriluz:photos_updated', handlePhotosSync);
+      window.removeEventListener('storage', handlePhotosSync);
+    };
+  }, [currentPatient?.id]);
+
+  const handlePortalFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Formato no válido', 'Por favor selecciona un archivo de imagen (JPG, PNG, WebP).', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setPhotoSelectedFileUrl(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePortalSavePhoto = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPatient) return;
+    const finalUrl = (photoUploadTab === 'upload' ? photoSelectedFileUrl : photoUrl).trim();
+    if (!finalUrl) {
+      showToast('Imagen requerida', 'Por favor selecciona un archivo de imagen o ingresa una liga (URL) válida.', 'error');
+      return;
+    }
+    const newPhoto: ProgressPhoto = {
+      id: `photo-${Date.now()}`,
+      patientId: currentPatient.id,
+      date: photoDate,
+      poseType: photoPoseType,
+      photoUrl: finalUrl,
+      notes: `${photoCategory === 'COMIDA' ? '[Platillo] ' : ''}${photoNotes}`.trim() || undefined,
+    };
+    storageService.saveProgressPhoto(newPhoto);
+    setProgressPhotos(storageService.getProgressPhotos(currentPatient.id));
+    setIsPhotoModalOpen(false);
+    setPhotoUrl('');
+    setPhotoSelectedFileUrl('');
+    setPhotoNotes('');
+    showToast('Foto Guardada', 'Tu imagen se guardó y sincronizó con el expediente de tu nutrióloga.', 'success');
+  };
+
+  const handlePortalDeletePhoto = (photoId: string) => {
+    storageService.deleteProgressPhoto(photoId);
+    if (currentPatient) {
+      setProgressPhotos(storageService.getProgressPhotos(currentPatient.id));
+    }
+    showToast('Foto Eliminada', 'La imagen ha sido eliminada con éxito.', 'info');
+  };
 
   // Download PDF Actions
   const handleDownloadPlanPdf = () => {
@@ -662,7 +740,7 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
     () => [
       {
         id: 'hoy' as const,
-        label: 'Mi Día',
+        label: 'Mi Comida',
         icon: Flame,
         palette: {
           activeBg: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-orange-500/25 ring-2 ring-amber-400/40',
@@ -917,18 +995,18 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
         })}
       </div>
 
-      {/* Opción 1: Tarjeta Plegable / Acordeón Inteligente - ¿Por qué tus calorías? (No invasiva, plegada por defecto) */}
-      <PatientNutritionalRationaleCard
-        patient={currentPatient}
-        plan={activePlan || null}
-        appointments={appointments}
-        organizationName={organization.name || 'Nutri Elena'}
-        defaultExpanded={false}
-      />
-
-      {/* SUB-VIEW 1: MI DÍA */}
+      {/* SUB-VIEW 1: MI COMIDA */}
       {activeSubTab === 'hoy' && (
         <div className="space-y-6">
+          {/* Tarjeta Plegable / Acordeón Inteligente - ¿Por qué tus calorías? (Solo visible en Mi Comida) */}
+          <PatientNutritionalRationaleCard
+            patient={currentPatient}
+            plan={activePlan || null}
+            appointments={appointments}
+            organizationName={organization.name || 'Nutri Elena'}
+            defaultExpanded={false}
+          />
+
           {/* Barra Interactiva de Días de la Semana (Selector Rápido) */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3.5 sm:p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between text-xs">
@@ -1841,27 +1919,134 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
 
       {/* SUB-VIEW 5: FOTOS */}
       {activeSubTab === 'fotos' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base text-slate-900 dark:text-white">Tus Fotos de Progreso</h3>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div>
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <Camera className="w-5 h-5 text-rose-500" />
+                <span>Tus Fotos de Avance y Platillos</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Sube fotos de tu progreso corporal o tus platillos para que tu nutrióloga dé seguimiento a tu evolución.
+              </p>
+            </div>
             <button
-              onClick={() => setIsPhotoModalOpen(true)}
-              className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold cursor-pointer"
+              type="button"
+              onClick={() => {
+                setPhotoUploadTab('upload');
+                setPhotoUrl('');
+                setPhotoSelectedFileUrl('');
+                setPhotoNotes('');
+                setIsPhotoModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer self-start sm:self-auto"
             >
-              Subir Foto
+              <Plus className="w-4 h-4" />
+              <span>Agregar Foto</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400">Inicio (Enero)</span>
-              <img src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300" alt="" className="w-full h-40 object-cover rounded-2xl" />
+          {progressPhotos && progressPhotos.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {progressPhotos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="group bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden p-3 space-y-2 hover:shadow-md transition-shadow relative"
+                >
+                  <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-900/10 dark:bg-black/20">
+                    <img
+                      src={photo.photoUrl}
+                      alt="Foto de avance"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setActiveZoomPhoto(photo)}
+                      className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                      title="Ver en pantalla completa"
+                    >
+                      <ZoomIn className="w-6 h-6 drop-shadow-md" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePortalDeletePhoto(photo.id)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-700 text-white transition-colors cursor-pointer opacity-90 hover:opacity-100 shadow-xs"
+                      title="Eliminar foto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white uppercase tracking-wider">
+                      {photo.notes?.startsWith('[Platillo]') ? 'Platillo' : photo.poseType || 'Avance'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{new Date(photo.date).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      {photo.weightAtPhoto && (
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          {photo.weightAtPhoto} kg
+                        </span>
+                      )}
+                    </div>
+                    {photo.notes && (
+                      <p className="text-[11px] text-slate-700 dark:text-slate-300 line-clamp-2">
+                        {photo.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400">Mes 2 (Marzo)</span>
-              <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300" alt="" className="w-full h-40 object-cover rounded-2xl" />
+          ) : (
+            <div className="py-12 px-4 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500 mx-auto flex items-center justify-center">
+                <Camera className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                  Aún no tienes fotos registradas
+                </h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                  Sube fotos de tu progreso físico o de tus comidas del día subiendo una imagen desde tu dispositivo o ingresando un enlace directo.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotoUploadTab('upload');
+                    setPhotoUrl('');
+                    setPhotoSelectedFileUrl('');
+                    setPhotoNotes('');
+                    setIsPhotoModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Subir Imagen</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotoUploadTab('url');
+                    setPhotoUrl('');
+                    setPhotoSelectedFileUrl('');
+                    setPhotoNotes('');
+                    setIsPhotoModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  <span>Pegar Enlace (URL)</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -2102,39 +2287,245 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
         </div>
       )}
 
-      {/* Upload Food Photo Modal */}
-      <Modal
-        id="upload-meal-photo-modal"
-        isOpen={isPhotoModalOpen}
-        onClose={() => setIsPhotoModalOpen(false)}
-        title="Registrar Foto de Platillo"
-        subtitle="NutriCopilot AI analizará automáticamente los grupos SMAE y calorías aproximadas"
-        maxWidth="md"
-      >
-        <div className="space-y-4 text-xs">
-          <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-center space-y-2">
-            <Camera className="w-8 h-8 text-emerald-600 mx-auto" />
-            <p className="text-slate-600 dark:text-slate-300">Toma una foto de tu plato o súbela desde tu galería</p>
-            <input
-              type="text"
-              placeholder="O pega URL de imagen (ej. https://...)"
-              value={photoUrl}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs mt-2"
-            />
-          </div>
+      {/* Upload Food / Progress Photo Modal */}
+      {isPhotoModalOpen && (
+        <Modal
+          id="upload-meal-photo-modal"
+          isOpen={isPhotoModalOpen}
+          onClose={() => {
+            setIsPhotoModalOpen(false);
+            setPhotoUrl('');
+            setPhotoSelectedFileUrl('');
+          }}
+          title="Agregar Foto de Avance o Platillo"
+          subtitle="Sube una foto desde tu galería o ingresa una liga (URL) para compartir con tu nutrióloga"
+          maxWidth="md"
+        >
+          <form onSubmit={handlePortalSavePhoto} className="space-y-4 text-xs">
+            {/* Tabs: Subir Archivo vs Pegar Enlace */}
+            <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+              <button
+                type="button"
+                onClick={() => setPhotoUploadTab('upload')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  photoUploadTab === 'upload'
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Subir Imagen</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoUploadTab('url')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  photoUploadTab === 'url'
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>Poner Enlace / URL</span>
+              </button>
+            </div>
 
-          <button
-            onClick={() => {
-              setIsPhotoModalOpen(false);
-              showToast('Foto Analizada', 'NutriCopilot estimó ~420 kcal (32g Proteína, 38g Carbos, 12g Grasas)', 'success');
-            }}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors cursor-pointer"
-          >
-            Analizar y Guardar Platillo
-          </button>
-        </div>
-      </Modal>
+            {/* Input según el modo */}
+            {photoUploadTab === 'upload' ? (
+              <div className="space-y-2">
+                <label className="block font-bold text-slate-700 dark:text-slate-300">
+                  Selecciona una imagen desde tu dispositivo:
+                </label>
+                <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-5 text-center hover:border-emerald-500 transition-colors bg-slate-50/50 dark:bg-slate-800/30">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePortalFileSelect}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {photoSelectedFileUrl ? (
+                    <div className="space-y-2">
+                      <img
+                        src={photoSelectedFileUrl}
+                        alt="Vista previa"
+                        className="max-h-48 mx-auto rounded-xl object-contain shadow-xs"
+                      />
+                      <p className="text-[11px] text-emerald-600 font-semibold">
+                        ✓ Imagen seleccionada. Haz clic si deseas cambiarla.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 pointer-events-none">
+                      <UploadCloud className="w-8 h-8 text-slate-400 mx-auto" />
+                      <p className="font-semibold text-slate-700 dark:text-slate-300">
+                        Haz clic o arrastra tu foto aquí
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Formatos soportados: JPG, PNG, WebP
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="block font-bold text-slate-700 dark:text-slate-300">
+                  Enlace directo a la imagen (URL):
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://ejemplo.com/mis-fotos/platillo.jpg"
+                  value={photoUrl}
+                  onChange={(e) => setPhotoUrl(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono"
+                />
+                {photoUrl && (
+                  <div className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-1">Vista Previa:</span>
+                    <img
+                      src={photoUrl}
+                      alt="Vista previa URL"
+                      className="max-h-40 mx-auto rounded-lg object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).alt = 'No se pudo cargar la imagen desde la URL';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Categoría y Tipo */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Categoría
+                </label>
+                <select
+                  value={photoCategory}
+                  onChange={(e) => setPhotoCategory(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value="AVANCE">Avance Corporal</option>
+                  <option value="COMIDA">Platillo / Comida</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Vista / Pose
+                </label>
+                <select
+                  value={photoPoseType}
+                  onChange={(e) => setPhotoPoseType(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value="FRONT">Frente</option>
+                  <option value="SIDE">Perfil / Lateral</option>
+                  <option value="BACK">Espalda</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Fecha */}
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Fecha de la Foto
+              </label>
+              <input
+                type="date"
+                value={photoDate}
+                onChange={(e) => setPhotoDate(e.target.value)}
+                required
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+              />
+            </div>
+
+            {/* Notas */}
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Notas / Descripción
+              </label>
+              <textarea
+                rows={2}
+                value={photoNotes}
+                onChange={(e) => setPhotoNotes(e.target.value)}
+                placeholder="ej. Desayuno de hoy, o cómo me sentí con el plan..."
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPhotoModalOpen(false);
+                  setPhotoUrl('');
+                  setPhotoSelectedFileUrl('');
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md cursor-pointer transition-all active:scale-95"
+              >
+                Guardar Foto
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal Zoom Foto */}
+      {activeZoomPhoto && (
+        <Modal
+          isOpen={!!activeZoomPhoto}
+          onClose={() => setActiveZoomPhoto(null)}
+          title="Detalle de Imagen"
+          subtitle={`${new Date(activeZoomPhoto.date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+          maxWidth="lg"
+        >
+          <div className="space-y-4">
+            <div className="max-h-[65vh] overflow-hidden rounded-2xl bg-black/90 flex items-center justify-center p-2">
+              <img
+                src={activeZoomPhoto.photoUrl}
+                alt="Detalle foto"
+                className="max-h-[60vh] max-w-full object-contain rounded-xl"
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
+                  {activeZoomPhoto.notes?.startsWith('[Platillo]') ? 'Platillo / Comida' : activeZoomPhoto.poseType}
+                </span>
+                {activeZoomPhoto.weightAtPhoto && (
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    Peso: {activeZoomPhoto.weightAtPhoto} kg
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  handlePortalDeletePhoto(activeZoomPhoto.id);
+                  setActiveZoomPhoto(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Eliminar Foto</span>
+              </button>
+            </div>
+            {activeZoomPhoto.notes && (
+              <p className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
+                {activeZoomPhoto.notes}
+              </p>
+            )}
+          </div>
+        </Modal>
+      )}
 
       {/* Patient Portal Footer & Logout Section */}
       <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
