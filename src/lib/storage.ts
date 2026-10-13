@@ -1303,11 +1303,6 @@ export const storageService = {
         directPlans.forEach((p) => map.set(p.id, p));
         this.savePlans(Array.from(map.values()));
         patientPlans = this.getPlansByPatientId(patientId);
-
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('nutriluz:db_updated', { detail: { type: 'plans_synced', patientId } }));
-          window.dispatchEvent(new CustomEvent('nutriluz_plan_updated', { detail: { type: 'plans_synced', patientId } }));
-        }
       }
 
       // 2. Also sync all plans across cloud to keep database cache fully consistent
@@ -1325,9 +1320,6 @@ export const storageService = {
         const finalPlans = Array.from(map.values());
         this.savePlans(finalPlans);
         patientPlans = this.getPlansByPatientId(patientId);
-
-        safeDispatchEvent('nutriluz:db_updated', { type: 'plans_synced', patientId });
-        safeDispatchEvent('nutriluz_plan_updated', { type: 'plans_synced', patientId });
       }
     } catch (e) {
       console.warn('[Storage] Error in fetchPatientPlans:', e);
@@ -1392,8 +1384,6 @@ export const storageService = {
         const merged = Array.from(map.values());
         this.saveAppointments(merged);
         patientAppts = this.getAppointmentsByPatientId(patientId);
-        safeDispatchEvent('nutriluz:db_updated', { type: 'appointments_synced', patientId });
-        safeDispatchEvent('nutriluz_appointment_updated', { patientId, appointments: patientAppts });
       }
     } catch (e) {
       console.warn('[Storage] Error in fetchPatientAppointments:', e);

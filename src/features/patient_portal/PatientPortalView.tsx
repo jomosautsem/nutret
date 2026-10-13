@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Utensils,
   Droplet,
@@ -285,6 +285,8 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
     showToast('Cita Solicitada', 'Tu cita quedó registrada y tu especialista la revisará en breve.', 'success');
   };
 
+  const lastSyncedPatientIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
     const handleUpdate = () => {
@@ -292,18 +294,13 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
         if (!isMounted) return;
         const list = storageService.getPatients();
         setPatients(list);
-        const activeId = storageService.getActivePortalPatientId();
+        const activeId = storageService.getActivePortalPatientId() || storageService.getActiveClinicalPatientId();
         if (activeId) {
           setActivePatientId(activeId);
           setIsLoggedOut(false);
           setPlans(storageService.getPlansByPatientId(activeId));
           const appts = storageService.getAppointmentsByPatientId(activeId);
           setAppointments(appts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
-          storageService.fetchPatientAppointments(activeId).then((fetched) => {
-            if (fetched && fetched.length > 0) {
-              setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
-            }
-          }).catch(() => {});
         } else {
           setActivePatientId(null);
           setIsLoggedOut(true);
@@ -311,6 +308,7 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
         }
       }, 0);
     };
+
     window.addEventListener('nutriluz_plan_updated', handleUpdate);
     window.addEventListener('nutriluz:db_updated', handleUpdate);
     window.addEventListener('nutriluz:cloud_synced', handleUpdate);
@@ -328,28 +326,41 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({ onExitPort
     };
   }, []);
 
+  // Hydrate plans and appointments when the current patient changes
   useEffect(() => {
-    if (currentPatient?.id) {
-      setPlans(storageService.getPlansByPatientId(currentPatient.id));
-      const appts = storageService.getAppointmentsByPatientId(currentPatient.id);
+    const pId = currentPatient?.id;
+    if (pId) {
+      setPlans(storageService.getPlansByPatientId(pId));
+      const appts = storageService.getAppointmentsByPatientId(pId);
       setAppointments(appts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
-      setCustomMealPhotos(getSavedMealPhotos(activePlan?.id || ''));
-      
-      storageService.fetchPatientPlans(currentPatient.id).then((fetched) => {
-        if (fetched && fetched.length > 0) {
-          setPlans(fetched);
-        }
-      }).catch(() => {});
 
-      storageService.fetchPatientAppointments(currentPatient.id).then((fetched) => {
-        if (fetched && fetched.length > 0) {
-          setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
-        }
-      }).catch(() => {});
+      // Only perform cloud fetch once per patient selection to avoid cycle
+      if (lastSyncedPatientIdRef.current !== pId) {
+        lastSyncedPatientIdRef.current = pId;
+        storageService.fetchPatientPlans(pId).then((fetched) => {
+          if (fetched && fetched.length > 0) {
+            setPlans(fetched);
+          }
+        }).catch(() => {});
+
+        storageService.fetchPatientAppointments(pId).then((fetched) => {
+          if (fetched && fetched.length > 0) {
+            setAppointments(fetched.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+          }
+        }).catch(() => {});
+      }
     } else {
       setAppointments([]);
+      lastSyncedPatientIdRef.current = null;
     }
-  }, [currentPatient?.id, activePlan?.id]);
+  }, [currentPatient?.id]);
+
+  // Synchronize meal photos when active plan changes
+  useEffect(() => {
+    if (activePlan?.id) {
+      setCustomMealPhotos(getSavedMealPhotos(activePlan.id));
+    }
+  }, [activePlan?.id]);
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();

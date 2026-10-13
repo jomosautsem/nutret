@@ -43,6 +43,7 @@ export const supabaseDb = {
   // --- ORGANIZATION PERSISTENCE ---
   async getOrganization(): Promise<Organization | null> {
     if (!supabase || !isSupabaseConfigured) return null;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
     try {
       const { data, error } = await supabase
         .from('organizations')
@@ -50,7 +51,12 @@ export const supabaseDb = {
         .eq('id', 'org-nutriluz-mexico')
         .maybeSingle();
 
-      if (error || !data) return null;
+      if (error || !data) {
+        if (error && !error.message?.includes('Failed to fetch')) {
+          console.warn('Error fetching organization from Supabase:', error.message);
+        }
+        return null;
+      }
 
       return {
         id: data.id,
@@ -65,8 +71,10 @@ export const supabaseDb = {
         address: data.address || 'Temixco, Morelos',
         watermarkOpacity: (data as any).watermark_opacity ?? (typeof window !== 'undefined' ? (parseFloat(localStorage.getItem('nutriluz_watermark_opacity') || '0.22') || 0.22) : 0.22),
       };
-    } catch (e) {
-      console.warn('Error fetching organization from Supabase:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('Failed to fetch')) {
+        console.warn('Error fetching organization from Supabase:', e?.message);
+      }
       return null;
     }
   },
@@ -101,6 +109,7 @@ export const supabaseDb = {
   // --- BOOTSTRAP & PREREQUISITES ---
   async ensureOrganizationAndUser(org?: Partial<Organization>, user?: Partial<UserProfile>): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured) return false;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
     try {
       const orgId = org?.id || 'org-nutriluz-mexico';
       const orgName = org?.name || 'Nutri Luz Elena';
@@ -122,7 +131,13 @@ export const supabaseDb = {
         { onConflict: 'id' }
       );
       if (orgErr) {
-        console.error('[Supabase] Failed to bootstrap organization:', orgErr.message);
+        const isNetworkErr = orgErr.message?.includes('Failed to fetch') || orgErr.message?.includes('TypeError');
+        if (isNetworkErr) {
+          console.warn('[Supabase] Cloud no alcanzable (Failed to fetch). Operando con motor local persistente.');
+          return false;
+        }
+        console.warn('[Supabase] No se pudo sincronizar organización con la nube:', orgErr.message);
+        return false;
       }
 
       // 2. Ensure baseline clinical specialists exist in users table so foreign keys NEVER fail
@@ -172,9 +187,14 @@ export const supabaseDb = {
         );
       }
 
-      return !orgErr;
+      return true;
     } catch (e: any) {
-      console.error('[Supabase] Error ensuring org and user:', e?.message);
+      const isNetworkErr = e?.message?.includes('Failed to fetch') || e?.name === 'TypeError';
+      if (isNetworkErr) {
+        console.warn('[Supabase] Conexión cloud offline (Failed to fetch). Operando con almacenamiento local.');
+      } else {
+        console.warn('[Supabase] Error en ensureOrganizationAndUser:', e?.message);
+      }
       return false;
     }
   },
@@ -182,16 +202,24 @@ export const supabaseDb = {
   // --- NUTRITIONIST & USER PROFILE CRUD ---
   async getNutritionistProfile(userId: string = 'user-lic-luz-elena'): Promise<UserProfile | null> {
     if (!supabase || !isSupabaseConfigured) return null;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
     try {
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
-      if (error || !data) return null;
+      if (error || !data) {
+        if (error && !error.message?.includes('Failed to fetch')) {
+          console.warn('[Supabase] Error fetching nutritionist user:', error.message);
+        }
+        return null;
+      }
       return mapDbToUser(data);
-    } catch (e) {
-      console.warn('[Supabase] Error fetching nutritionist user:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('Failed to fetch')) {
+        console.warn('[Supabase] Error fetching nutritionist user:', e?.message);
+      }
       return null;
     }
   },

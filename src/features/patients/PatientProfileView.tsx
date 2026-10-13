@@ -227,6 +227,8 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
   );
 
   // Sync state whenever patientId changes or events fire
+  const lastFetchedProfilePatientIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     const refreshData = () => {
       const p = storageService.getPatientById(patientId);
@@ -242,16 +244,20 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     };
 
     refreshData();
-    storageService.fetchPatientPlans(patientId).then((fetched) => {
-      if (fetched && fetched.length > 0) {
-        setPlans(fetched);
-      }
-    }).catch(() => {});
-    storageService.fetchPatientAppointments(patientId).then((fetched) => {
-      if (fetched && fetched.length > 0) {
-        setAppointments(fetched);
-      }
-    }).catch(() => {});
+
+    if (lastFetchedProfilePatientIdRef.current !== patientId) {
+      lastFetchedProfilePatientIdRef.current = patientId;
+      storageService.fetchPatientPlans(patientId).then((fetched) => {
+        if (fetched && fetched.length > 0) {
+          setPlans(fetched);
+        }
+      }).catch(() => {});
+      storageService.fetchPatientAppointments(patientId).then((fetched) => {
+        if (fetched && fetched.length > 0) {
+          setAppointments(fetched);
+        }
+      }).catch(() => {});
+    }
 
     const handleUpdate = (e: any) => {
       const detail = e.detail;
@@ -260,6 +266,15 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
         if (p) {
           setPatient((current) => {
             if (!current) return p;
+            if (
+              current.id === p.id &&
+              current.updatedAt === p.updatedAt &&
+              current.firstName === p.firstName &&
+              current.lastName === p.lastName &&
+              (current.assignedRecipeIds?.length || 0) === (p.assignedRecipeIds?.length || 0)
+            ) {
+              return current;
+            }
             return {
               ...p,
               assignedRecipeIds: Array.isArray(p.assignedRecipeIds)
@@ -427,7 +442,7 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
     if (clinicalRecord || patient) {
       populateClinicalForm(clinicalRecord, patient);
     }
-  }, [clinicalRecord, patient, isEditingClinical]);
+  }, [patientId, clinicalRecord?.id, clinicalRecord?.updatedAt, patient?.id, patient?.updatedAt, isEditingClinical]);
 
   const handleStartEditClinical = () => {
     const currentClin = clinicalRecord || storageService.getClinicalRecordByPatientId(patientId);
