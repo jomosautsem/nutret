@@ -3075,7 +3075,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     <span>Objetivos de adecuación de macronutrientes</span>
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Ajuste independiente con meta configurable (predeterminado 100%)
+                    Adecuación y balance por macronutriente
                   </span>
                 </div>
 
@@ -3103,26 +3103,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                         <span>Aporte actual: </span>
                         <strong className="text-teal-700 dark:text-teal-300 font-extrabold">{smaeTotals.prot}g</strong>
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                         Meta: {proteinGrams > 0 ? `${proteinGrams}g` : 'No definida'}
-                      </div>
-                    </div>
-
-                    {/* Objetivo editable */}
-                    <div className="flex items-center justify-between text-[11px] bg-white/70 dark:bg-slate-900/70 p-1.5 rounded-xl border border-teal-100 dark:border-teal-900/40">
-                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Objetivo deseado:</span>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="50"
-                          max="200"
-                          step="1"
-                          value={proteinTargetPct}
-                          onChange={(e) => setProteinTargetPct(Math.max(1, Number(e.target.value) || 0))}
-                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-800 border border-teal-300 dark:border-teal-700 rounded-md text-center font-bold text-teal-800 dark:text-teal-200 text-xs"
-                        />
-                        <span className="text-[10px] font-bold text-slate-500">%</span>
-                        <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300">({derivedProteinGrams}g)</span>
                       </div>
                     </div>
 
@@ -3175,26 +3157,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                         <span>Aporte actual: </span>
                         <strong className="text-amber-700 dark:text-amber-300 font-extrabold">{smaeTotals.lip}g</strong>
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                         Meta: {fatGrams > 0 ? `${fatGrams}g` : 'No definida'}
-                      </div>
-                    </div>
-
-                    {/* Objetivo editable */}
-                    <div className="flex items-center justify-between text-[11px] bg-white/70 dark:bg-slate-900/70 p-1.5 rounded-xl border border-amber-100 dark:border-amber-900/40">
-                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Objetivo deseado:</span>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="50"
-                          max="200"
-                          step="1"
-                          value={fatTargetPct}
-                          onChange={(e) => setFatTargetPct(Math.max(1, Number(e.target.value) || 0))}
-                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md text-center font-bold text-amber-800 dark:text-amber-200 text-xs"
-                        />
-                        <span className="text-[10px] font-bold text-slate-500">%</span>
-                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">({derivedFatGrams}g)</span>
                       </div>
                     </div>
 
@@ -3247,26 +3211,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                         <span>Aporte actual: </span>
                         <strong className="text-blue-700 dark:text-blue-300 font-extrabold">{smaeTotals.hc}g</strong>
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                         Meta: {carbsGrams > 0 ? `${carbsGrams}g` : 'No definida'}
-                      </div>
-                    </div>
-
-                    {/* Objetivo editable */}
-                    <div className="flex items-center justify-between text-[11px] bg-white/70 dark:bg-slate-900/70 p-1.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
-                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Objetivo deseado:</span>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="50"
-                          max="200"
-                          step="1"
-                          value={carbsTargetPct}
-                          onChange={(e) => setCarbsTargetPct(Math.max(1, Number(e.target.value) || 0))}
-                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-700 rounded-md text-center font-bold text-blue-800 dark:text-blue-200 text-xs"
-                        />
-                        <span className="text-[10px] font-bold text-slate-500">%</span>
-                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300">({derivedCarbsGrams}g)</span>
                       </div>
                     </div>
 
@@ -3300,29 +3246,29 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
               {/* Real-time SMAE Totals Summary Banner */}
               <div className="p-3 rounded-2xl bg-slate-900 text-white grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Kcal SMAE</span>
-                  <span className="text-base font-extrabold text-emerald-400">{smaeTotals.kcal}</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {targetKcal} kcal</span>
+                <div className="border-r border-slate-800 pr-2 flex flex-col justify-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Meta Kcal</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-400 block">{targetKcal} kcal</span>
+                  <span className="text-[10px] text-slate-300 block font-medium">Actual: {smaeTotals.kcal} kcal</span>
                 </div>
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Proteínas</span>
-                  <span className="text-base font-extrabold text-teal-400">{smaeTotals.prot}g</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {proteinGrams}g</span>
+                <div className="border-r border-slate-800 pr-2 flex flex-col justify-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Meta Proteínas</span>
+                  <span className="text-base sm:text-lg font-black text-teal-400 block">{proteinGrams}g</span>
+                  <span className="text-[10px] text-slate-300 block font-medium">Actual: {smaeTotals.prot}g</span>
                 </div>
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Lípidos</span>
-                  <span className="text-base font-extrabold text-amber-400">{smaeTotals.lip}g</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {fatGrams}g</span>
+                <div className="border-r border-slate-800 pr-2 flex flex-col justify-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Meta Lípidos</span>
+                  <span className="text-base sm:text-lg font-black text-amber-400 block">{fatGrams}g</span>
+                  <span className="text-[10px] text-slate-300 block font-medium">Actual: {smaeTotals.lip}g</span>
                 </div>
-                <div className="border-r border-slate-800 pr-2">
-                  <span className="text-[10px] text-slate-400 block">Carbohidratos</span>
-                  <span className="text-base font-extrabold text-blue-400">{smaeTotals.hc}g</span>
-                  <span className="text-[10px] text-slate-400 block">Meta: {carbsGrams}g</span>
+                <div className="border-r border-slate-800 pr-2 flex flex-col justify-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Meta Carbohidratos</span>
+                  <span className="text-base sm:text-lg font-black text-blue-400 block">{carbsGrams}g</span>
+                  <span className="text-[10px] text-slate-300 block font-medium">Actual: {smaeTotals.hc}g</span>
                 </div>
                 <div className="col-span-2 sm:col-span-1 flex flex-col justify-center">
-                  <span className="text-[10px] text-slate-400 block">% Adecuación</span>
-                  <span className={`text-base font-extrabold ${
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">% Adecuación</span>
+                  <span className={`text-base sm:text-lg font-black block ${
                     smaeTotals.kcalAdequacyPct >= 95 && smaeTotals.kcalAdequacyPct <= 105
                       ? 'text-emerald-400'
                       : smaeTotals.kcalAdequacyPct < 95
@@ -3331,6 +3277,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   }`}>
                     {smaeTotals.kcalAdequacyPct}%
                   </span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Rango: 95% - 105%</span>
                 </div>
               </div>
 
