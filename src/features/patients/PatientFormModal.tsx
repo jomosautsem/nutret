@@ -160,6 +160,32 @@ export type PredictiveFormulaKey =
   | 'hosp'
   | 'amb';
 
+// Plantilla vacía de porciones SMAE para pacientes nuevos
+export const EMPTY_SMAE_PORTIONS: Record<string, number> = {
+  'Verduras': 0,
+  'Frutas': 0,
+  'Cereales s/g': 0,
+  'Cereales c/g': 0,
+  'Leguminosas': 0,
+  'AOA Muy bajo aporte': 0,
+  'AOA Bajo aporte': 0,
+  'AOA Moderado aporte': 0,
+  'AOA Alto aporte': 0,
+  'Leche descremada': 0,
+  'Leche semidescremada': 0,
+  'Leche entera': 0,
+  'Leche c/azúcar': 0,
+  'Grasas s/proteína': 0,
+  'Grasas c/proteína': 0,
+  'Azúcares s/grasa': 0,
+};
+
+// Helper para limpiar entradas numéricas evitando ceros a la izquierda (ej: "0128" -> "128")
+export const cleanNumberInput = (raw: string): string => {
+  if (!raw) return '';
+  return raw.replace(/^0+(?=\d)/, '');
+};
+
 interface PatientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -179,7 +205,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   // Active Tab
   const [activeTab, setActiveTab] = useState<ModalTabType>('general');
 
-  // Form State
+  // Form State (Limpio para paciente nuevo, sin datos automáticos)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -187,20 +213,20 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     phone: '',
     whatsapp: '',
     gender: 'F' as 'M' | 'F' | 'Otro',
-    birthDate: '1995-05-12',
-    occupation: 'Profesionista',
-    address: 'CDMX, México',
-    height: 165,
-    initialWeight: 70,
-    currentWeight: 70,
-    targetWeight: 62,
+    birthDate: '',
+    occupation: '',
+    address: '',
+    height: '' as number | string,
+    initialWeight: '' as number | string,
+    currentWeight: '' as number | string,
+    targetWeight: '' as number | string,
     bodyFatPct: '' as number | string,
     muscleMassKg: '' as number | string,
     visceralFatLevel: '' as number | string,
-    goal: 'Pérdida de Grasa y Recomposición Corporal',
+    goal: '',
     status: 'Activo' as PatientStatus,
     riskLevel: 'NORMAL' as RiskLevel,
-    adherenceRate: 90,
+    adherenceRate: '' as number | string,
     allergies: '',
     pathologies: '',
     notes: '',
@@ -221,8 +247,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
     familyNotes: '',
     surgeries: '',
     medications: '',
-    sleepHours: 7,
-    waterLiters: 2.5,
+    sleepHours: '' as number | string,
+    waterLiters: '' as number | string,
     stressLevel: 'Medio',
     smoking: false,
     alcoholFrequency: 'Ocasional',
@@ -249,24 +275,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   const labFileInputRef = useRef<HTMLInputElement>(null);
 
   // Evaluador SMAE Portions State
-  const [smaePortions, setSmaePortions] = useState<Record<string, number>>({
-    'Verduras': 4,
-    'Frutas': 3,
-    'Cereales s/g': 5,
-    'Cereales c/g': 1,
-    'Leguminosas': 1.5,
-    'AOA Muy bajo aporte': 2,
-    'AOA Bajo aporte': 3,
-    'AOA Moderado aporte': 1,
-    'AOA Alto aporte': 0,
-    'Leche descremada': 1,
-    'Leche semidescremada': 0,
-    'Leche entera': 0,
-    'Leche c/azúcar': 0,
-    'Grasas s/proteína': 3,
-    'Grasas c/proteína': 1,
-    'Azúcares s/grasa': 0,
-  });
+  const [smaePortions, setSmaePortions] = useState<Record<string, number>>(EMPTY_SMAE_PORTIONS);
 
   // Independent Macronutrient Adequacy Targets (editable, por defecto 100%)
   const [proteinTargetPct, setProteinTargetPct] = useState<number>(100);
@@ -550,20 +559,20 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         phone: '',
         whatsapp: '',
         gender: 'F',
-        birthDate: '1995-05-12',
-        occupation: 'Profesionista',
-        address: 'CDMX, México',
-        height: 165,
-        initialWeight: 72,
-        currentWeight: 72,
-        targetWeight: 62,
+        birthDate: '',
+        occupation: '',
+        address: '',
+        height: '',
+        initialWeight: '',
+        currentWeight: '',
+        targetWeight: '',
         bodyFatPct: '',
         muscleMassKg: '',
         visceralFatLevel: '',
-        goal: 'Pérdida de Grasa y Recomposición Corporal',
+        goal: '',
         status: 'Activo',
         riskLevel: 'NORMAL',
-        adherenceRate: 90,
+        adherenceRate: '',
         allergies: '',
         pathologies: '',
         notes: '',
@@ -573,6 +582,22 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
         portalPassword: 'Nutri2026!',
         showPassword: false,
       });
+      setAnamnesisData({
+        familyDiabetes: false,
+        familyHypertension: false,
+        familyCancer: false,
+        familyCardiovascular: false,
+        familyThyroid: false,
+        familyNotes: '',
+        surgeries: '',
+        medications: '',
+        sleepHours: '',
+        waterLiters: '',
+        stressLevel: 'Medio',
+        smoking: false,
+        alcoholFrequency: 'Ocasional',
+      });
+      setSmaePortions({ ...EMPTY_SMAE_PORTIONS });
       setStudies(INITIAL_STUDIES);
       setLabFile(null);
       setCarbsPct(50);
@@ -585,20 +610,22 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   const heightM = (Number(formData.height) || 165) / 100;
   const currentWeightNum = Number(formData.currentWeight) || 70;
   const liveBmi = Number((currentWeightNum / (heightM * heightM)).toFixed(1));
+  const hasAnthropometrics = Boolean(formData.height && formData.currentWeight);
 
-  const birthYear = formData.birthDate ? new Date(formData.birthDate).getFullYear() : 1995;
-  const ageYears = isNaN(birthYear) ? 29 : Math.max(1, new Date().getFullYear() - birthYear);
+  const birthYear = formData.birthDate ? new Date(formData.birthDate).getFullYear() : NaN;
+  const ageYears = isNaN(birthYear) ? 0 : Math.max(1, new Date().getFullYear() - birthYear);
+  const hasBirthDate = Boolean(formData.birthDate && ageYears > 0);
 
   // Clinical Engine Algorithmic Calculations (8 Ecuaciones Predictivas de GEB y GET)
   const clinicalEngineData = useMemo(() => {
     return computeClinicalEngine({
       nombre: `${formData.firstName} ${formData.lastName}`.trim() || 'Paciente',
       sexo: formData.gender === 'M' ? 'Masculino' : 'Femenino',
-      edad: ageYears,
+      edad: ageYears > 0 ? ageYears : 30,
       peso: currentWeightNum,
       talla_cm: Number(formData.height) || 165,
       factor_actividad: activityFactor,
-      meta_kcal: targetKcal,
+      meta_kcal: targetKcal || 1800,
       porcentaje_grasa: formData.bodyFatPct !== '' ? Number(formData.bodyFatPct) : undefined,
       masa_muscular_kg: formData.muscleMassKg !== '' ? Number(formData.muscleMassKg) : undefined,
       distribucion_macros: {
@@ -1268,7 +1295,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       targetProteinG: proteinGrams,
       targetCarbsG: carbsGrams,
       targetFatG: fatGrams,
-      targetWaterLiters: anamnesisData.waterLiters || 2.5,
+      targetWaterLiters: Number(anamnesisData.waterLiters) || 2.5,
       startDate: new Date().toISOString().slice(0, 10),
       approvedBySpecialist: true,
       generalInstructions: `Distribución de macronutrientes: ${carbsPct}% Carbohidratos (${carbsGrams}g), ${proteinPct}% Proteínas (${proteinGrams}g, ${proteinGPerKg} g/kg), ${fatPct}% Grasas (${fatGrams}g).`,
@@ -1469,7 +1496,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     Edad Calculada
                   </label>
                   <div className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold">
-                    {ageYears} años
+                    {hasBirthDate ? `${ageYears} años` : '--'}
                   </div>
                 </div>
               </div>
@@ -1514,7 +1541,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="text"
                     value={formData.occupation}
                     onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                    placeholder="Ej. Ingeniero en Sistemas / Estudiante"
+                    placeholder="Ej. Profesionista / Estudiante"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
@@ -1528,7 +1555,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="text"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Ej. CDMX, México"
+                    placeholder="Ej. CDMX, México / Domicilio"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
@@ -1548,8 +1575,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     id="patient-form-height"
                     type="number"
                     value={formData.height}
-                    onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    placeholder="Ej. 165"
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const val = cleanNumberInput(e.target.value);
+                      setFormData({ ...formData, height: val === '' ? '' : Number(val) });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                 </div>
 
@@ -1562,8 +1594,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="number"
                     step="0.1"
                     value={formData.initialWeight}
-                    onChange={(e) => setFormData({ ...formData, initialWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    placeholder="Ej. 70"
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const val = cleanNumberInput(e.target.value);
+                      setFormData({ ...formData, initialWeight: val === '' ? '' : Number(val) });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                 </div>
 
@@ -1576,8 +1613,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="number"
                     step="0.1"
                     value={formData.currentWeight}
-                    onChange={(e) => setFormData({ ...formData, currentWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400"
+                    placeholder="Ej. 70"
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const val = cleanNumberInput(e.target.value);
+                      setFormData({ ...formData, currentWeight: val === '' ? '' : Number(val) });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400 placeholder:text-slate-400"
                   />
                 </div>
 
@@ -1590,8 +1632,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="number"
                     step="0.1"
                     value={formData.targetWeight}
-                    onChange={(e) => setFormData({ ...formData, targetWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    placeholder="Ej. 65"
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const val = cleanNumberInput(e.target.value);
+                      setFormData({ ...formData, targetWeight: val === '' ? '' : Number(val) });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -1614,8 +1661,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       step="0.1"
                       placeholder="Ej. 22.5"
                       value={formData.bodyFatPct}
-                      onChange={(e) => setFormData({ ...formData, bodyFatPct: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value);
+                        setFormData({ ...formData, bodyFatPct: val });
+                      }}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                     />
                   </div>
                   <div>
@@ -1628,8 +1679,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       step="0.1"
                       placeholder="Ej. 48.0"
                       value={formData.muscleMassKg}
-                      onChange={(e) => setFormData({ ...formData, muscleMassKg: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value);
+                        setFormData({ ...formData, muscleMassKg: val });
+                      }}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                     />
                   </div>
                   <div>
@@ -1642,8 +1697,12 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       step="1"
                       placeholder="Ej. 5 (1-12)"
                       value={formData.visceralFatLevel}
-                      onChange={(e) => setFormData({ ...formData, visceralFatLevel: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value);
+                        setFormData({ ...formData, visceralFatLevel: val });
+                      }}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                     />
                   </div>
                 </div>
@@ -1660,14 +1719,16 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       Índice de Masa Corporal (IMC Basal)
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Calculado a partir de {formData.currentWeight} kg y {formData.height} cm
+                      {hasAnthropometrics
+                        ? `Calculado a partir de ${formData.currentWeight} kg y ${formData.height} cm`
+                        : 'Ingresa peso y estatura para calcular el IMC'}
                     </div>
                   </div>
                 </div>
 
                 <div className="text-right">
                   <div className="text-base font-extrabold text-slate-900 dark:text-white">
-                    {liveBmi} <span className="text-[11px] font-normal text-slate-400">kg/m²</span>
+                    {hasAnthropometrics ? liveBmi : '--'} <span className="text-[11px] font-normal text-slate-400">kg/m²</span>
                   </div>
                 </div>
               </div>
@@ -1682,8 +1743,8 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                   type="text"
                   value={formData.goal}
                   onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
-                  placeholder="Ej. Pérdida de Grasa y Recomposición Corporal"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white"
+                  placeholder="Ej. Pérdida de Grasa, Ganancia Muscular, Recomposición..."
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {QUICK_GOALS.map((qg, i) => (
@@ -1742,9 +1803,14 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     type="number"
                     min="0"
                     max="100"
+                    placeholder="Ej. 90"
                     value={formData.adherenceRate}
-                    onChange={(e) => setFormData({ ...formData, adherenceRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const val = cleanNumberInput(e.target.value);
+                      setFormData({ ...formData, adherenceRate: val === '' ? '' : Number(val) });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -1811,11 +1877,16 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     </label>
                     <input
                       type="number"
-                      min="3"
-                      max="14"
+                      min="1"
+                      max="24"
+                      placeholder="Ej. 7"
                       value={anamnesisData.sleepHours}
-                      onChange={(e) => setAnamnesisData({ ...anamnesisData, sleepHours: Number(e.target.value) })}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-medium"
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value);
+                        setAnamnesisData({ ...anamnesisData, sleepHours: val === '' ? '' : Number(val) });
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-medium placeholder:text-slate-400"
                     />
                   </div>
 
@@ -1826,11 +1897,16 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     <input
                       type="number"
                       step="0.5"
-                      min="0.5"
-                      max="8"
+                      min="0"
+                      max="15"
+                      placeholder="Ej. 2.5"
                       value={anamnesisData.waterLiters}
-                      onChange={(e) => setAnamnesisData({ ...anamnesisData, waterLiters: Number(e.target.value) })}
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-medium"
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value);
+                        setAnamnesisData({ ...anamnesisData, waterLiters: val === '' ? '' : Number(val) });
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-medium placeholder:text-slate-400"
                     />
                   </div>
 
@@ -2051,13 +2127,15 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                             type="number"
                             step="0.1"
                             value={study.value}
+                            placeholder="0"
+                            onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                             onChange={(e) => {
-                              const val = e.target.value;
+                              const val = cleanNumberInput(e.target.value);
                               setStudies((prev) =>
                                 prev.map((s) => (s.id === study.id ? { ...s, value: val } : s))
                               );
                             }}
-                            className="w-20 px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-600 text-right font-bold text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-emerald-500"
+                            className="w-20 px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-600 text-right font-bold text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400"
                           />
                           <span className="text-[10px] text-slate-500 font-mono w-9">{study.unit}</span>
 
@@ -2239,9 +2317,14 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                       <input
                         type="number"
                         step="25"
-                        value={targetKcal}
-                        onChange={(e) => setTargetKcal(Number(e.target.value))}
-                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-sm text-right pr-12 shadow-xs"
+                        placeholder="Ej. 1800"
+                        value={targetKcal === 0 ? '' : targetKcal}
+                        onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                        onChange={(e) => {
+                          const val = cleanNumberInput(e.target.value);
+                          setTargetKcal(val === '' ? ('' as any) : Number(val));
+                        }}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-sm text-right pr-12 shadow-xs placeholder:text-slate-400"
                       />
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
                         kcal
@@ -3337,12 +3420,15 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                           type="number"
                           step="0.5"
                           min="0"
-                          value={val}
+                          value={val === 0 ? '' : val}
+                          placeholder="0"
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => {
-                            const num = Math.max(0, Number(e.target.value) || 0);
+                            const raw = cleanNumberInput(e.target.value);
+                            const num = raw === '' ? 0 : Math.max(0, parseFloat(raw) || 0);
                             setSmaePortions({ ...smaePortions, [c.grupo]: num });
                           }}
-                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-900 dark:text-white text-xs"
+                          className="w-12 px-1 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400"
                         />
                         <button
                           type="button"
@@ -3650,13 +3736,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 <div className="flex justify-between">
                   <span className="text-slate-500">Paciente:</span>
                   <span className="font-bold text-slate-900 dark:text-white">
-                    {formData.firstName} {formData.lastName} ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}, {ageYears} años)
+                    {formData.firstName || formData.lastName ? `${formData.firstName} ${formData.lastName}` : 'Nombre no especificado'} ({formData.gender === 'M' ? 'Hombre' : 'Mujer'}{hasBirthDate ? `, ${ageYears} años` : ''})
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Métricas:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {formData.currentWeight} kg • {formData.height} cm (IMC: {liveBmi})
+                    {hasAnthropometrics ? `${formData.currentWeight} kg • ${formData.height} cm (IMC: ${liveBmi})` : 'Métricas pendientes'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -3764,13 +3850,13 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
               <span className="text-slate-500">Objetivo:</span>
               <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
-                {formData.goal}
+                {formData.goal || 'Plan Nutricional Integral'}
               </span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
               <span className="text-slate-500">Somatometría:</span>
               <span className="font-medium text-slate-800 dark:text-slate-200">
-                {formData.currentWeight} kg • {formData.height} cm (IMC: {liveBmi})
+                {hasAnthropometrics ? `${formData.currentWeight} kg • ${formData.height} cm (IMC: ${liveBmi})` : 'Métricas pendientes'}
               </span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
